@@ -122,3 +122,67 @@ test("输入法确认不误提交，多行粘贴仍先预览", async ({ page }) 
   await expect(page.locator(".transfer-dialog")).toBeVisible();
   await expect(page.locator("textarea")).toHaveValue("多行导入一\n多行导入二");
 });
+
+test("抽屉草稿在点外部、换日及切视图取消时保留，确认放弃后继续", async ({
+  page,
+  request,
+}) => {
+  const t = await root(request, unique("抽屉草稿"));
+  await page.setViewportSize({ width: 1080, height: 720 });
+  await page.goto("/?preview=1");
+  await page.getByLabel("日历视图", { exact: true }).click();
+  await page.getByRole("button", { name: t.date, exact: true }).click();
+  const drawer = page.getByLabel("日期任务抽屉");
+  await drawer.getByRole("button", { name: t.title, exact: true }).click();
+  const editor = drawer.locator(".inline-task-editor");
+  await editor.getByLabel("任务标题").fill(t.title + "未保存");
+  await editor
+    .getByRole("textbox", { name: "描述", exact: true })
+    .fill("请保留这段草稿");
+  page.once("dialog", (d) => d.dismiss());
+  await page.locator(".calendar-month-picker").click();
+  await expect(drawer).toBeVisible();
+  await expect(editor.getByLabel("任务标题")).toHaveValue(t.title + "未保存");
+  const next = new Date(t.date + "T12:00:00");
+  next.setDate(next.getDate() + 1);
+  const nextDay = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
+  page.once("dialog", (d) => d.dismiss());
+  await page.getByRole("button", { name: nextDay, exact: true }).click();
+  await expect(editor).toBeVisible();
+  await expect(
+    editor.getByRole("textbox", { name: "描述", exact: true }),
+  ).toHaveValue("请保留这段草稿");
+  page.once("dialog", (d) => d.dismiss());
+  await page.getByLabel("任务列表", { exact: true }).click();
+  await expect(drawer).toBeVisible();
+  await expect(page.locator(".calendar-grid")).toBeVisible();
+  page.once("dialog", (d) => d.accept());
+  await page.getByRole("button", { name: nextDay, exact: true }).click();
+  await expect(editor).toHaveCount(0);
+  await expect(drawer.getByRole("heading")).not.toContainText("未保存");
+  const stored = await call(request, "FindTask", t.id);
+  expect(stored.title).toBe(t.title);
+  expect(stored.description || "").not.toContain("请保留这段草稿");
+});
+
+test("日历复制仍以选区首日为相对日期锚点", async ({
+  page,
+  request,
+  context,
+}) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  const t = await root(request, unique("范围复制"));
+  const date = new Date(t.date + "T12:00:00");
+  date.setDate(date.getDate() - 1);
+  const anchor = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  await page.setViewportSize({ width: 1080, height: 720 });
+  await page.goto("/?preview=1");
+  await page.getByLabel("日历视图", { exact: true }).click();
+  await page.getByRole("button", { name: anchor, exact: true }).click();
+  await page
+    .getByRole("button", { name: t.date, exact: true })
+    .click({ modifiers: ["Shift"] });
+  const sent = page.waitForRequest((r) => r.url().endsWith("/api/CopyTasks"));
+  await page.getByLabel("复制任务", { exact: true }).click();
+  expect((await sent).postDataJSON()[0].date).toBe(anchor);
+});

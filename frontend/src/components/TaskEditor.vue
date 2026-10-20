@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import CustomSelect from "./CustomSelect.vue";
+import { registerEditorGuard } from "../composables/editorGuard";
 import { restoreDialogFocus } from "../composables/dialogFocus";
-import { ref, onMounted, nextTick, watch } from "vue";
+import { ref, onMounted, onUnmounted, nextTick, watch } from "vue";
 import { X, CalendarDays, Bell, Repeat2, AlignLeft } from "lucide-vue-next";
 import { type Task, type Rule } from "../api/types";
 import { api, confirmAction } from "../api";
@@ -67,6 +68,12 @@ const formState = () =>
     following.value,
   ]);
 let initialState = formState();
+const dirty = () => formState() !== initialState;
+async function canLeave() {
+  return !s.saving && (!dirty() || (await confirmAction("放弃未保存的修改？")));
+}
+const releaseGuard = registerEditorGuard(dirty, canLeave);
+onUnmounted(releaseGuard);
 function toLocal(ms: number) {
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -176,10 +183,7 @@ function toggleWeekday(n: number) {
     : [...weekdays.value, n];
 }
 async function cancel() {
-  if (formState() !== initialState) {
-    if (!(await confirmAction("放弃未保存的修改？"))) return;
-  }
-  emit("close");
+  if (await canLeave()) emit("close");
 }
 </script>
 <template>

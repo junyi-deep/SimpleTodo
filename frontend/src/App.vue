@@ -33,6 +33,7 @@ import {
   parseDay,
   shiftDay,
 } from "./api/types";
+import { canLeaveEditor, hasDirtyEditor } from "./composables/editorGuard";
 import TaskList from "./components/TaskList.vue";
 import CustomSelect from "./components/CustomSelect.vue";
 import FocusPanel from "./components/FocusPanel.vue";
@@ -91,20 +92,8 @@ const calendarDays = computed(() =>
         ),
       ),
 );
-const year = computed({
-    get: () => month.value.slice(0, 4),
-    set: (v) => {
-      month.value = v + month.value.slice(4);
-      void loadCalendar();
-    },
-  }),
-  monthNumber = computed({
-    get: () => month.value.slice(5),
-    set: (v) => {
-      month.value = month.value.slice(0, 5) + v;
-      void loadCalendar();
-    },
-  });
+const year = computed(() => month.value.slice(0, 4)),
+  monthNumber = computed(() => month.value.slice(5));
 const windowState = computed(() =>
   s.boot?.windows.find((w) => w.key === "main"),
 );
@@ -178,7 +167,7 @@ watch(
     }
   },
 );
-watch(calendarMode, () => void loadCalendar());
+
 function clamp(day: string) {
   return day < "2000-01-01"
     ? "2000-01-01"
@@ -193,7 +182,58 @@ async function loadCalendar() {
   s.end = clamp(calendarDays.value.at(-1)!);
   await s.load();
 }
+async function chooseEditor(task: Task | null) {
+  if (task?.id === editor.value?.id) return;
+  if (task && !(await canLeaveEditor())) return;
+  editor.value = task;
+}
+async function closeDrawer() {
+  if (!(await canLeaveEditor())) return;
+  drawer.value = false;
+  editor.value = null;
+}
+async function openSettings(tab: string) {
+  if (!(await canLeaveEditor())) return;
+  editor.value = null;
+  drawer.value = false;
+  settingsTab.value = tab;
+  settingsOpen.value = true;
+  menu.value = false;
+}
+async function openTransfer(mode: "import" | "export") {
+  if (!(await canLeaveEditor())) return;
+  editor.value = null;
+  drawer.value = false;
+  transfer.value = mode;
+  menu.value = false;
+}
+async function changeCalendar(
+  kind: "year" | "month" | "mode",
+  value: string | number,
+) {
+  if (!(await canLeaveEditor())) return;
+  editor.value = null;
+  drawer.value = false;
+  if (kind === "year") month.value = String(value) + month.value.slice(4);
+  else if (kind === "month")
+    month.value = month.value.slice(0, 5) + String(value);
+  else calendarMode.value = String(value);
+  await loadCalendar();
+}
+async function selectListDay(day: string) {
+  if (!(await canLeaveEditor())) return;
+  editor.value = null;
+  s.date = day;
+  activeDay.value = day;
+}
+async function openBatch(action: string) {
+  if (!(await canLeaveEditor())) return;
+  editor.value = null;
+  batchAction.value = action;
+  transfer.value = "batch";
+}
 async function navigate(next: string) {
+  if (!(await canLeaveEditor())) return false;
   settingsOpen.value = false;
   transfer.value = null;
   menu.value = false;
@@ -210,8 +250,10 @@ async function navigate(next: string) {
     await s.load();
   }
   await s.run(() => api("SetView", next));
+  return true;
 }
 async function toggleList() {
+  if (!(await canLeaveEditor())) return;
   listView.value = listView.value === "day" ? "inbox" : "day";
   s.view = listView.value;
   search.value = "";
@@ -220,6 +262,8 @@ async function toggleList() {
   await s.load();
 }
 async function step(n: number) {
+  if (!(await canLeaveEditor())) return;
+  editor.value = null;
   if (panel.value !== "calendar") {
     s.date = clamp(shiftDay(s.date, n));
     activeDay.value = s.date;
@@ -241,6 +285,8 @@ async function step(n: number) {
   await loadCalendar();
 }
 async function today() {
+  if (!(await canLeaveEditor())) return;
+  editor.value = null;
   activeDay.value = s.boot?.today || dayString(new Date());
   month.value = activeDay.value.slice(0, 7);
   if (panel.value === "calendar") await loadCalendar();
@@ -251,7 +297,8 @@ async function today() {
     await s.load();
   }
 }
-function pickDay(day: string, e?: MouseEvent) {
+async function pickDay(day: string, e?: MouseEvent) {
+  if (!(await canLeaveEditor())) return;
   if (rangeMoved.value) {
     rangeMoved.value = false;
     drawer.value = true;
@@ -273,6 +320,7 @@ function selectRange() {
     .map((t) => t.id);
 }
 function rangeStart(day: string, e: PointerEvent) {
+  if (hasDirtyEditor()) return;
   if (e.button !== 0 || e.shiftKey) return;
   rangeDragging.value = true;
   rangeMoved.value = false;
@@ -288,15 +336,16 @@ function rangeOver(day: string, e: PointerEvent) {
 function rangeStop() {
   rangeDragging.value = false;
 }
-function outside(e: PointerEvent) {
+async function outside(e: PointerEvent) {
   const el = e.target as HTMLElement;
   if (!el.closest(".tools")) menu.value = false;
   if (
     drawer.value &&
     !el.closest(
-      ".day-drawer,.calendar-day,.select-options,.reminder-popover,.node-menu",
+      ".day-drawer,.calendar-day,.select-options,.reminder-popover,.node-menu,.app-header",
     )
   ) {
+    if (!(await canLeaveEditor())) return;
     drawer.value = false;
     editor.value = null;
   }
@@ -328,18 +377,33 @@ async function rootDrop(target: Task, e: DragEvent) {
   await s.run(() => api("Reorder", ids, s.snapshot.revision));
   dragging.value = false;
 }
-function importLines(text: string) {
+async function importLines(text: string) {
+  if (!(await canLeaveEditor())) return;
+  editor.value = null;
   pastedText.value = text;
   transfer.value = "import";
 }
 async function copySelection() {
-  const text = await s.run(() => api<string>("CopyTasks", s.query, s.selected));
+  const sourceQuery =
+    panel.value === "calendar" && rangeAnchor.value && rangeEnd.value
+      ? {
+          ...s.query,
+          date: [rangeAnchor.value, rangeEnd.value].sort()[0],
+          end: [rangeAnchor.value, rangeEnd.value].sort()[1],
+          limit: 10000,
+        }
+      : s.query;
+  const text = await s.run(() =>
+    api<string>("CopyTasks", sourceQuery, s.selected),
+  );
   if (text !== undefined) {
     await s.run(() => api("ClipboardWrite", text));
     s.inform("已复制任务");
   }
 }
 async function pasteSelection() {
+  if (!(await canLeaveEditor())) return;
+  editor.value = null;
   await s.run(async () => {
     const text = await api<string>("ClipboardRead");
     pastedPreview.value = await api<Preview>(
@@ -444,8 +508,7 @@ async function keyboard(e: KeyboardEvent) {
     } else if (menu.value) {
       menu.value = false;
     } else if (drawer.value) {
-      drawer.value = false;
-      editor.value = null;
+      await closeDrawer();
     } else {
       batch.value = false;
       s.selected = [];
@@ -479,7 +542,28 @@ onMounted(async () => {
   );
   stopListeners.push(await listen("todo:quit-request", () => void quit()));
   stopListeners.push(
-    await listen("todo:notification", () => void navigate("tasks")),
+    await listen("todo:notification", async (data) => {
+      if (data?.sourceType !== "task" || !data.sourceId) {
+        await navigate("focus");
+        return;
+      }
+      try {
+        const root = await api<Task>("FindTask", data.sourceId);
+        if (!(await navigate("tasks"))) return;
+        s.hideCompleted = false;
+        listView.value = root.date ? "day" : "inbox";
+        s.view = listView.value;
+        activeDay.value = root.date || s.boot?.today || s.date;
+        s.date = activeDay.value;
+        await s.load();
+        await nextTick();
+        document
+          .querySelector<HTMLElement>(`[data-node="${root.id}"]`)
+          ?.focus();
+      } catch (e) {
+        s.inform("提醒对应的任务可能已被删除");
+      }
+    }),
   );
   poll = setInterval(() => {
     void s.metadata().catch(() => {});
@@ -582,27 +666,11 @@ onUnmounted(() => {
             <MoreHorizontal :size="17" />
           </summary>
           <div class="menu">
-            <button
-              @click="
-                settingsOpen = true;
-                settingsTab = 'general';
-                menu = false;
-              "
-            >
+            <button @click="openSettings('general')">
               <Settings :size="14" />设置</button
-            ><button
-              @click="
-                transfer = 'import';
-                menu = false;
-              "
-            >
+            ><button @click="openTransfer('import')">
               <Upload :size="14" />导入待办</button
-            ><button
-              @click="
-                transfer = 'export';
-                menu = false;
-              "
-            >
+            ><button @click="openTransfer('export')">
               <Download :size="14" />导出待办</button
             ><button
               @click="
@@ -613,14 +681,7 @@ onUnmounted(() => {
               <Bell :size="14" />错过的提醒 {{ s.boot?.notices.length || 0 }}
             </button>
             <hr />
-            <button
-              @click="
-                settingsOpen = true;
-                settingsTab = 'about';
-                menu = false;
-              "
-            >
-              帮助与关于</button
+            <button @click="openSettings('about')">帮助与关于</button
             ><button
               @click="
                 quit();
@@ -674,7 +735,7 @@ onUnmounted(() => {
             class="icon-button"
             aria-label="打开设置"
             title="设置"
-            @click="settingsOpen = true"
+            @click="openSettings('general')"
           >
             <Settings :size="14" />
           </button>
@@ -693,10 +754,7 @@ onUnmounted(() => {
               ' ' +
               Number(day.slice(-2))
             "
-            @click="
-              s.date = day;
-              activeDay = day;
-            "
+            @click="selectListDay(day)"
             @dragover.prevent
             @drop="dropDate($event, day)"
           >
@@ -709,11 +767,17 @@ onUnmounted(() => {
       </section>
       <section v-else class="calendar-toolbar">
         <div class="calendar-month-picker">
-          <CustomSelect v-model="year" aria-label="年份"
+          <CustomSelect
+            :model-value="year"
+            @update:model-value="changeCalendar('year', $event)"
+            aria-label="年份"
             ><option v-for="y in 101" :key="y" :value="String(1999 + y)">
               {{ 1999 + y }}年
             </option></CustomSelect
-          ><CustomSelect v-model="monthNumber" aria-label="月份"
+          ><CustomSelect
+            :model-value="monthNumber"
+            @update:model-value="changeCalendar('month', $event)"
+            aria-label="月份"
             ><option
               v-for="m in 12"
               :key="m"
@@ -724,7 +788,8 @@ onUnmounted(() => {
           >
         </div>
         <span class="grow" /><CustomSelect
-          v-model="calendarMode"
+          :model-value="calendarMode"
+          @update:model-value="changeCalendar('mode', $event)"
           aria-label="日历范围"
           ><option value="month">月视图</option>
           <option value="week">周视图</option></CustomSelect
@@ -770,19 +835,13 @@ onUnmounted(() => {
         <span>已选 {{ s.selected.length }} 项</span><span class="grow" /><button
           class="icon-button"
           aria-label="批量完成"
-          @click="
-            batchAction = 'complete';
-            transfer = 'batch';
-          "
+          @click="openBatch('complete')"
         >
           <CheckCheck :size="15" /></button
         ><button
           class="icon-button"
           aria-label="批量取消完成"
-          @click="
-            batchAction = 'pending';
-            transfer = 'batch';
-          "
+          @click="openBatch('pending')"
         >
           <ListTodo :size="15" /></button
         ><button
@@ -800,10 +859,7 @@ onUnmounted(() => {
         ><button
           class="icon-button"
           aria-label="批量删除"
-          @click="
-            batchAction = 'delete';
-            transfer = 'batch';
-          "
+          @click="openBatch('delete')"
         >
           <Trash2 :size="14" />
         </button>
@@ -814,7 +870,7 @@ onUnmounted(() => {
         :date="listView === 'inbox' ? null : s.date"
         :editing="editor?.id"
         :batch="batch"
-        @edit="editor = $event"
+        @edit="chooseEditor"
         @drag="dragging = true"
         @drop="rootDrop"
         @paste="importLines"
@@ -894,10 +950,7 @@ onUnmounted(() => {
               <button
                 class="icon-button"
                 aria-label="关闭日期任务"
-                @click="
-                  drawer = false;
-                  editor = null;
-                "
+                @click="closeDrawer"
               >
                 <X :size="16" />
               </button>
@@ -906,7 +959,7 @@ onUnmounted(() => {
               :roots="roots"
               :date="activeDay"
               :editing="editor?.id"
-              @edit="editor = $event"
+              @edit="chooseEditor"
               @drag="dragging = true"
               @drop="rootDrop"
               @paste="importLines"
