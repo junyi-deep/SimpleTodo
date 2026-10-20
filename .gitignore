@@ -1,0 +1,30 @@
+.task
+bin
+frontend/dist
+frontend/node_modules
+build/linux/appimage/build
+build/windows/nsis/MicrosoftEdgeWebview2Setup.exe
+# Mobile generated (per-machine; overlays hold absolute paths)
+build/ios/xcode/overlay.json
+build/ios/xcode/gen/
+build/android/overlay.json
+build/android/gen/
+# Local checks and browser traces
+frontend/test-results/
+frontend/playwright-report/
+.impeccable/review/
+# Local data and credentials never belong in the public repository
+.DS_Store
+*.db
+*.db-wal
+*.db-shm
+*.log
+*.syso
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.impeccable/config.local.json

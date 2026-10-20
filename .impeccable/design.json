@@ -1,0 +1,511 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-19T17:24:52.639189+00:00",
+  "title": "Design System: SimpleTodo",
+  "extensions": {
+    "sourceFiles": [
+      "PRODUCT.md",
+      ".impeccable/review/direction.md",
+      "frontend/src/style.css",
+      "frontend/src/App.vue",
+      "frontend/src/components/TaskTree.vue",
+      "frontend/src/components/TaskEditor.vue",
+      "frontend/src/components/SettingsDialog.vue",
+      "frontend/src/api/types.ts",
+      "todoservice.go"
+    ],
+    "captureMode": "code-scan",
+    "colorMeta": {
+      "surface": {
+        "role": "neutral",
+        "displayName": "surface",
+        "source": "frontend/src/style.css"
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "secondary",
+        "source": "frontend/src/style.css"
+      },
+      "hover": {
+        "role": "neutral",
+        "displayName": "hover",
+        "source": "frontend/src/style.css"
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "text",
+        "source": "frontend/src/style.css"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "muted",
+        "source": "frontend/src/style.css"
+      },
+      "quiet": {
+        "role": "neutral",
+        "displayName": "quiet",
+        "source": "frontend/src/style.css"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "border",
+        "source": "frontend/src/style.css"
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "accent",
+        "source": "frontend/src/style.css"
+      },
+      "accent-strong": {
+        "role": "primary",
+        "displayName": "accent-strong",
+        "source": "frontend/src/style.css"
+      },
+      "accent-soft": {
+        "role": "primary",
+        "displayName": "accent-soft",
+        "source": "frontend/src/style.css"
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "danger",
+        "source": "frontend/src/style.css"
+      },
+      "surface-dark": {
+        "role": "neutral",
+        "displayName": "surface-dark",
+        "source": "frontend/src/style.css"
+      },
+      "secondary-dark": {
+        "role": "neutral",
+        "displayName": "secondary-dark",
+        "source": "frontend/src/style.css"
+      },
+      "hover-dark": {
+        "role": "neutral",
+        "displayName": "hover-dark",
+        "source": "frontend/src/style.css"
+      },
+      "text-dark": {
+        "role": "neutral",
+        "displayName": "text-dark",
+        "source": "frontend/src/style.css"
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "muted-dark",
+        "source": "frontend/src/style.css"
+      },
+      "quiet-dark": {
+        "role": "neutral",
+        "displayName": "quiet-dark",
+        "source": "frontend/src/style.css"
+      },
+      "border-dark": {
+        "role": "neutral",
+        "displayName": "border-dark",
+        "source": "frontend/src/style.css"
+      },
+      "accent-dark": {
+        "role": "primary",
+        "displayName": "accent-dark",
+        "source": "frontend/src/style.css"
+      },
+      "accent-strong-dark": {
+        "role": "primary",
+        "displayName": "accent-strong-dark",
+        "source": "frontend/src/style.css"
+      },
+      "accent-soft-dark": {
+        "role": "primary",
+        "displayName": "accent-soft-dark",
+        "source": "frontend/src/style.css"
+      },
+      "danger-dark": {
+        "role": "semantic",
+        "displayName": "danger-dark",
+        "source": "frontend/src/style.css"
+      },
+      "task-red": {
+        "role": "semantic",
+        "displayName": "task-red",
+        "source": "frontend/src/api/types.ts"
+      },
+      "task-orange": {
+        "role": "semantic",
+        "displayName": "task-orange",
+        "source": "frontend/src/api/types.ts"
+      },
+      "task-yellow": {
+        "role": "semantic",
+        "displayName": "task-yellow",
+        "source": "frontend/src/api/types.ts"
+      },
+      "task-green": {
+        "role": "semantic",
+        "displayName": "task-green",
+        "source": "frontend/src/api/types.ts"
+      },
+      "task-blue": {
+        "role": "semantic",
+        "displayName": "task-blue",
+        "source": "frontend/src/api/types.ts"
+      },
+      "task-purple": {
+        "role": "semantic",
+        "displayName": "task-purple",
+        "source": "frontend/src/api/types.ts"
+      },
+      "task-none": {
+        "role": "semantic",
+        "displayName": "task-none",
+        "source": "frontend/src/api/types.ts"
+      }
+    },
+    "typographyMeta": {
+      "headline": {
+        "displayName": "headline",
+        "purpose": "主日期标题"
+      },
+      "title": {
+        "displayName": "title",
+        "purpose": "现行系统字体层级"
+      },
+      "section": {
+        "displayName": "section",
+        "purpose": "现行系统字体层级"
+      },
+      "body": {
+        "displayName": "body",
+        "purpose": "现行系统字体层级"
+      },
+      "task": {
+        "displayName": "task",
+        "purpose": "任务标题，可换行"
+      },
+      "task-mini": {
+        "displayName": "task-mini",
+        "purpose": "现行系统字体层级"
+      },
+      "button": {
+        "displayName": "button",
+        "purpose": "现行系统字体层级"
+      },
+      "label": {
+        "displayName": "label",
+        "purpose": "现行系统字体层级"
+      },
+      "small": {
+        "displayName": "small",
+        "purpose": "现行系统字体层级"
+      },
+      "support": {
+        "displayName": "support",
+        "purpose": "现行系统字体层级"
+      },
+      "footer": {
+        "displayName": "footer",
+        "purpose": "现行系统字体层级"
+      },
+      "clock": {
+        "displayName": "clock",
+        "purpose": "仅专注计时数字"
+      }
+    },
+    "themeBindings": {
+      "light": {
+        "--surface": "{colors.surface}",
+        "--secondary": "{colors.secondary}",
+        "--hover": "{colors.hover}",
+        "--text": "{colors.text}",
+        "--muted": "{colors.muted}",
+        "--quiet": "{colors.quiet}",
+        "--border": "{colors.border}",
+        "--accent": "{colors.accent}",
+        "--accent-strong": "{colors.accent-strong}",
+        "--accent-soft": "{colors.accent-soft}",
+        "--danger": "{colors.danger}"
+      },
+      "dark": {
+        "--surface": "{colors.surface-dark}",
+        "--secondary": "{colors.secondary-dark}",
+        "--hover": "{colors.hover-dark}",
+        "--text": "{colors.text-dark}",
+        "--muted": "{colors.muted-dark}",
+        "--quiet": "{colors.quiet-dark}",
+        "--border": "{colors.border-dark}",
+        "--accent": "{colors.accent-dark}",
+        "--accent-strong": "{colors.accent-strong-dark}",
+        "--accent-soft": "{colors.accent-soft-dark}",
+        "--danger": "{colors.danger-dark}"
+      }
+    },
+    "tonalRampPolicy": "没有源代码色阶；此扫描不合成新色阶。",
+    "shadows": [
+      {
+        "name": "menu",
+        "value": "0 8px 30px rgb(24 45 29 / 0.15)",
+        "purpose": "浮出菜单"
+      },
+      {
+        "name": "dialog",
+        "value": "0 20px 70px rgb(20 35 24 / 0.24)",
+        "purpose": "模态对话框"
+      },
+      {
+        "name": "toast",
+        "value": "0 5px 18px rgb(20 35 24 / 0.15)",
+        "purpose": "底部提示"
+      },
+      {
+        "name": "entry-focus",
+        "value": "0 2px 9px rgb(32 58 35 / 0.05)",
+        "purpose": "新增入口焦点"
+      },
+      {
+        "name": "selected-segment",
+        "value": "0 1px 5px rgb(20 35 24 / 0.05)",
+        "purpose": "专注模式当前项"
+      },
+      {
+        "name": "selected-calendar-day",
+        "value": "inset 0 0 0 1.5px var(--accent)",
+        "purpose": "日期选择"
+      },
+      {
+        "name": "focus-breathe-midpoint",
+        "value": "0 8px 28px rgb(72 114 77 / 0.12)",
+        "purpose": "专注运行呼吸中点"
+      }
+    ],
+    "motion": [
+      {
+        "name": "tree-toggle",
+        "value": "transform 0.18s",
+        "purpose": "折叠箭头旋转90deg"
+      },
+      {
+        "name": "loading",
+        "value": "spin 1s linear infinite",
+        "purpose": "加载图标"
+      },
+      {
+        "name": "focus-running",
+        "value": "breathe 5s ease-in-out infinite",
+        "purpose": "50%时 scale(1.035)"
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation: none !important; transition: none !important;",
+        "purpose": ".no-motion * 与 prefers-reduced-motion: reduce 均应用"
+      }
+    ],
+    "focus": {
+      "outline": "2px solid var(--accent)",
+      "outlineOffset": "3px",
+      "offsetTargets": [
+        "button",
+        "input",
+        "textarea",
+        "select",
+        "a"
+      ],
+      "outlineTargets": [
+        "button:focus-visible",
+        "input:focus-visible",
+        "textarea:focus-visible",
+        "select:focus-visible",
+        "[role=\"treeitem\"]:focus-visible"
+      ],
+      "entryFocusWithin": "border-color: var(--accent);\n  box-shadow: 0 2px 9px rgb(32 58 35 / 0.05);",
+      "entryInputOutline": "none !important"
+    },
+    "breakpoints": [
+      {
+        "name": "wide-main",
+        "value": "(min-width: 700px)"
+      },
+      {
+        "name": "compact-width",
+        "value": "(max-width: 420px)"
+      },
+      {
+        "name": "compact-settings",
+        "value": "(max-width: 600px)"
+      },
+      {
+        "name": "compact-height",
+        "value": "(max-height: 620px)"
+      }
+    ],
+    "windowSizes": {
+      "main": {
+        "default": [
+          460,
+          720
+        ],
+        "minimum": [
+          360,
+          480
+        ],
+        "reviewViewports": [
+          [
+            460,
+            760
+          ],
+          [
+            360,
+            600
+          ]
+        ]
+      },
+      "overview": {
+        "default": [
+          1080,
+          760
+        ],
+        "minimum": [
+          840,
+          600
+        ]
+      },
+      "mini": {
+        "default": [
+          300,
+          420
+        ],
+        "minimum": [
+          240,
+          62
+        ],
+        "collapsedHeight": 62
+      },
+      "quick": {
+        "default": [
+          420,
+          230
+        ],
+        "minimum": [
+          360,
+          200
+        ]
+      }
+    },
+    "surface": {
+      "css": "min-height: 100dvh;\n  display: flex;\n  flex-direction: column;\n  background: color-mix(\n    in srgb,\n    var(--surface) calc(var(--window-alpha) * 100%),\n    transparent\n  );\n  max-width: 100%;\n  position: relative;",
+      "defaultWindowAlpha": 1,
+      "dialogBackdrop": "rgb(20 30 23 / 0.28)"
+    },
+    "verificationLimits": [
+      "代码扫描未验证原生窗口、通知或快捷键。",
+      "direction.md 的主窗口截图尺寸与 todoservice.go 默认/最小尺寸不同，文档分别记录。",
+      "未读取实时计算样式或在本次扫描重新验收截图。"
+    ]
+  },
+  "components": [
+    {
+      "name": "主按钮",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "主按钮",
+      "html": "<button class=\"ds-button-primary\">记录</button>",
+      "css": ".ds-button-primary { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color: var(--text); cursor: pointer; border: 1px solid var(--border);\n  border-radius: 7px;\n  padding: 8px 12px;\n  min-height: 34px;\n  display: inline-flex;\n  gap: 7px;\n  align-items: center;\n  justify-content: center;\n  font-size: 12px;\n  font-weight: 500;\n  white-space: nowrap;\n  background: var(--surface); background: var(--accent);\n  border-color: var(--accent);\n  color: var(--surface); } .ds-button-primary:hover { background: var(--hover); } .ds-button-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; } .ds-button-primary:disabled { opacity: 0.45;\n  cursor: not-allowed; } .ds-button-primary:hover { background: var(--accent-strong); }"
+    },
+    {
+      "name": "次要按钮",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "次要按钮",
+      "html": "<button class=\"ds-button-secondary\">记录</button>",
+      "css": ".ds-button-secondary { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color: var(--text); cursor: pointer; border: 1px solid var(--border);\n  border-radius: 7px;\n  padding: 8px 12px;\n  min-height: 34px;\n  display: inline-flex;\n  gap: 7px;\n  align-items: center;\n  justify-content: center;\n  font-size: 12px;\n  font-weight: 500;\n  white-space: nowrap;\n  background: var(--surface);  } .ds-button-secondary:hover { background: var(--hover); } .ds-button-secondary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; } .ds-button-secondary:disabled { opacity: 0.45;\n  cursor: not-allowed; }"
+    },
+    {
+      "name": "危险按钮",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "危险按钮",
+      "html": "<button class=\"ds-button-destructive\">删除</button>",
+      "css": ".ds-button-destructive { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color: var(--text); cursor: pointer; border: 1px solid var(--border);\n  border-radius: 7px;\n  padding: 8px 12px;\n  min-height: 34px;\n  display: inline-flex;\n  gap: 7px;\n  align-items: center;\n  justify-content: center;\n  font-size: 12px;\n  font-weight: 500;\n  white-space: nowrap;\n  background: var(--surface); background: var(--accent);\n  border-color: var(--accent);\n  color: var(--surface); background: var(--danger);\n  border-color: var(--danger); } .ds-button-destructive:hover { background: var(--hover); } .ds-button-destructive:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; } .ds-button-destructive:disabled { opacity: 0.45;\n  cursor: not-allowed; }"
+    },
+    {
+      "name": "标准字段",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "普通文本输入，placeholder 与键盘焦点沿用现行 CSS。",
+      "html": "<input class=\"ds-field\" placeholder=\"准备做什么？\" aria-label=\"任务标题\" />",
+      "css": ".ds-field { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size: 14px; color: var(--text); background: var(--surface);\n  border: 1px solid var(--border);\n  border-radius: 7px;\n  padding: 9px 10px;\n  min-width: 0; caret-color: var(--accent); } .ds-field::placeholder { color: var(--muted); } .ds-field:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }"
+    },
+    {
+      "name": "任务视图导航",
+      "kind": "nav",
+      "refersTo": "tab-active",
+      "description": "等宽页签；活动项使用浅绿状态面。",
+      "html": "<nav class=\"ds-tabs\" aria-label=\"任务视图\"><button class=\"ds-active\" aria-current=\"page\">当天</button><button>收集箱</button><button>待完成</button></nav>",
+      "css": ".ds-tabs { display: flex;\n  align-items: center;\n  gap: 7px;\n  margin-top: 21px;\n  padding-bottom: 16px;\ngap: 3px;\nmargin-top: 12px;\n    padding-bottom: 10px; }.ds-tabs > button { display: flex;\n  align-items: center;\n  gap: 6px;\n  flex: 1;\n  justify-content: center;\n  font-size: 11px;\n  color: var(--muted);\n  padding: 9px 4px;\n  border-radius: 6px;\n  white-space: nowrap;\nfont-size: 10px;\n    gap: 4px; }.ds-tabs > button.ds-active { color: var(--accent);\n  background: var(--accent-soft);\n  font-weight: 600; }.ds-tabs > button:hover:not(.ds-active) { background: var(--secondary); }.ds-tabs > button { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;border: 0; background: none; cursor: pointer; } .ds-tabs > button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }"
+    },
+    {
+      "name": "提示容器",
+      "kind": "card",
+      "refersTo": "notice-card",
+      "description": "通知面板使用次级表面，不增加卡片阴影。",
+      "html": "<section class=\"ds-notice\"><header><h3>错过的提醒</h3></header><div>查看提醒并继续安排。</div></section>",
+      "css": ".ds-notice { margin: 8px 25px 5px;\n  padding: 14px;\n  background: var(--secondary);\n  border-radius: 8px; }.ds-notice > header { display: flex;\n  align-items: center;\n  gap: 12px;\n  margin-bottom: 12px; }.ds-notice > div { display: flex;\n  align-items: flex-start;\n  gap: 8px;\n  font-size: 12px;\n  margin-top: 10px; }.ds-notice { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; color: var(--text); } .ds-notice h3 { margin: 0; font-size: 14px; font-weight: 600; }"
+    },
+    {
+      "name": "已完成任务行",
+      "kind": "custom",
+      "refersTo": "task-row",
+      "description": "紧凑行、明确勾号与划线；示例不提供业务操作。",
+      "html": "<div class=\"ds-task-row\"><button class=\"ds-task-check ds-checked\" aria-label=\"取消完成\"><svg viewBox=\"0 0 16 16\"><path d=\"m3 8 3 3 7-7\" /></svg></button><button class=\"ds-task-title\">整理今天的任务</button></div>",
+      "css": ".ds-task-row { position: relative;\n  display: flex;\n  align-items: center;\n  gap: 7px;\n  min-height: 43px;\n  padding: 6px 3px 6px calc(var(--depth) * 16px + 1px);\n  border-radius: 6px; }.ds-task-row:hover { background: var(--secondary); }.ds-task-title { text-align: left;\n  line-height: 1.65;\n  font-size: 13px;\n  overflow-wrap: anywhere;\n  min-width: 0;\n  flex: 1;\n  padding: 3px 0; }.ds-task-check { width: 16px;\n  height: 16px;\n  min-width: 16px;\n  border: 1.25px solid color-mix(in srgb, var(--muted) 65%, transparent);\n  border-radius: 5px;\n  display: grid;\n  place-items: center;\n  padding: 0; }.ds-task-check.ds-checked { background: var(--accent);\n  border-color: var(--accent); }.ds-task-check svg { width: 13px;\n  height: 13px;\n  fill: none;\n  stroke: var(--surface);\n  stroke-width: 1.8; }.ds-task-row { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; color: var(--text); --depth: 0; } .ds-task-row button { font: inherit; cursor: pointer; background: none; } .ds-task-row .ds-task-check.ds-checked { background: var(--accent); } .ds-task-title { border: 0; } .ds-task-row button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }.ds-task-title { text-decoration: line-through; text-decoration-thickness: 1px; color: var(--muted); font-size: 13px; line-height: 1.65; }"
+    },
+    {
+      "name": "底部新增入口",
+      "kind": "input",
+      "refersTo": "add-task",
+      "description": "独立输入无框，容器响应 focus-within。",
+      "html": "<label class=\"ds-add\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M5 12h14M12 5v14\"/></svg><input placeholder=\"添加任务…\" aria-label=\"添加任务\" /></label>",
+      "css": ".ds-add { margin: 8px 25px 0;\n  border: 1px solid var(--border);\n  border-radius: 8px;\n  display: flex;\n  align-items: center;\n  gap: 9px;\n  padding: 9px 10px;\n  color: var(--accent);\n  background: var(--surface);\nmargin-inline: 17px; }.ds-add:focus-within { border-color: var(--accent);\n  box-shadow: 0 2px 9px rgb(32 58 35 / 0.05); }.ds-add > input { border: 0 !important;\n  flex: 1;\n  padding: 3px 0 !important;\n  font-size: 12px;\n  outline: none !important;\n  background: transparent !important; }.ds-add { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; } .ds-add > input { font-family: inherit; color: var(--text); caret-color: var(--accent); } .ds-add > input::placeholder { color: var(--muted); }"
+    },
+    {
+      "name": "选中日历格",
+      "kind": "custom",
+      "refersTo": "calendar-day",
+      "description": "使用实际选中内描边与范围底色；140px 仅为孤立示例宽度，生产宽度由七列网格决定。",
+      "html": "<button class=\"ds-calendar-day ds-inrange ds-selected\"><span class=\"ds-calendar-number\">20</span><span class=\"ds-calendar-task\">整理今天的任务</span></button>",
+      "css": ".ds-calendar-day { min-height: 99px;\n  display: flex;\n  flex-direction: column;\n  align-items: stretch;\n  padding: 7px 8px;\n  text-align: left;\n  border-right: 1px solid var(--border);\n  border-bottom: 1px solid var(--border);\n  overflow: hidden;\nmin-height: 66px; }.ds-calendar-day:hover { background: var(--secondary); }.ds-calendar-day.ds-inrange { background: var(--accent-soft); }.ds-calendar-day.ds-selected { box-shadow: inset 0 0 0 1.5px var(--accent); }.ds-calendar-number { font-size: 11px;\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  margin-bottom: 7px;\nflex-shrink: 0;\n  line-height: 16px;\n  margin-bottom: 3px; }.ds-calendar-task { font-size: 10px;\n  line-height: 1.6;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  overflow: hidden;\n  color: var(--text);\nflex-shrink: 0;\n  line-height: 16px; }.ds-calendar-day { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif; width: 140px; background: transparent; color: var(--text); border-top: 0; border-left: 0; cursor: pointer; } .ds-calendar-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }"
+    },
+    {
+      "name": "对话框表面",
+      "kind": "custom",
+      "refersTo": "dialog",
+      "description": "常规弹层的表面、边界和内容密度；此示例以普通容器展示，不模拟原生模态行为。",
+      "html": "<section class=\"ds-dialog\"><header class=\"ds-dialog-header\">任务详情</header><div class=\"ds-dialog-body\">准备做什么？</div><footer class=\"ds-dialog-footer\"><button>关闭</button></footer></section>",
+      "css": ".ds-dialog { padding: 0;\n  border: 0;\n  border-radius: 12px;\n  background: var(--surface);\n  color: var(--text);\n  width: min(540px, calc(100vw - 28px));\n  max-height: calc(100dvh - 36px);\n  box-shadow: 0 20px 70px rgb(20 35 24 / 0.24);\n  overflow: hidden;\nmargin: auto; }.ds-dialog-header { display: flex;\n  align-items: center;\n  justify-content: space-between;\n  padding: 15px 21px;\n  border-bottom: 1px solid var(--border);\n  font-size: 13px;\n  font-weight: 600; }.ds-dialog-body { padding: 20px 23px;\n  overflow-y: auto;\n  max-height: calc(100dvh - 195px);\npadding: 17px; }.ds-dialog-footer { display: flex;\n  align-items: center;\n  justify-content: flex-end;\n  gap: 8px;\n  padding: 13px 21px;\n  border-top: 1px solid var(--border);\nflex-shrink: 0; }.ds-dialog { font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;font-size: 14px; } .ds-dialog-footer button { font: inherit; font-size: 12px; border: 0; background: none; color: var(--accent); cursor: pointer; } .ds-dialog-footer button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }"
+    }
+  ],
+  "narrative": {
+    "overview": "SimpleTodo 是 macOS 优先、兼顾 Windows 的本地桌面待办工具。界面以紧凑任务树、日期选择和连续录入为中心：温和近白或深绿灰底色、低饱和绿色强调、系统字体、细分隔线以及 Lucide 线性图标。文字与状态承担信息，空间服务于频繁勾选、拆分、改期和新增。\n\n本文从已有代码扫描记录现状，不建立新的视觉方向，也不表示截图或原生能力已通过验收。颜色和组件原语以前置 YAML 为准，浅色为无后缀默认值，深色使用对应 `-dark` 值；JSON sidecar 保存不能放入前置 token 的交互、阴影和示例。",
+    "keyCharacteristics": [
+      "桌面操作工具的紧凑密度与清楚任务状态。",
+      "浅深主题共享语义；系统字体与本地 Lucide 图标。",
+      "主窗口、总览、浮窗、快速录入各有固定用途。",
+      "任务、月历、设置内容分区滚动，新增入口保持可达。"
+    ],
+    "rules": [],
+    "dos": [
+      "Do 沿用系统字体、Lucide 线性图标和现有语义颜色。",
+      "Do 保持任务标题换行、完成划线、部分完成短横线和键盘焦点。",
+      "Do 保持固定窗口内的独立滚动与底部录入入口。",
+      "Do 同时检查浅色、深色、窄窗口与低高度布局。",
+      "Do 在对话框展示导入预览、错误、批量影响范围等实际业务反馈。"
+    ],
+    "donts": [
+      "Don't 加入远程字体、营销页装饰或摄影背景。",
+      "Don't 用大卡片或大留白替换紧凑任务行。",
+      "Don't 把任务标签的多色圆点扩展为整个界面的强调色。",
+      "Don't 用颜色单独表示完成、部分完成、错误或当前选择。",
+      "Don't 把本次代码扫描或浏览器截图视为原生窗口、通知、快捷键的实机验收。"
+    ]
+  }
+}

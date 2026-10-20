@@ -1,0 +1,96 @@
+name: Build and release
+on:
+  push:
+    tags: ['*']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  build:
+    name: ${{ matrix.platform }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: macos-arm64
+          - os: windows-2022
+            platform: windows-amd64
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        shell: bash
+        run: |
+          npm ci --prefix frontend
+          go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.33
+      - name: Frontend checks and build
+        shell: bash
+        run: |
+          npm run typecheck --prefix frontend
+          npm test --prefix frontend
+          npm run build --prefix frontend
+      - name: Go checks
+        shell: bash
+        run: |
+          go test ./...
+          go vet ./...
+      - name: Package macOS arm64
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          test "$(uname -m)" = arm64
+          wails3 task darwin:package ARCH=arm64
+          mkdir -p release
+          ditto -c -k --sequesterRsrc --keepParent bin/simpletodo.app release/SimpleTodo-macos-arm64.zip
+      - name: Package Windows amd64
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          wails3 task windows:build ARCH=amd64
+          mkdir -p release
+          powershell -NoProfile -Command "Compress-Archive -Path bin/simpletodo.exe -DestinationPath release/SimpleTodo-windows-amd64.zip"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ${{ matrix.platform }}
+          path: release/*.zip
+          if-no-files-found: error
+          retention-days: 7
+  publish:
+    name: Publish release
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          path: release
+          merge-multiple: true
+      - name: Publish the two platform archives
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          test "$(find release -name '*.zip' | wc -l | tr -d ' ')" = 2
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" release/*.zip --clobber
+          else
+            gh release create "$RELEASE_TAG" release/*.zip --verify-tag --title "SimpleTodo $RELEASE_TAG" --generate-notes
+          fi

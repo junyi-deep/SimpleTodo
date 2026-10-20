@@ -1,0 +1,15 @@
+{
+  "fixed": {
+    "file_version": "0.1.0"
+  },
+  "info": {
+    "0409": {
+      "ProductVersion": "0.1.0",
+      "CompanyName": "SimpleTodo",
+      "FileDescription": "SimpleTodo local task planner",
+      "LegalCopyright": "\u00a9 2026 SimpleTodo",
+      "ProductName": "SimpleTodo",
+      "Comments": "Local tasks and focus timer"
+    }
+  }
+}
