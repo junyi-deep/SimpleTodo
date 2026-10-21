@@ -52,7 +52,7 @@ func (s *TodoService) Boot() (map[string]any, error) {
 		if p := s.startupErr.Load(); p != nil {
 			msg = *p
 		}
-		return map[string]any{"startupError": msg, "settings": map[string]string{"theme": "system", "onboarding": "true"}, "version": "0.1.0", "dataDir": s.dataPath, "today": time.Now().Format("2006-01-02"), "windows": []todo.WindowState{}, "notices": []todo.Notice{}, "countdowns": []todo.Countdown{}, "warnings": s.warnings, "capabilities": map[string]any{"platform": runtime.GOOS}}, nil
+		return map[string]any{"startupError": msg, "settings": map[string]string{"theme": "system", "onboarding": "true"}, "version": "0.1.1", "dataDir": s.dataPath, "today": time.Now().Format("2006-01-02"), "windows": []todo.WindowState{}, "notices": []todo.Notice{}, "countdowns": []todo.Countdown{}, "warnings": s.warnings, "capabilities": map[string]any{"platform": runtime.GOOS}}, nil
 	}
 
 	settings, err := s.core().Settings()
@@ -77,7 +77,7 @@ func (s *TodoService) Boot() (map[string]any, error) {
 	}
 	allowed, _ := s.ns.CheckNotificationAuthorization()
 	auto, _ := s.app.Autostart.IsEnabled()
-	return map[string]any{"settings": settings, "version": "0.1.0", "dataDir": s.core().DataDir(), "today": time.Now().In(mustLocation(s.core().Timezone())).Format("2006-01-02"), "timezone": s.core().Timezone(), "focus": f, "countdowns": cs, "windows": ws, "notices": ns, "warnings": s.warnings, "autostart": auto, "notificationAllowed": allowed, "capabilities": map[string]any{"desktopMode": desktop.Supported(), "edgeHide": desktop.Supported(), "platform": runtime.GOOS}}, nil
+	return map[string]any{"settings": settings, "version": "0.1.1", "dataDir": s.core().DataDir(), "today": time.Now().In(mustLocation(s.core().Timezone())).Format("2006-01-02"), "timezone": s.core().Timezone(), "focus": f, "countdowns": cs, "windows": ws, "notices": ns, "warnings": s.warnings, "autostart": auto, "notificationAllowed": allowed, "capabilities": map[string]any{"desktopMode": desktop.Supported(), "edgeHide": desktop.Supported(), "platform": runtime.GOOS}}, nil
 }
 func (s *TodoService) Query(q todo.Query) (todo.Snapshot, error) {
 	if s.core() == nil {
@@ -427,19 +427,33 @@ func (s *TodoService) SetView(view string) error {
 	restore := s.listBounds
 	s.mu.Unlock()
 	application.InvokeSync(func() {
+		var area application.Rect
+		// ScreenManager exposes DIP work areas; GetScreen on macOS returns
+		// unnormalised native values on Retina displays in this Wails version.
+		if screen := s.app.Screen.ScreenNearestDipRect(w.Bounds()); screen != nil {
+			area = screen.WorkArea
+		}
+		minW, minH := 440, 380
 		if view == "calendar" {
-			w.SetMinSize(760, 500)
+			minW, minH = 760, 500
+		}
+		if area.Width > 0 && area.Height > 0 {
+			minW, minH = min(minW, area.Width), min(minH, area.Height)
+		}
+		w.SetMinSize(minW, minH)
+		if view == "calendar" {
 			if !w.IsMaximised() {
-				w.SetSize(1080, 720)
+				bounds := w.Bounds()
+				bounds.Width, bounds.Height = 1080, 720
+				w.SetBounds(fitWindowBounds(bounds, area))
 			}
 		} else {
-			w.SetMinSize(440, 380)
 			if old == "calendar" && !w.IsMaximised() {
-				if restore.Width >= 440 {
-					w.SetBounds(restore)
-				} else {
-					w.SetSize(600, 580)
+				if restore.Width < 440 {
+					restore = w.Bounds()
+					restore.Width, restore.Height = 600, 580
 				}
+				w.SetBounds(fitWindowBounds(restore, area))
 			}
 		}
 	})

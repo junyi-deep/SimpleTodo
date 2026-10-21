@@ -17,7 +17,7 @@ import (
 )
 
 func (e *Engine) exportLocked() (Transfer, error) {
-	d := Transfer{Version: 1, AppVersion: "0.1.0", ExportedAt: e.now().UnixMilli(), Tasks: []Task{}, Focus: []Focus{}}
+	d := Transfer{Version: 1, AppVersion: "0.1.1", ExportedAt: e.now().UnixMilli(), Tasks: []Task{}, Focus: []Focus{}}
 	rows, err := e.db.Query("SELECT " + columns + " FROM tasks ORDER BY planned_date,sort_order,id")
 	if err != nil {
 		return d, err

@@ -81,6 +81,8 @@ async function toggle() {
         : Math.max(8, rect.top - height - 5)) + "px",
   });
   p.showPopover();
+  // Safari does not focus buttons on mouse/AX activation by default.
+  trigger.value?.focus();
 }
 function choose(i: Item) {
   if (i.disabled) return;

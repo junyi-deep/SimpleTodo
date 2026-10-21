@@ -19,9 +19,13 @@ test("列表内连续录入、多级快捷键和完成汇总", async ({ page }) 
   await input.press("Enter");
   await input.press("Escape");
   await row(page, leaf).getByLabel("完成任务及所有后代").click();
-  await expect(row(page, title)).toHaveAttribute("aria-checked", "true");
+  await expect(
+    row(page, title).getByRole("button", { name: "取消完成", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   await page.reload();
-  await expect(row(page, title)).toHaveAttribute("aria-checked", "true");
+  await expect(
+    row(page, title).getByRole("button", { name: "取消完成", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
 });
 test("收集箱显示全部任务，详情在行内保存，无颜色入口", async ({
   page,

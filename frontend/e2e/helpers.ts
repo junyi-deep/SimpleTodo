@@ -29,7 +29,7 @@ export async function root(
 }
 export function row(page: Page, title: string) {
   return page
-    .getByRole("treeitem")
+    .locator("[data-node]")
     .filter({ has: page.getByRole("button", { name: title, exact: true }) });
 }
 export async function add(page: Page, title: string) {

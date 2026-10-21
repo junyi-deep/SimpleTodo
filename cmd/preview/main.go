@@ -68,7 +68,7 @@ func main() {
 			return nil, err
 		}
 		ws, err := e.Windows()
-		return map[string]any{"settings": settings, "version": "0.1.0", "dataDir": e.Dir, "today": time.Now().Format("2006-01-02"), "focus": f, "timezone": e.Timezone(), "countdowns": cs, "windows": ws, "notices": ns, "warnings": []string{}, "autostart": false, "notificationAllowed": false, "capabilities": map[string]any{"desktopMode": false, "edgeHide": false, "platform": "preview"}}, err
+		return map[string]any{"settings": settings, "version": "0.1.1", "dataDir": e.Dir, "today": time.Now().Format("2006-01-02"), "focus": f, "timezone": e.Timezone(), "countdowns": cs, "windows": ws, "notices": ns, "warnings": []string{}, "autostart": false, "notificationAllowed": false, "capabilities": map[string]any{"desktopMode": false, "edgeHide": false, "platform": "preview"}}, err
 	}}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(200) })

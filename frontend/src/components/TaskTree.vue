@@ -368,12 +368,7 @@ async function dropNode(e: DragEvent, t: Task) {
 }
 </script>
 <template>
-  <section
-    class="task-tree"
-    :class="{ compact }"
-    role="tree"
-    :aria-label="root.title"
-  >
+  <section class="task-tree" :class="{ compact }" :aria-label="root.title">
     <nav v-if="focused" class="branch-path" aria-label="任务层级路径">
       <template v-for="(ancestor, i) in breadcrumbs" :key="ancestor.id">
         <ChevronRight v-if="i" :size="12" />
@@ -386,227 +381,217 @@ async function dropNode(e: DragEvent, t: Task) {
         </button>
       </template>
     </nav>
-    <template v-for="{ task: t, depth } in rows" :key="t.id">
-      <div
-        class="task-row group"
-        :class="{
-          done: t.status === 'completed',
-          root: !t.parentId,
-          'is-dragging': draggedId === t.id,
-          'drop-target': dropHint === t.id,
-        }"
-        :style="{ '--depth': Math.min(depth, 5) }"
-        role="treeitem"
-        :aria-level="depth + 1"
-        :aria-setsize="t.parentId ? children(t.parentId).length : 1"
-        :aria-posinset="
-          t.parentId
-            ? children(t.parentId).findIndex((n) => n.id === t.id) + 1
-            : 1
-        "
-        :aria-expanded="children(t.id).length ? expanded.has(t.id) : undefined"
-        :aria-checked="
-          t.status === 'completed'
-            ? true
-            : progress(t.id).done > 0
-              ? 'mixed'
-              : false
-        "
-        :tabindex="rowFocus === t.id ? 0 : -1"
-        :data-node="t.id"
-        @dragenter.prevent="dropHint = t.id"
-        @dragleave="
-          if (
-            !($event.currentTarget as HTMLElement).contains(
-              $event.relatedTarget as Node,
-            )
-          )
-            dropHint = null;
-        "
-        @dragend="
-          draggedId = null;
-          dropHint = null;
-        "
-        @drop="dropHint = null"
-        @keydown="keydown($event, t)"
-        @focus="rowFocus = t.id"
-        @dragover.prevent
-        @drop.stop="dropNode($event, t)"
-      >
-        <span
-          class="drag-handle"
-          :draggable="!s.saving && s.sortMode === 'manual'"
-          @dragstart="startDrag($event, t)"
-          title="拖动；子任务放到节点下，按住 Alt 可同级排序"
-          ><GripVertical :size="13"
-        /></span>
-        <button
-          v-if="children(t.id).length"
-          class="tree-toggle"
-          :aria-label="expanded.has(t.id) ? '折叠子任务' : '展开子任务'"
-          @click="toggle(t.id)"
-        >
-          <ChevronRight
-            :size="13"
-            :class="{ rotate: expanded.has(t.id) }"
-          /></button
-        ><span v-else class="tree-toggle spacer" />
-        <button
-          class="task-check"
+    <div role="list" :aria-label="root.title">
+      <div v-for="{ task: t, depth } in rows" :key="t.id" role="listitem">
+        <div
+          class="task-row group"
           :class="{
-            checked: t.status === 'completed',
-            partial: t.status !== 'completed' && progress(t.id).done > 0,
+            done: t.status === 'completed',
+            root: !t.parentId,
+            'is-dragging': draggedId === t.id,
+            'drop-target': dropHint === t.id,
           }"
-          :aria-label="
-            t.status === 'completed' ? '取消完成' : '完成任务及所有后代'
+          :style="{ '--depth': Math.min(depth, 5) }"
+          role="group"
+          :aria-label="`${t.title}，第 ${depth + 1} 级任务`"
+          :tabindex="rowFocus === t.id ? 0 : -1"
+          :data-node="t.id"
+          @dragenter.prevent="dropHint = t.id"
+          @dragleave="
+            if (
+              !($event.currentTarget as HTMLElement).contains(
+                $event.relatedTarget as Node,
+              )
+            )
+              dropHint = null;
           "
-          :disabled="s.saving"
-          @click="s.complete(t)"
+          @dragend="
+            draggedId = null;
+            dropHint = null;
+          "
+          @drop="dropHint = null"
+          @keydown="keydown($event, t)"
+          @focus="rowFocus = t.id"
+          @dragover.prevent
+          @drop.stop="dropNode($event, t)"
         >
-          <svg v-if="t.status === 'completed'" viewBox="0 0 16 16">
-            <path d="m3 8 3 3 7-7" /></svg
-          ><span v-else-if="progress(t.id).done > 0" />
-        </button>
-        <div class="task-copy">
+          <span
+            class="drag-handle"
+            :draggable="!s.saving && s.sortMode === 'manual'"
+            @dragstart="startDrag($event, t)"
+            title="拖动；子任务放到节点下，按住 Alt 可同级排序"
+            ><GripVertical :size="13"
+          /></span>
           <button
-            class="task-title"
-            :title="t.title"
-            @click="titleClick(t)"
-            @dblclick="titleDoubleClick(t)"
+            v-if="children(t.id).length"
+            class="tree-toggle"
+            :aria-label="expanded.has(t.id) ? '折叠子任务' : '展开子任务'"
+            :aria-expanded="expanded.has(t.id)"
+            @click="toggle(t.id)"
+          >
+            <ChevronRight
+              :size="13"
+              :class="{ rotate: expanded.has(t.id) }"
+            /></button
+          ><span v-else class="tree-toggle spacer" />
+          <button
+            class="task-check"
+            :class="{
+              checked: t.status === 'completed',
+              partial: t.status !== 'completed' && progress(t.id).done > 0,
+            }"
+            :aria-label="
+              t.status === 'completed' ? '取消完成' : '完成任务及所有后代'
+            "
             :disabled="s.saving"
+            :aria-pressed="t.status === 'completed'"
+            @click="s.complete(t)"
           >
-            {{ t.title }}</button
-          ><small v-if="!t.parentId && t.remindAt" class="task-reminder"
-            ><Bell :size="10" />{{
-              new Date(t.remindAt).toLocaleString("zh-CN", {
-                month: "2-digit",
-                day: "2-digit",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            }}</small
-          >
-        </div>
-        <span v-if="children(t.id).length" class="task-progress"
-          >{{ progress(t.id).done }}/{{ progress(t.id).total }}</span
-        >
-        <Repeat2
-          v-if="t.seriesId"
-          class="task-indicator"
-          :size="12"
-          title="重复任务"
-        />
-        <button
-          v-if="!t.parentId"
-          class="icon-button reminder-trigger"
-          :class="{ scheduled: !!t.remindAt }"
-          :data-reminder-trigger="t.id"
-          aria-label="设置提醒"
-          @click.stop="reminding = !reminding"
-        >
-          <Bell :size="14" />
-        </button>
-        <details
-          class="node-more"
-          :data-owner="root.id"
-          :open="menu === t.id"
-          @toggle="
-            (e) => {
-              if (!(e.target as HTMLDetailsElement).open && menu === t.id)
-                menu = null;
-            }
-          "
-        >
-          <summary
-            class="icon-button"
-            aria-label="更多任务操作"
-            @click.prevent="openMenu(t, $event)"
-          >
-            <MoreHorizontal :size="16" />
-          </summary>
-          <Teleport to="body"
-            ><div
-              v-if="menu === t.id"
-              class="menu node-menu"
-              :data-popup="root.id"
-              :style="{
-                left: menuPosition.left + 'px',
-                top: menuPosition.top + 'px',
-              }"
-              @keydown.esc.stop="menu = null"
+            <svg v-if="t.status === 'completed'" viewBox="0 0 16 16">
+              <path d="m3 8 3 3 7-7" /></svg
+            ><span v-else-if="progress(t.id).done > 0" />
+          </button>
+          <div class="task-copy">
+            <button
+              class="task-title"
+              :title="t.title"
+              @click="titleClick(t)"
+              @dblclick="titleDoubleClick(t)"
+              :disabled="s.saving"
             >
-              <button v-if="t.parentId" @click="indent(t)">
-                <IndentIncrease :size="14" />缩进一级</button
-              ><button v-if="t.parentId" @click="indent(t, true)">
-                <IndentDecrease :size="14" />提升一级
-              </button>
-              <button
-                v-if="children(t.id).length"
-                @click="
-                  focused = t.id;
-                  expanded = new Set(nodes.map((n) => n.id));
-                  menu = null;
-                "
-              >
-                <Focus :size="14" />聚焦此分支</button
-              ><button
-                v-if="!t.parentId && !t.seriesId"
-                @click="
-                  s.move(t, t.date ? null : s.date);
-                  menu = null;
-                "
-              >
-                <CalendarDays :size="14" />{{
-                  t.date ? "移到收集箱" : "安排到所选日期"
-                }}
-              </button>
-              <button
-                v-if="t.parentId || !t.seriesId"
-                @click="
-                  placement = t;
-                  menu = null;
-                "
-              >
-                {{ t.parentId ? "移动到其他父任务…" : "调整计划日期…" }}
-              </button>
-              <hr />
-              <button class="danger" @click="del(t)">
-                <Trash2 :size="14" />删除{{
-                  children(t.id).length ? "整个分支" : ""
-                }}
-              </button>
-            </div></Teleport
+              {{ t.title }}</button
+            ><small v-if="!t.parentId && t.remindAt" class="task-reminder"
+              ><Bell :size="10" />{{
+                new Date(t.remindAt).toLocaleString("zh-CN", {
+                  month: "2-digit",
+                  day: "2-digit",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              }}</small
+            >
+          </div>
+          <span v-if="children(t.id).length" class="task-progress"
+            >{{ progress(t.id).done }}/{{ progress(t.id).total }}</span
           >
-        </details>
-      </div>
-      <TaskEditor
-        v-if="editing === t.id"
-        :key="t.id"
-        :task="t"
-        @close="emit('edit', null)"
-      />
-      <div
-        v-if="adding === t.id"
-        class="child-entry"
-        :style="{ paddingLeft: `${Math.min(depth + 1, 5) * 16 + 31}px` }"
-      >
-        <CornerDownRight :size="14" /><input
-          v-model="draft"
-          :data-new-child="t.id"
-          placeholder="添加子任务，Enter 连续录入"
-          maxlength="500"
-          @compositionstart="composing = true"
-          @compositionend="composing = false"
-          @keydown="saveChild(t, $event)"
-        /><button
-          class="icon-button"
-          @click="adding = null"
-          aria-label="取消新增"
+          <Repeat2
+            v-if="t.seriesId"
+            class="task-indicator"
+            :size="12"
+            title="重复任务"
+          />
+          <button
+            v-if="!t.parentId"
+            class="icon-button reminder-trigger"
+            :class="{ scheduled: !!t.remindAt }"
+            :data-reminder-trigger="t.id"
+            aria-label="设置提醒"
+            @click.stop="reminding = !reminding"
+          >
+            <Bell :size="14" />
+          </button>
+          <details
+            class="node-more"
+            :data-owner="root.id"
+            :open="menu === t.id"
+            @toggle="
+              (e) => {
+                if (!(e.target as HTMLDetailsElement).open && menu === t.id)
+                  menu = null;
+              }
+            "
+          >
+            <summary
+              class="icon-button"
+              aria-label="更多任务操作"
+              @click.prevent="openMenu(t, $event)"
+            >
+              <MoreHorizontal :size="16" />
+            </summary>
+            <Teleport to="body"
+              ><div
+                v-if="menu === t.id"
+                class="menu node-menu"
+                :data-popup="root.id"
+                :style="{
+                  left: menuPosition.left + 'px',
+                  top: menuPosition.top + 'px',
+                }"
+                @keydown.esc.stop="menu = null"
+              >
+                <button v-if="t.parentId" @click="indent(t)">
+                  <IndentIncrease :size="14" />缩进一级</button
+                ><button v-if="t.parentId" @click="indent(t, true)">
+                  <IndentDecrease :size="14" />提升一级
+                </button>
+                <button
+                  v-if="children(t.id).length"
+                  @click="
+                    focused = t.id;
+                    expanded = new Set(nodes.map((n) => n.id));
+                    menu = null;
+                  "
+                >
+                  <Focus :size="14" />聚焦此分支</button
+                ><button
+                  v-if="!t.parentId && !t.seriesId"
+                  @click="
+                    s.move(t, t.date ? null : s.date);
+                    menu = null;
+                  "
+                >
+                  <CalendarDays :size="14" />{{
+                    t.date ? "移到收集箱" : "安排到所选日期"
+                  }}
+                </button>
+                <button
+                  v-if="t.parentId || !t.seriesId"
+                  @click="
+                    placement = t;
+                    menu = null;
+                  "
+                >
+                  {{ t.parentId ? "移动到其他父任务…" : "调整计划日期…" }}
+                </button>
+                <hr />
+                <button class="danger" @click="del(t)">
+                  <Trash2 :size="14" />删除{{
+                    children(t.id).length ? "整个分支" : ""
+                  }}
+                </button>
+              </div></Teleport
+            >
+          </details>
+        </div>
+        <TaskEditor
+          v-if="editing === t.id"
+          :key="t.id"
+          :task="t"
+          @close="emit('edit', null)"
+        />
+        <div
+          v-if="adding === t.id"
+          class="child-entry"
+          :style="{ paddingLeft: `${Math.min(depth + 1, 5) * 16 + 31}px` }"
         >
-          ×
-        </button>
+          <CornerDownRight :size="14" /><input
+            v-model="draft"
+            :data-new-child="t.id"
+            placeholder="添加子任务，Enter 连续录入"
+            maxlength="500"
+            @compositionstart="composing = true"
+            @compositionend="composing = false"
+            @keydown="saveChild(t, $event)"
+          /><button
+            class="icon-button"
+            @click="adding = null"
+            aria-label="取消新增"
+          >
+            ×
+          </button>
+        </div>
       </div>
-    </template>
+    </div>
   </section>
   <ReminderPopover
     v-if="reminding"

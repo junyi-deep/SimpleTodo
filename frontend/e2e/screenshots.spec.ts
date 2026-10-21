@@ -81,7 +81,7 @@ test("README 实际界面截图与紧凑窗口布局", async ({ page, request })
   const drawer = page.getByLabel("日期任务抽屉");
   await expect(drawer).toBeVisible();
   await drawer
-    .getByRole("treeitem")
+    .locator("[data-node]")
     .filter({
       has: page.getByRole("button", { name: parent.title, exact: true }),
     })
