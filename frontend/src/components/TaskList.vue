@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { ref, nextTick, onMounted, onUnmounted } from "vue";
 import { Plus, CornerDownLeft } from "lucide-vue-next";
+import InlineTitle from "./InlineTitle.vue";
+import { canLeaveEditor } from "../composables/editorGuard";
 import TaskTree from "./TaskTree.vue";
 import { useTodo } from "../stores/todo";
 import type { Task } from "../api/types";
@@ -17,24 +19,18 @@ const emit = defineEmits<{
   paste: [string];
 }>();
 const s = useTodo(),
-  draft = ref(""),
-  input = ref<HTMLInputElement>(),
-  composing = ref(false);
-async function add(e?: KeyboardEvent) {
-  if (composing.value || e?.isComposing || s.saving || !draft.value.trim())
-    return;
-  if (await s.create(draft.value.trim(), undefined, props.date)) {
-    draft.value = "";
-    input.value?.focus();
+  adding = ref(false);
+async function start() {
+  if (await canLeaveEditor()) {
+    adding.value = true;
+    await nextTick();
   }
 }
-function paste(e: ClipboardEvent) {
-  const text = e.clipboardData?.getData("text/plain") || "";
-  if (text.trim().split(/\r?\n/).length > 1) {
-    e.preventDefault();
-    emit("paste", text);
-  }
+function requestAdd() {
+  void start();
 }
+onMounted(() => document.addEventListener("todo:new-task", requestAdd));
+onUnmounted(() => document.removeEventListener("todo:new-task", requestAdd));
 </script>
 <template>
   <section class="task-list" :aria-busy="s.loading">
@@ -61,39 +57,24 @@ function paste(e: ClipboardEvent) {
         />
       </div>
     </div>
-    <form class="inline-add" @submit.prevent="add()">
-      <Plus :size="15" /><input
-        ref="input"
-        v-model="draft"
-        aria-label="新待办标题"
-        placeholder="添加任务，按 Enter 保存"
-        maxlength="500"
-        @paste="paste"
-        @compositionstart="composing = true"
-        @compositionend="composing = false"
-        @keydown.enter.prevent="add($event)"
-        @keydown.tab="
-          (e) => {
-            if (s.boot?.settings.tabEntry === 'true') {
-              e.preventDefault();
-              add(e);
-            }
-          }
-        "
-        @keydown.esc.stop="
-          draft = '';
-          input?.blur();
-        "
-      /><button
-        aria-label="添加待办"
-        class="icon-button"
-        :disabled="!draft.trim() || s.saving"
-      >
-        <CornerDownLeft :size="14" />
-      </button>
-    </form>
+    <div v-if="adding" class="draft-task-row">
+      <span class="draft-check" /><InlineTitle
+        :date="date"
+        @done="adding = false"
+        @paste="emit('paste', $event)"
+      />
+    </div>
+    <button
+      v-else
+      class="add-task-button"
+      aria-label="新增待办"
+      title="新增待办"
+      @click="start"
+    >
+      <Plus :size="17" />
+    </button>
     <p v-if="!roots.length && !s.loading" class="compact-empty">
-      还没有任务。先记下一件要做的事。
+      点击加号，记下第一件要做的事。
     </p>
     <p v-if="s.loading" class="compact-empty">正在读取…</p>
     <button

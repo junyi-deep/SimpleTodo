@@ -125,6 +125,11 @@ func main() {
 		if er != nil {
 			return
 		}
+		if m["autostartConfigured"] != "true" {
+			if er = s.Autostart(true); er != nil {
+				app.Event.Emit("todo:error", "登录启动未能开启："+er.Error())
+			}
+		}
 		for _, action := range []string{"main", "quick"} {
 			if key := m["shortcut"+map[string]string{"main": "Main", "mini": "Mini", "quick": "Quick"}[action]]; key != "" {
 				if er = s.Shortcut(action, key); er != nil {

@@ -2,6 +2,10 @@ package main
 
 import "github.com/wailsapp/wails/v3/pkg/application"
 
+func mainWindowOptions(platform string) application.WebviewWindowOptions {
+	return application.WebviewWindowOptions{Name: "main", Title: "SimpleTodo", Width: 480, Height: 720, MinWidth: 400, MinHeight: 440, URL: "/?window=main", Frameless: platform == "windows", BackgroundColour: application.NewRGBA(255, 255, 255, 255), Mac: application.MacWindow{TitleBar: application.MacTitleBarHiddenInset, InvisibleTitleBarHeight: 36}}
+}
+
 // Keep enlarged views entirely inside the active display, including displays
 // positioned to the left or above the primary display.
 func fitWindowBounds(bounds, area application.Rect) application.Rect {

@@ -55,7 +55,7 @@ test("README 实际界面截图与紧凑窗口布局", async ({ page, request })
     remindAt: when.getTime(),
     reminderTime: `${String(when.getHours()).padStart(2, "0")}:${String(when.getMinutes()).padStart(2, "0")}`,
   });
-  await page.setViewportSize({ width: 600, height: 580 });
+  await page.setViewportSize({ width: 480, height: 720 });
   await page.goto("/?preview=1");
   await row(page, parent.title).getByLabel("展开子任务").click();
   await expect(
@@ -67,7 +67,7 @@ test("README 实际界面截图与紧凑窗口布局", async ({ page, request })
     animations: "disabled",
   });
   await page.setViewportSize({ width: 440, height: 480 });
-  await expect(page.getByLabel("新待办标题")).toBeVisible();
+  await expect(page.getByLabel("新增待办", { exact: true })).toBeVisible();
   expect(
     await page.locator("body").evaluate((el) => el.scrollWidth <= innerWidth),
   ).toBe(true);

@@ -2,6 +2,7 @@ package main
 
 import (
 	"changeme/internal/desktop"
+	"changeme/internal/releases"
 	"changeme/internal/todo"
 	"context"
 	"encoding/json"
@@ -9,6 +10,7 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/services/notifications"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -52,7 +54,7 @@ func (s *TodoService) Boot() (map[string]any, error) {
 		if p := s.startupErr.Load(); p != nil {
 			msg = *p
 		}
-		return map[string]any{"startupError": msg, "settings": map[string]string{"theme": "system", "onboarding": "true"}, "version": "0.1.1", "dataDir": s.dataPath, "today": time.Now().Format("2006-01-02"), "windows": []todo.WindowState{}, "notices": []todo.Notice{}, "countdowns": []todo.Countdown{}, "warnings": s.warnings, "capabilities": map[string]any{"platform": runtime.GOOS}}, nil
+		return map[string]any{"startupError": msg, "settings": map[string]string{"theme": "system", "onboarding": "true"}, "version": todo.Version, "dataDir": s.dataPath, "today": time.Now().Format("2006-01-02"), "windows": []todo.WindowState{}, "notices": []todo.Notice{}, "countdowns": []todo.Countdown{}, "warnings": s.warnings, "capabilities": map[string]any{"platform": runtime.GOOS}}, nil
 	}
 
 	settings, err := s.core().Settings()
@@ -77,7 +79,7 @@ func (s *TodoService) Boot() (map[string]any, error) {
 	}
 	allowed, _ := s.ns.CheckNotificationAuthorization()
 	auto, _ := s.app.Autostart.IsEnabled()
-	return map[string]any{"settings": settings, "version": "0.1.1", "dataDir": s.core().DataDir(), "today": time.Now().In(mustLocation(s.core().Timezone())).Format("2006-01-02"), "timezone": s.core().Timezone(), "focus": f, "countdowns": cs, "windows": ws, "notices": ns, "warnings": s.warnings, "autostart": auto, "notificationAllowed": allowed, "capabilities": map[string]any{"desktopMode": desktop.Supported(), "edgeHide": desktop.Supported(), "platform": runtime.GOOS}}, nil
+	return map[string]any{"settings": settings, "version": todo.Version, "dataDir": s.core().DataDir(), "today": time.Now().In(mustLocation(s.core().Timezone())).Format("2006-01-02"), "timezone": s.core().Timezone(), "focus": f, "countdowns": cs, "windows": ws, "notices": ns, "warnings": s.warnings, "autostart": auto, "notificationAllowed": allowed, "capabilities": map[string]any{"desktopMode": desktop.Supported(), "edgeHide": desktop.Supported(), "platform": runtime.GOOS}}, nil
 }
 func (s *TodoService) Query(q todo.Query) (todo.Snapshot, error) {
 	if s.core() == nil {
@@ -126,6 +128,12 @@ func (s *TodoService) Reparent(c todo.Command) ([]todo.Task, error) {
 		return nil, fmt.Errorf("MAINTENANCE: 正在维护数据，请稍后重试")
 	}
 	return s.core().Reparent(c)
+}
+func (s *TodoService) Nest(c todo.Command, revision string) ([]todo.Task, error) {
+	if err := s.ready(); err != nil {
+		return nil, err
+	}
+	return s.core().Nest(c, revision)
 }
 func (s *TodoService) Reorder(ids []string, revision string) error {
 	if err := s.ready(); err != nil {
@@ -334,23 +342,29 @@ func (s *TodoService) OpenDataDir() error {
 	}
 	return s.app.Browser.OpenFile(dir)
 }
-func (s *TodoService) CheckUpdate() error {
-	m, err := s.core().Settings()
+func (s *TodoService) CheckUpdate() (releases.Info, error) {
+	return releases.Latest(s.ctx, &http.Client{Timeout: 12 * time.Second}, releases.Endpoint, todo.Version, runtime.GOOS, runtime.GOARCH)
+}
+func (s *TodoService) DownloadUpdate() error {
+	info, err := s.CheckUpdate()
 	if err != nil {
 		return err
 	}
-	url := m["releaseURL"]
-	if !strings.HasPrefix(url, "https://") {
-		return fmt.Errorf("尚未配置有效的 HTTPS 项目发布页")
-	}
-	return s.app.Browser.OpenURL(url)
+	return s.app.Browser.OpenURL(info.DownloadURL)
 }
 func (s *TodoService) Autostart(enabled bool) error {
+	var err error
 	if enabled {
-		return s.app.Autostart.EnableWithOptions(application.AutostartOptions{Arguments: []string{"--background"}})
+		err = s.app.Autostart.EnableWithOptions(application.AutostartOptions{Arguments: []string{"--background"}})
+	} else {
+		err = s.app.Autostart.Disable()
 	}
-	return s.app.Autostart.Disable()
+	if err != nil {
+		return err
+	}
+	return s.core().SaveSettings(map[string]string{"autostartConfigured": "true"})
 }
+
 func (s *TodoService) Shortcut(action, key string) error {
 	s.shortcutMu.Lock()
 	defer s.shortcutMu.Unlock()
@@ -433,7 +447,7 @@ func (s *TodoService) SetView(view string) error {
 		if screen := s.app.Screen.ScreenNearestDipRect(w.Bounds()); screen != nil {
 			area = screen.WorkArea
 		}
-		minW, minH := 440, 380
+		minW, minH := 400, 440
 		if view == "calendar" {
 			minW, minH = 760, 500
 		}
@@ -449,9 +463,9 @@ func (s *TodoService) SetView(view string) error {
 			}
 		} else {
 			if old == "calendar" && !w.IsMaximised() {
-				if restore.Width < 440 {
+				if restore.Width < 400 {
 					restore = w.Bounds()
-					restore.Width, restore.Height = 600, 580
+					restore.Width, restore.Height = 480, 720
 				}
 				w.SetBounds(fitWindowBounds(restore, area))
 			}
@@ -469,6 +483,8 @@ func (s *TodoService) WindowAction(action string) error {
 		w.Minimise()
 	case "maximize":
 		w.ToggleMaximise()
+	case "close":
+		w.Hide()
 	default:
 		return fmt.Errorf("未知窗口操作")
 	}
@@ -676,12 +692,11 @@ func (s *TodoService) setupWindows(background bool) {
 		saved[w.Key] = w
 	}
 	for _, key := range []string{"main"} {
-		width, height, minW, minH := 600, 580, 440, 380
-		title := "SimpleTodo"
-		options := application.WebviewWindowOptions{Name: key, Title: title, Width: width, Height: height, MinWidth: minW, MinHeight: minH, Hidden: key != "main" || background, AlwaysOnTop: false, URL: "/?window=" + key, BackgroundColour: application.NewRGBA(255, 255, 255, 255), Mac: application.MacWindow{TitleBar: application.MacTitleBarHiddenInset, InvisibleTitleBarHeight: 36}}
+		options := mainWindowOptions(runtime.GOOS)
+		options.Hidden = background
 		if state, ok := saved[key]; ok {
-			options.Width = max(440, state.Width)
-			options.Height = max(380, state.Height)
+			options.Width = max(400, state.Width)
+			options.Height = max(440, state.Height)
 			options.X = state.X
 			options.Y = state.Y
 			visible := false

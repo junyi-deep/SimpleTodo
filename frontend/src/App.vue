@@ -147,8 +147,10 @@ watch(
         !editor.value &&
         !dragging.value &&
         !document.querySelector<HTMLInputElement>("[data-new-child]")?.value &&
-        !document.querySelector<HTMLInputElement>('[aria-label="新待办标题"]')
-          ?.value &&
+        !document.querySelector<HTMLInputElement>(
+          '[aria-label="新待办标题"]',
+        ) &&
+        !hasDirtyEditor() &&
         panel.value === "tasks"
       ) {
         s.date = v;
@@ -373,7 +375,13 @@ async function rootDrop(target: Task, e: DragEvent) {
       )
       .sort((a, b) => a.order - b.order),
     ids = peers.filter((t) => t.id !== source.id).map((t) => t.id);
-  ids.splice(ids.indexOf(target.id), 0, source.id);
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  ids.splice(
+    ids.indexOf(target.id) +
+      (e.clientY > rect.top + rect.height * 0.75 ? 1 : 0),
+    0,
+    source.id,
+  );
   await s.run(() => api("Reorder", ids, s.snapshot.revision));
   dragging.value = false;
 }
@@ -471,6 +479,8 @@ async function keyboard(e: KeyboardEvent) {
     mod = e.metaKey || e.ctrlKey;
   if (mod && e.key.toLowerCase() === "n") {
     e.preventDefault();
+    if (!(await canLeaveEditor())) return;
+    editor.value = null;
     if (settingsOpen.value || transfer.value) {
       settingsOpen.value = false;
       transfer.value = null;
@@ -478,9 +488,7 @@ async function keyboard(e: KeyboardEvent) {
     if (panel.value === "focus") await navigate("tasks");
     if (panel.value === "calendar") drawer.value = true;
     await nextTick();
-    document
-      .querySelector<HTMLInputElement>('[aria-label="新待办标题"]')
-      ?.focus();
+    document.dispatchEvent(new Event("todo:new-task"));
   } else if (mod && e.key.toLowerCase() === "t" && !editing) {
     e.preventDefault();
     await today();
@@ -533,9 +541,7 @@ onMounted(async () => {
         await navigate("tasks");
         if (value === "quick") {
           await nextTick();
-          document
-            .querySelector<HTMLInputElement>('[aria-label="新待办标题"]')
-            ?.focus();
+          document.dispatchEvent(new Event("todo:new-task"));
         }
       }
     }),
@@ -601,7 +607,10 @@ onUnmounted(() => {
     :inert="s.maintenance || undefined"
     @dragend="dragging = false"
   >
-    <header class="app-header">
+    <header
+      class="app-header"
+      @dblclick.self="s.run(() => api('WindowAction', 'maximize'))"
+    >
       <strong class="brand">SimpleTodo</strong>
       <nav class="header-actions" aria-label="窗口与视图">
         <button
@@ -656,6 +665,15 @@ onUnmounted(() => {
           @click="s.run(() => api('WindowAction', 'maximize'))"
         >
           <Maximize2 :size="14" />
+        </button>
+        <button
+          v-if="s.boot?.capabilities.platform === 'windows'"
+          class="icon-button window-close"
+          aria-label="关闭窗口"
+          title="关闭"
+          @click="s.run(() => api('WindowAction', 'close'))"
+        >
+          <X :size="15" />
         </button>
         <details class="tools" :open="menu">
           <summary
@@ -801,21 +819,13 @@ onUnmounted(() => {
         </button>
       </section>
       <div v-if="panel === 'tasks'" class="list-toolbar">
-        <span class="list-caption"
-          >{{ completed }} / {{ roots.length }} 完成</span
-        ><span class="grow" /><label class="search-control"
+        <label class="search-control"
           ><Search :size="13" /><input
             v-model="search"
             placeholder="搜索任务"
             aria-label="搜索当前视图" /></label
-        ><button
-          class="icon-button"
-          :class="{ active: s.hideCompleted }"
-          aria-label="切换已完成显示"
-          @click="s.hideCompleted = !s.hideCompleted"
-        >
-          <CheckCheck :size="15" /></button
-        ><button
+        ><span class="grow" />
+        <button
           class="text-button"
           @click="
             batch = !batch;
@@ -824,11 +834,33 @@ onUnmounted(() => {
         >
           {{ batch ? "完成选择" : "选择" }}
         </button>
+        <template v-if="batch"
+          ><button
+            class="icon-button"
+            aria-label="批量完成"
+            :disabled="!s.selected.length"
+            @click="openBatch('complete')"
+          >
+            <CheckCheck :size="15" /></button
+          ><button
+            class="icon-button"
+            aria-label="批量取消完成"
+            :disabled="!s.selected.length"
+            @click="openBatch('pending')"
+          >
+            <ListTodo :size="15" /></button
+          ><button
+            class="icon-button"
+            aria-label="批量删除"
+            :disabled="!s.selected.length"
+            @click="openBatch('delete')"
+          >
+            <Trash2 :size="14" /></button
+        ></template>
       </div>
       <div
         v-if="
-          s.selected.length &&
-          (batch || (panel === 'calendar' && rangeAnchor !== rangeEnd))
+          s.selected.length && panel === 'calendar' && rangeAnchor !== rangeEnd
         "
         class="batch-bar"
       >
@@ -875,6 +907,13 @@ onUnmounted(() => {
         @drop="rootDrop"
         @paste="importLines"
       />
+      <footer
+        v-if="panel === 'tasks'"
+        class="list-footer"
+        aria-label="任务完成统计"
+      >
+        {{ completed }} / {{ roots.length }} 已完成
+      </footer>
       <section
         v-else
         class="calendar-workspace"

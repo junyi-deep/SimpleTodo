@@ -6,6 +6,18 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+func TestChecklistWindowDefaultsAndWindowsTitlebar(t *testing.T) {
+	for _, platform := range []string{"windows", "darwin"} {
+		opts := mainWindowOptions(platform)
+		if opts.Width != 480 || opts.Height != 720 || opts.MinWidth != 400 || opts.MinHeight != 440 || opts.URL != "/?window=main" {
+			t.Fatalf("unexpected checklist window defaults: %+v", opts)
+		}
+		if opts.Frameless != (platform == "windows") {
+			t.Fatalf("incorrect native titlebar on %s", platform)
+		}
+	}
+}
+
 func TestViewBoundsStayInsideDisplay(t *testing.T) {
 	for _, tc := range []struct {
 		name                 string

@@ -37,7 +37,7 @@ type Engine struct {
 	lastDay  string
 }
 
-var defaults = map[string]string{"theme": "system", "autoPostpone": "false", "completedBottom": "true", "titleClick": "edit", "tabEntry": "false", "sound": "true", "focusMinutes": "25", "emoji": "☺", "miniView": "today", "miniPending": "true", "edgeHide": "false", "releaseURL": "", "shortcutMain": "", "shortcutMini": "", "shortcutQuick": "", "onboarding": "false", "animation": "true", "notificationPrompted": "false"}
+var defaults = map[string]string{"theme": "system", "autoPostpone": "true", "completedBottom": "true", "titleClick": "edit", "tabEntry": "false", "sound": "true", "focusMinutes": "25", "emoji": "☺", "miniView": "today", "miniPending": "true", "edgeHide": "false", "releaseURL": "", "shortcutMain": "", "shortcutMini": "", "shortcutQuick": "", "onboarding": "false", "animation": "true", "notificationPrompted": "false", "autostartConfigured": "false"}
 
 func Open(dir string) (*Engine, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -254,7 +254,7 @@ func (e *Engine) SaveSettings(m map[string]string) error {
 			if er != nil || n < 1 || n > 180 {
 				return fail("VALIDATION_ERROR", "专注时长为 1—180 分钟")
 			}
-		case "autoPostpone", "completedBottom", "tabEntry", "sound", "miniPending", "edgeHide", "onboarding", "animation", "notificationPrompted":
+		case "autoPostpone", "completedBottom", "tabEntry", "sound", "miniPending", "edgeHide", "onboarding", "animation", "notificationPrompted", "autostartConfigured":
 			if v != "true" && v != "false" {
 				return fail("VALIDATION_ERROR", "无效开关值")
 			}

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-20T17:08:40.181778+00:00",
+  "generatedAt": "2026-10-21T15:52:35.400059+00:00",
   "title": "Design System: SimpleTodo",
   "extensions": {
     "colorMeta": {
@@ -311,6 +311,48 @@
           "oklch(87% 0 0)",
           "oklch(95% 0 0)"
         ]
+      },
+      "app-icon-blue": {
+        "role": "primary",
+        "displayName": "应用资产蓝",
+        "tonalRamp": [
+          "oklch(15% 0.2143 262.88)",
+          "oklch(27% 0.2143 262.88)",
+          "oklch(39% 0.2143 262.88)",
+          "oklch(51% 0.2143 262.88)",
+          "oklch(63% 0.2143 262.88)",
+          "oklch(75% 0.2143 262.88)",
+          "oklch(87% 0.2143 262.88)",
+          "oklch(95% 0.2143 262.88)"
+        ]
+      },
+      "fixed-white": {
+        "role": "neutral",
+        "displayName": "固定白色",
+        "tonalRamp": [
+          "oklch(15% 0 0)",
+          "oklch(27% 0 0)",
+          "oklch(39% 0 0)",
+          "oklch(51% 0 0)",
+          "oklch(63% 0 0)",
+          "oklch(75% 0 0)",
+          "oklch(87% 0 0)",
+          "oklch(95% 0 0)"
+        ]
+      },
+      "window-close-hover": {
+        "role": "neutral",
+        "displayName": "Windows 关闭悬停",
+        "tonalRamp": [
+          "oklch(15% 0.17 25)",
+          "oklch(27% 0.17 25)",
+          "oklch(39% 0.17 25)",
+          "oklch(51% 0.17 25)",
+          "oklch(63% 0.17 25)",
+          "oklch(75% 0.17 25)",
+          "oklch(87% 0.17 25)",
+          "oklch(95% 0.17 25)"
+        ]
       }
     },
     "typographyMeta": {
@@ -380,6 +422,11 @@
         "name": "drag-preview",
         "value": "0 8px 24px rgb(0 0 0 / .2)",
         "purpose": "当前行拖动预览。"
+      },
+      {
+        "name": "task-settings",
+        "value": "0 14px 46px #0002",
+        "purpose": "主窗口内 HTML 详细设置对话框，背板 #0004。"
       }
     ],
     "motion": [
@@ -412,31 +459,40 @@
       {
         "name": "workspace-compact",
         "value": "520px"
+      },
+      {
+        "name": "narrow-window",
+        "value": "440px"
       }
     ],
     "evidence": {
       "sources": [
+        "PRODUCT.md",
+        "docs/清单交互优化.md",
+        ".impeccable/review/direction.md",
         "frontend/src/style.css",
         "frontend/src/App.vue",
-        "frontend/src/components/CustomSelect.vue",
         "frontend/src/components/TaskTree.vue",
+        "frontend/src/components/InlineTitle.vue",
         "frontend/src/components/TaskList.vue",
         "frontend/src/components/TaskEditor.vue",
         "frontend/src/components/ReminderPopover.vue",
-        "todoservice.go"
+        "frontend/src/components/CustomSelect.vue",
+        "window_geometry.go",
+        "build/appicon.svg"
       ],
       "screenshots": [
         "docs/images/tasks.png",
         "docs/images/calendar.png",
-        ".impeccable/review/redesign-dark-1080.png",
-        ".impeccable/review/redesign-list-440.png",
-        ".impeccable/review/redesign-week.png",
-        ".impeccable/review/redesign-inline-editor.png",
-        ".impeccable/review/redesign-reminder.png",
-        ".impeccable/review/redesign-custom-select.png"
+        ".impeccable/review/checklist-windows-400.png",
+        ".impeccable/review/checklist-inline-title.png",
+        ".impeccable/review/checklist-settings-modal.png",
+        ".impeccable/review/checklist-repeat-reminder.png",
+        "build/appicon.png",
+        ".impeccable/review/checklist-sibling-order.png"
       ],
-      "scope": "当前浏览器界面与代码扫描；不证明原生系统能力。",
-      "tonalRamps": "OKLCH 无彩色八阶为面板展示合成，不是新增产品配色。"
+      "scope": "当前浏览器界面、应用资产和代码扫描；本轮 macOS 锁屏，未补验；Windows 浏览器布局与窗口选项不构成 Windows 原生 GUI 实测。",
+      "tonalRamps": "八阶 OKLCH 为面板展示合成，不新增产品主题色；应用图标蓝与窗口关闭悬停仅按各自范围使用。"
     }
   },
   "components": [
@@ -457,12 +513,12 @@
       "css": ".ds-secondary{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);font-size:12px;font-weight:500;min-height:34px;padding:8px 12px;border:1px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;}.ds-secondary:hover{background:var(--hover);}.ds-secondary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
     },
     {
-      "name": "列表内新增",
-      "kind": "input",
-      "refersTo": "inline-add",
-      "description": "位于任务列表末端的录入行；示例仅呈现输入状态。",
-      "html": "<label class=\"ds-add\"><span aria-hidden=\"true\"><svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M5 12h14M12 5v14\"/></svg></span><input aria-label=\"新待办标题\" placeholder=\"添加任务，按 Enter 保存\" /></label>",
-      "css": ".ds-add{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);display:flex;align-items:center;gap:8px;min-height:36px;padding:3px 7px 3px 28px;border-radius:4px;color:var(--muted);}.ds-add:focus-within{background:var(--secondary);color:var(--text);}.ds-add input{font-family:inherit;font-size:12px;flex:1;min-width:0;border:0;background:transparent;color:var(--text);padding:5px 0;outline:none;}.ds-add input::placeholder{color:var(--muted);}"
+      "name": "居中新增加号",
+      "kind": "button",
+      "refersTo": "add-task-button",
+      "description": "列表末端的轻量加号；点击后创建界面草稿，此示例不模拟写入。",
+      "html": "<button class=\"ds-add\" aria-label=\"新增待办\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M5 12h14M12 5v14\"/></svg></button>",
+      "css": ".ds-add{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);display:flex;align-items:center;justify-content:center;width:100%;min-height:34px;margin:2px 0;color:var(--muted);border:0;border-radius:5px;background:none;cursor:pointer;}.ds-add:hover{color:var(--text);background:var(--secondary);}.ds-add:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
     },
     {
       "name": "直接视图切换",
@@ -480,60 +536,68 @@
       "css": ".ds-select{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);width:190px;}.ds-trigger{font:inherit;width:100%;display:flex;justify-content:space-between;gap:10px;padding:6px 9px;min-height:30px;background:var(--surface);border:1px solid var(--border);border-radius:5px;font-size:12px;cursor:pointer;}.ds-trigger:hover{background:var(--hover);}.ds-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}.ds-options{margin-top:5px;padding:4px;border:1px solid var(--border);border-radius:7px;background:var(--surface);box-shadow:0 8px 28px rgb(0 0 0/.12);}.ds-options button{font:inherit;font-size:12px;display:flex;justify-content:space-between;width:100%;padding:7px 9px;line-height:18px;border:0;border-radius:4px;background:none;color:var(--text);text-align:left;cursor:pointer;}.ds-options button:hover,.ds-options .ds-selected{background:var(--hover);}.ds-options button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
     },
     {
-      "name": "任务行与提醒",
+      "name": "选中任务与提醒",
       "kind": "custom",
       "refersTo": "task-row",
-      "description": "35px 最小任务行，单行省略，提醒另占小字行。",
-      "html": "<div class=\"ds-task\"><button class=\"ds-check\" aria-label=\"完成任务\"></button><div class=\"ds-copy\"><button class=\"ds-title\" title=\"准备周五的产品讨论\">准备周五的产品讨论</button><small class=\"ds-reminder\"><svg width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4\"/></svg> 10/23 09:30</small></div><button class=\"ds-more\" aria-label=\"更多任务操作\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/></svg></button></div>",
-      "css": ".ds-task{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);display:flex;align-items:center;gap:5px;min-height:35px;padding:5px 3px 5px 1px;border-radius:6px;transition:background .14s ease,opacity .14s ease;}.ds-task:hover{background:var(--secondary);}.ds-check{width:15px;height:15px;min-width:16px;border:1.25px solid color-mix(in srgb,var(--muted) 65%,transparent);border-radius:4px;background:none;cursor:pointer;}.ds-check:hover{border-color:var(--accent);}.ds-copy{flex:1;min-width:0;}.ds-title{font-family:inherit;font-size:13px;line-height:21px;text-align:left;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:0;background:none;color:var(--text);padding:0;cursor:pointer;}.ds-reminder{display:block;font-size:10px;line-height:16px;color:var(--muted);font-variant-numeric:tabular-nums;}.ds-more{border:0;background:none;color:var(--muted);opacity:0;cursor:pointer;}.ds-task:hover .ds-more,.ds-task:focus-within .ds-more{opacity:1;}.ds-task button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
+      "description": "选中项完整换行，未选中项保持单行省略；提醒为下方小字。",
+      "html": "<div class=\"ds-task ds-selected\"><button class=\"ds-check\" aria-label=\"完成任务\"></button><div class=\"ds-copy\"><button class=\"ds-title\" title=\"准备周五的产品讨论\">准备周五的产品讨论</button><small class=\"ds-reminder\"><svg width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4\"/></svg> 10/23 09:30</small></div><button class=\"ds-more\" aria-label=\"更多任务操作\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/></svg></button></div>",
+      "css": ".ds-task{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);display:flex;align-items:center;gap:5px;min-height:35px;padding:5px 3px 5px 1px;border-radius:6px;transition:background .14s ease,opacity .14s ease;}.ds-task:hover{background:var(--secondary);}.ds-check{width:15px;height:15px;min-width:16px;border:1.25px solid color-mix(in srgb,var(--muted) 65%,transparent);border-radius:4px;background:none;cursor:pointer;}.ds-check:hover{border-color:var(--accent);}.ds-copy{flex:1;min-width:0;}.ds-title{font-family:inherit;font-size:13px;line-height:21px;text-align:left;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:0;background:none;color:var(--text);padding:0;cursor:pointer;}.ds-reminder{display:block;font-size:10px;line-height:16px;color:var(--muted);font-variant-numeric:tabular-nums;}.ds-more{border:0;background:none;color:var(--muted);opacity:0;cursor:pointer;}.ds-task:hover .ds-more,.ds-task:focus-within .ds-more{opacity:1;}.ds-task button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;} .ds-task.ds-selected{background:var(--secondary);align-items:flex-start;}.ds-selected .ds-title{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;}.ds-selected .ds-check{margin-top:3px;}"
     },
     {
-      "name": "行内详情容器",
-      "kind": "card",
-      "refersTo": "inline-editor",
-      "description": "对应任务下方的详情工作面，替代任务详情弹窗。",
-      "html": "<section class=\"ds-editor\"><header>编辑任务</header><div><input aria-label=\"标题\" value=\"准备周五的产品讨论\" /><p>详情在任务列表中展开。</p></div><footer><button>保存</button></footer></section>",
-      "css": ".ds-editor{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);margin:2px 20px 9px 29px;border:1px solid var(--border);border-radius:7px;background:var(--secondary);overflow:hidden;}.ds-editor header{padding:6px 10px;min-height:30px;font-size:11px;border-bottom:1px solid var(--border);}.ds-editor>div{padding:10px;}.ds-editor input{font-family:inherit;width:100%;font-size:14px;line-height:22px;border:0;background:transparent;color:var(--text);padding:4px 0;}.ds-editor p{font-size:11px;color:var(--muted);}.ds-editor footer{padding:7px 10px;border-top:1px solid var(--border);text-align:right;}.ds-editor button{font-family:inherit;font-size:12px;border:0;background:var(--accent);color:var(--surface);border-radius:7px;padding:8px 12px;cursor:pointer;}.ds-editor button:hover{background:var(--accent-strong);}.ds-editor input:focus-visible,.ds-editor button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
-    },
-    {
-      "name": "选中日期格",
+      "name": "任务详细设置",
       "kind": "custom",
-      "refersTo": "calendar-day",
-      "description": "七列网格中的日期格，以内描边和今天下划线共同表达状态。",
-      "html": "<button class=\"ds-day\"><span class=\"ds-number\">21</span><span class=\"ds-calendar-task\">准备周五的产品讨论</span></button>",
-      "css": ".ds-day{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);width:140px;min-height:66px;display:flex;flex-direction:column;gap:4px;padding:8px;border:0;border-right:1px solid var(--border);border-bottom:1px solid var(--border);background:var(--secondary);box-shadow:inset 0 0 0 1.5px var(--text);text-align:left;cursor:pointer;}.ds-day:hover{background:var(--secondary);}.ds-day:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}.ds-number{font-size:12px;line-height:17px;font-weight:750;text-decoration:underline;text-underline-offset:4px;}.ds-calendar-task{display:block;font-size:11px;line-height:20px;padding:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:var(--secondary);border-radius:3px;max-width:100%;}"
+      "refersTo": "task-settings-dialog",
+      "description": "主窗口内 HTML dialog 的表面和密度；示例以普通容器呈现，不声称模拟原生窗口或模态行为。",
+      "html": "<section class=\"ds-settings\"><header><strong>任务详情</strong><button aria-label=\"关闭\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></header><div><input aria-label=\"任务标题\" value=\"准备周五的产品讨论\"/><label>描述<textarea placeholder=\"补充说明、链接或执行步骤…\"></textarea></label></div><footer><button class=\"ds-cancel\">取消</button><button class=\"ds-save\">保存修改</button></footer></section>",
+      "css": ".ds-settings{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);width:min(460px,calc(100vw - 28px));max-height:calc(100vh - 32px);margin:auto;border:1px solid var(--border);border-radius:9px;background:var(--surface);overflow:auto;box-shadow:0 14px 46px #0002;}.ds-settings header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;}.ds-settings header button{border:0;background:none;color:var(--muted);cursor:pointer;}.ds-settings>div{padding:14px;max-height:calc(100vh - 145px);overflow:auto;}.ds-settings input{font-family:inherit;font-size:16px;line-height:24px;width:100%;padding:6px 8px;margin-bottom:12px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);}.ds-settings label{font-size:11px;color:var(--muted);}.ds-settings textarea{display:block;width:100%;height:70px;font:inherit;padding:9px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);}.ds-settings footer{display:flex;justify-content:flex-end;gap:8px;padding:10px 14px;border-top:1px solid var(--border);}.ds-settings footer button{font-family:inherit;font-size:12px;padding:8px 12px;border:1px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;}.ds-settings footer .ds-save{background:var(--accent);color:var(--surface);border-color:var(--accent);}.ds-settings footer button:hover{background:var(--hover);}.ds-settings footer .ds-save:hover{background:var(--accent-strong);}.ds-settings button:focus-visible,.ds-settings input:focus-visible,.ds-settings textarea:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
+    },
+    {
+      "name": "原位标题草稿",
+      "kind": "input",
+      "refersTo": "inline-title",
+      "description": "任务标题原位编辑，继承当前文字并随内容增高；示例仅展示输入表面。",
+      "html": "<div class=\"ds-draft\"><span class=\"ds-draft-check\"></span><textarea rows=\"2\" aria-label=\"编辑任务标题\">准备周五的产品讨论，整理需要确认的问题</textarea></div>",
+      "css": ".ds-draft{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);display:flex;gap:8px;align-items:flex-start;min-height:35px;padding:6px 6px 6px 21px;background:var(--secondary);border-radius:5px;}.ds-draft-check{width:15px;height:15px;margin-top:3px;flex-shrink:0;border:1px solid var(--quiet);border-radius:4px;}.ds-draft textarea{font:inherit;width:100%;min-width:0;min-height:24px;max-height:210px;resize:none;border:0;background:transparent;color:var(--text);box-shadow:none;line-height:21px;padding:0 2px;overflow-wrap:anywhere;}.ds-draft textarea:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
     },
     {
       "name": "日期任务抽屉",
       "kind": "custom",
       "refersTo": "day-drawer",
-      "description": "覆盖日历右侧的日期工作区；示例尺寸服从容器限制，不模拟打开行为。",
-      "html": "<aside class=\"ds-drawer\"><header><div><h2>10月21日星期三</h2><small>5 项任务</small></div><button aria-label=\"关闭日期抽屉\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></header><p>在这里查看并录入当天任务。</p></aside>",
+      "description": "覆盖日历右侧的日期工作区；内部复用最新选择、原位编辑和加号草稿。示例不模拟打开行为。",
+      "html": "<aside class=\"ds-drawer\"><header><div><h2>10月21日星期三</h2><small>5 项任务</small></div><button aria-label=\"关闭日期抽屉\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></header><p>在这里查看与编辑当天任务。</p></aside>",
       "css": ".ds-drawer{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);width:clamp(360px,42vw,480px);max-width:calc(100% - 28px);min-height:180px;background:var(--surface);box-shadow:-12px 0 40px rgb(0 0 0/.14);display:flex;flex-direction:column;}.ds-drawer header{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 13px;border-bottom:1px solid var(--border);}.ds-drawer h2{margin:0 0 4px;font-size:15px;font-weight:600;}.ds-drawer small{font-size:11px;color:var(--muted);}.ds-drawer button{width:27px;height:27px;border:0;border-radius:5px;background:none;color:var(--muted);cursor:pointer;}.ds-drawer button:hover{background:var(--hover);}.ds-drawer button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}.ds-drawer p{margin:12px 16px;font-size:12px;color:var(--muted);}"
+    },
+    {
+      "name": "重复提醒气泡",
+      "kind": "custom",
+      "refersTo": "reminder-popover",
+      "description": "时间、重复频率、间隔与星期的紧凑浮层；下拉外观独立展开，无框架运行时。",
+      "html": "<section class=\"ds-reminder-panel\"><header><strong>设置提醒</strong><button aria-label=\"关闭提醒设置\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></header><label>提醒时间<input aria-label=\"提醒时间\" type=\"datetime-local\" value=\"2026-10-22T09:30\"/></label><label>重复提醒<button class=\"ds-repeat-trigger\" role=\"combobox\" aria-expanded=\"false\">每周<svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 9 6 6 6-6\"/></svg></button></label><label>重复间隔<input aria-label=\"重复间隔\" type=\"number\" value=\"2\"/></label><div class=\"ds-weekdays\"><button aria-pressed=\"false\">日</button><button aria-pressed=\"false\">一</button><button aria-pressed=\"false\">二</button><button aria-pressed=\"false\">三</button><button class=\"ds-active\" aria-pressed=\"true\">四</button><button aria-pressed=\"false\">五</button><button aria-pressed=\"false\">六</button></div><footer><button class=\"ds-remove\">移除提醒</button><button class=\"ds-save-reminder\">保存提醒</button></footer></section>",
+      "css": ".ds-reminder-panel{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);width:284px;max-height:calc(100vh - 24px);overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:0 8px 28px rgb(0 0 0/.14);padding:12px;}.ds-reminder-panel header,.ds-reminder-panel footer{display:flex;justify-content:space-between;align-items:center;gap:7px;}.ds-reminder-panel strong{font-size:12px;}.ds-reminder-panel header button{border:0;background:none;color:var(--muted);cursor:pointer;}.ds-reminder-panel label{display:block;margin:10px 0;font-size:11px;color:var(--muted);}.ds-reminder-panel input{display:block;font-family:inherit;font-size:12px;width:100%;margin:10px 0;padding:7px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);}.ds-repeat-trigger{display:flex;align-items:center;justify-content:space-between;width:100%;padding:6px 9px;min-height:30px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:5px;font:inherit;font-size:12px;cursor:pointer;}.ds-repeat-trigger:hover{background:var(--hover);}.ds-weekdays{display:flex;gap:4px;margin:8px 0;}.ds-weekdays button{width:28px;height:28px;border:0;border-radius:4px;background:var(--secondary);color:var(--text);font-family:inherit;font-size:11px;cursor:pointer;}.ds-weekdays .ds-active{background:var(--text);color:var(--surface);}.ds-reminder-panel footer button{font-family:inherit;font-size:12px;border:0;background:none;color:var(--muted);padding:5px 10px;min-height:29px;cursor:pointer;}.ds-reminder-panel footer .ds-save-reminder{background:var(--accent);color:var(--surface);border-radius:7px;}.ds-reminder-panel .ds-save-reminder:hover{background:var(--accent-strong);}.ds-reminder-panel button:focus-visible,.ds-reminder-panel input:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
     }
   ],
   "narrative": {
-    "overview": "SimpleTodo 的界面把频繁勾选、拆分、改期和连续录入放在同一工作现场。白色与黑色表面、层次灰文字、系统字体和细分隔线保持任务密度；品牌只保留 SimpleTodo 文字，不增加状态徽标或装饰图案。\n\n这是用户明确指定的替代视觉，取代原绿色、多窗口与底部录入设计。本文以当前 CSS 覆盖规则、Vue 组件及实际浏览器截图为依据；设计记录与浏览器评审不构成 macOS/Windows 原生窗口、托盘、通知或快捷键的实机验收结论。",
+    "overview": "SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一工作现场。白色与黑色表面、层次灰文字、系统字体和细分隔线保持任务密度；顶栏品牌只保留 SimpleTodo 文字，不显示对钩或本地徽标。应用图标与关于页共用蓝底白色交叉双对钩，蓝色不扩展为界面强调色。\n\n最新清单交互在现有紧凑单窗口上扩展：单击选中后长标题完整换行，双击在原位置编辑标题，铅笔打开主窗口内的 HTML 详细设置对话框。本文依据最终 CSS、组件和实际浏览器截图；本轮 macOS 原生补验遇锁屏，Windows 浏览器布局和窗口选项检查也不构成 Windows 原生 GUI 实测。",
     "keyCharacteristics": [
       "黑白灰浅深主题配对，系统字体与 Lucide 线性图标。",
       "唯一原生主窗口；列表、月/周日历、专注、设置和数据工具原位切换。",
-      "35px 最小任务行，单行标题；新增、详情和提醒均紧邻任务。",
-      "自定义下拉、宽右侧日期抽屉、任务拖动预览与清楚落点。"
+      "35px 最小任务行，选中后换行；标题原位编辑、加号草稿与独立详细设置。",
+      "左侧搜索、固定底部统计、自定义下拉、宽日期抽屉和拖动预览。"
     ],
     "rules": [],
     "dos": [
       "Do 沿用前置 token 的浅深配对、系统字体和 Lucide 线性图标。",
-      "Do 保持任务单行省略、完整悬停标题、明确完成勾号和键盘焦点。",
-      "Do 将新增行与详情保留在任务列表现场，切换视图前保护未保存草稿。",
-      "Do 使用自定义 combobox/listbox，保留键盘选择和焦点返回。",
-      "Do 同时检查紧凑窗口、日历抽屉、深色及减少动画设置。"
+      "Do 区分单击选中、双击原位编辑与铅笔详细设置，保留键盘焦点和完整标题。",
+      "Do 让加号先创建界面草稿，保护输入法组合、版本冲突草稿和空白取消。",
+      "Do 使用自定义 combobox/listbox，保留键盘选择、禁用状态与焦点返回。",
+      "Do 同时检查 400px 紧凑布局、固定 footer、日历抽屉、深色与减少动画。"
     ],
     "donts": [
-      "Don't 恢复绿色主题、任务颜色入口、品牌对钩、本地徽标或底部本地存储说明。",
-      "Don't 新建今日待办、总览或快速记录原生窗口。",
-      "Don't 用大卡片、大留白或多行任务标题降低列表密度。",
-      "Don't 把日历日期任务再次排在网格下方；使用右侧抽屉。",
-      "Don't 把浏览器截图、detector 或代码检查写成原生系统能力通过。"
+      "Don't 把应用图标蓝色推广为主题强调色，或恢复品牌对钩、本地徽标与底部存储说明。",
+      "Don't 新建今日待办、总览、快速记录或任务详情原生窗口。",
+      "Don't 恢复永久新增输入框，或把所有任务强制多行排版；仅选中项完整换行。",
+      "Don't 把日期任务再次排在日历下面，或把详细设置恢复为行下展开。",
+      "Don't 把浏览器截图、detector、窗口选项检查或跨平台编译写成原生 GUI 验收通过。"
     ]
   }
 }

@@ -29,6 +29,8 @@ export const useTodo = defineStore("todo", () => {
     loading = ref(true),
     saving = ref(false),
     selected = ref<string[]>([]),
+    activeTask = ref(""),
+    titleEditing = ref(""),
     hideCompleted = ref(false),
     sortMode = ref("manual");
   const query = computed<Query>(() => ({
@@ -261,6 +263,8 @@ export const useTodo = defineStore("todo", () => {
     loading,
     saving,
     selected,
+    activeTask,
+    titleEditing,
     hideCompleted,
     sortMode,
     query,

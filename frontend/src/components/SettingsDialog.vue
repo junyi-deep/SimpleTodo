@@ -28,7 +28,12 @@ const s = useTodo(),
   windowMode = ref("normal"),
   opacity = ref(1),
   bindings = ref<Record<string, string>>({ main: "", quick: "", mini: "" }),
-  release = ref(""),
+  latestRelease = ref<{
+    version: string;
+    available: boolean;
+    downloadURL: string;
+  } | null>(null),
+  checking = ref(false),
   emoji = ref("");
 const tabs = [
   { id: "general", label: "常规", icon: Settings2 },
@@ -40,7 +45,7 @@ const tabs = [
 restoreDialogFocus();
 onMounted(async () => {
   await loadBackups();
-  release.value = s.boot?.settings.releaseURL || "";
+
   emoji.value = s.boot?.settings.emoji || "☺";
   for (const key of ["main", "quick", "mini"])
     bindings.value[key] =
@@ -57,6 +62,19 @@ function checkbox(e: Event) {
 }
 async function set(key: string, e: Event) {
   await s.setting(key, (e.target as HTMLInputElement).value);
+}
+async function checkUpdate() {
+  checking.value = true;
+  try {
+    const result = await s.run(() =>
+      api<{ version: string; available: boolean; downloadURL: string }>(
+        "CheckUpdate",
+      ),
+    );
+    if (result) latestRelease.value = result;
+  } finally {
+    checking.value = false;
+  }
 }
 async function auto(e: Event) {
   await s.run(() => api("Autostart", (e.target as HTMLInputElement).checked));
@@ -176,16 +194,6 @@ async function migrate() {
               type="checkbox"
               :checked="s.boot?.settings.completedBottom === 'true'"
               @change="s.setting('completedBottom', checkbox($event))" /></label
-          ><label class="setting-row"
-            ><span>点击任务标题</span
-            ><CustomSelect
-              :model-value="s.boot?.settings.titleClick"
-              aria-label="点击任务标题"
-              @change="set('titleClick', $event)"
-            >
-              <option value="edit">编辑任务</option>
-              <option value="complete">切换完成</option>
-            </CustomSelect></label
           ><label class="setting-row"
             ><span>Tab 连续录入<small>关闭时使用系统键盘导航</small></span
             ><input
@@ -382,24 +390,36 @@ async function migrate() {
           </button></template
         >
         <template v-if="tab === 'about'"
-          ><div class="about-mark"><CheckMark /></div>
+          ><img class="about-app-icon" src="/appicon.svg" alt="SimpleTodo" />
           <h2>SimpleTodo</h2>
           <p class="muted">版本 {{ s.boot?.version }} · 把每一天安排得刚刚好</p>
           <p class="about-copy">
             从一个想法开始，拆成可执行的步骤。按天规划、桌面待办、专注计时，所有任务和数据都留在你的电脑上。
           </p>
           <h3>发布与更新</h3>
-          <label class="field"
-            ><span>项目发布页（HTTPS）</span
-            ><input v-model="release" placeholder="尚未配置发布页"
-          /></label>
+          <p class="muted small">
+            从 GitHub Release 检查并下载适合当前电脑的安装包。
+          </p>
           <div class="inline-actions">
-            <button class="button" @click="s.setting('releaseURL', release)">
-              保存地址</button
-            ><button class="button" @click="s.run(() => api('CheckUpdate'))">
-              <ExternalLink :size="14" />手动检查更新
+            <button class="button" :disabled="checking" @click="checkUpdate">
+              <ExternalLink :size="14" />{{
+                checking ? "检查中…" : "检查更新"
+              }}</button
+            ><button
+              v-if="latestRelease?.available"
+              class="button primary"
+              @click="s.run(() => api('DownloadUpdate'))"
+            >
+              下载 {{ latestRelease.version }}
             </button>
           </div>
+          <p v-if="latestRelease" class="muted small">
+            {{
+              latestRelease.available
+                ? "发现新版本 " + latestRelease.version
+                : "当前已是最新版本（" + latestRelease.version + "）"
+            }}
+          </p>
           <h3>使用提示</h3>
           <p class="muted small">
             Enter 连续记录，Shift+Enter

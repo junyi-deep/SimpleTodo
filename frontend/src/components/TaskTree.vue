@@ -13,7 +13,10 @@ import {
   IndentIncrease,
   IndentDecrease,
   Focus,
+  Pencil,
 } from "lucide-vue-next";
+import InlineTitle from "./InlineTitle.vue";
+import { canLeaveEditor } from "../composables/editorGuard";
 import TaskEditor from "./TaskEditor.vue";
 import ReminderPopover from "./ReminderPopover.vue";
 import TaskPlacement from "./TaskPlacement.vue";
@@ -104,16 +107,14 @@ function toggle(id: string) {
   else next.add(id);
   expanded.value = next;
 }
-let titleTimer: ReturnType<typeof setTimeout> | undefined;
-function titleClick(t: Task) {
-  if (s.boot?.settings.titleClick === "complete") {
-    clearTimeout(titleTimer);
-    titleTimer = setTimeout(() => void s.complete(t), 250);
-  } else emit("edit", t);
+async function titleClick(t: Task) {
+  s.activeTask = t.id;
+  document.querySelector<HTMLElement>(`[data-node="${t.id}"]`)?.focus();
 }
-function titleDoubleClick(t: Task) {
-  clearTimeout(titleTimer);
-  emit("edit", t);
+async function titleDoubleClick(t: Task) {
+  if (!(await canLeaveEditor())) return;
+  s.activeTask = t.id;
+  s.titleEditing = t.id;
 }
 async function moveOrder(t: Task, step: number) {
   const peers = t.parentId
@@ -174,7 +175,6 @@ onMounted(() => {
   document.addEventListener("todo:add-child", addRequested);
 });
 onUnmounted(() => {
-  clearTimeout(titleTimer);
   document.removeEventListener("pointerdown", outside);
   document.removeEventListener("todo:add-child", addRequested);
 });
@@ -292,7 +292,7 @@ async function keydown(e: KeyboardEvent, t: Task) {
     await add(t);
   } else if (e.key === "Enter") {
     e.preventDefault();
-    emit("edit", t);
+    await titleDoubleClick(t);
   } else if (e.key === " ") {
     e.preventDefault();
     await s.complete(t);
@@ -350,21 +350,56 @@ function startDrag(e: DragEvent, t: Task) {
   draggedId.value = t.id;
   emit("drag", t);
 }
+function dropPosition(e: DragEvent) {
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
+  const y = e.clientY - r.top;
+  return e.altKey || y < r.height * 0.25
+    ? "before"
+    : y > r.height * 0.75
+      ? "after"
+      : "inside";
+}
 async function dropNode(e: DragEvent, t: Task) {
   e.preventDefault();
-  const id = e.dataTransfer?.getData("text/plain"),
-    source = s.taskMap.get(id || "");
-  if (!source) return;
-  if (source.parentId && source.rootId === t.rootId) {
+  dropHint.value = null;
+  const source = s.taskMap.get(e.dataTransfer?.getData("text/plain") || "");
+  if (!source || source.id === t.id) return;
+  const mode = dropPosition(e);
+  if (mode !== "inside" && !source.parentId && !t.parentId) {
+    emit("drop", t, e);
+    return;
+  }
+  if (mode !== "inside" && source.parentId && source.rootId === t.rootId) {
+    const parent = t.parentId || t.rootId;
+    const peers = children(parent).filter((node) => node.id !== source.id);
+    const beforeId = t.parentId
+      ? mode === "before"
+        ? t.id
+        : peers[peers.findIndex((node) => node.id === t.id) + 1]?.id || ""
+      : mode === "before"
+        ? peers[0]?.id || ""
+        : "";
     await s.run(() =>
       api("Reparent", {
         ...s.command(source),
-        parentId: e.altKey ? t.parentId || t.rootId : t.id,
-        beforeId: e.altKey ? t.id : "",
+        parentId: t.parentId || t.rootId,
+        beforeId,
       }),
     );
-    expanded.value = new Set([...expanded.value, t.id]);
-  } else emit("drop", t, e);
+    return;
+  }
+  if (
+    !source.parentId &&
+    (source.remindAt || source.seriesId || source.description) &&
+    !(await confirmAction(
+      "作为子任务后将继承目标任务的日期与提醒。原描述会追加到目标根任务的描述；重复任务仅移动当前实例。继续？",
+    ))
+  )
+    return;
+  const result = await s.run(() =>
+    api("Nest", { ...s.command(source), parentId: t.id }, s.snapshot.revision),
+  );
+  if (result) expanded.value = new Set([...expanded.value, t.id]);
 }
 </script>
 <template>
@@ -390,6 +425,7 @@ async function dropNode(e: DragEvent, t: Task) {
             root: !t.parentId,
             'is-dragging': draggedId === t.id,
             'drop-target': dropHint === t.id,
+            selected: s.activeTask === t.id,
           }"
           :style="{ '--depth': Math.min(depth, 5) }"
           role="group"
@@ -411,8 +447,12 @@ async function dropNode(e: DragEvent, t: Task) {
           "
           @drop="dropHint = null"
           @keydown="keydown($event, t)"
-          @focus="rowFocus = t.id"
-          @dragover.prevent
+          @focus="
+            rowFocus = t.id;
+            s.activeTask = t.id;
+          "
+          @click="s.activeTask = t.id"
+          @dragover.prevent="dropHint = t.id"
           @drop.stop="dropNode($event, t)"
         >
           <span
@@ -452,7 +492,13 @@ async function dropNode(e: DragEvent, t: Task) {
             ><span v-else-if="progress(t.id).done > 0" />
           </button>
           <div class="task-copy">
+            <InlineTitle
+              v-if="s.titleEditing === t.id"
+              :task="t"
+              @done="s.titleEditing = ''"
+            />
             <button
+              v-else
               class="task-title"
               :title="t.title"
               @click="titleClick(t)"
@@ -489,6 +535,14 @@ async function dropNode(e: DragEvent, t: Task) {
             @click.stop="reminding = !reminding"
           >
             <Bell :size="14" />
+          </button>
+          <button
+            class="icon-button task-settings-trigger"
+            aria-label="任务设置"
+            title="任务设置"
+            @click.stop="emit('edit', t)"
+          >
+            <Pencil :size="13" />
           </button>
           <details
             class="node-more"

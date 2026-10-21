@@ -27,7 +27,7 @@ test("列表内连续录入、多级快捷键和完成汇总", async ({ page }) 
     row(page, title).getByRole("button", { name: "取消完成", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
 });
-test("收集箱显示全部任务，详情在行内保存，无颜色入口", async ({
+test("收集箱显示全部任务，详情弹窗保存，无颜色入口", async ({
   page,
   request,
 }) => {
@@ -41,10 +41,10 @@ test("收集箱显示全部任务，详情在行内保存，无颜色入口", as
   await expect(
     page.getByRole("button", { name: inbox.title, exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: inbox.title, exact: true }).click();
-  const editor = page.locator(".inline-task-editor");
+  await row(page, inbox.title).getByLabel("任务设置").click();
+  const editor = page.locator(".task-settings-dialog");
   await expect(editor).toBeVisible();
-  await expect(page.locator("dialog")).toHaveCount(0);
+  await expect(page.locator("dialog")).toHaveCount(1);
   await expect(editor.getByText("颜色", { exact: true })).toHaveCount(0);
   await editor.getByLabel("任务标题").fill(inbox.title + "更新");
   await editor

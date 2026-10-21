@@ -1974,3 +1974,45 @@ dialog[inert]::backdrop {
 .compact-app .toast {font-size:11px;bottom:14px;padding:8px 12px;}
 @media(max-width:520px){.compact-app.on-mac .app-header{padding-left:78px;}.compact-app .app-header{gap:6px;}.compact-app .brand{font-size:12px;}.compact-app .header-actions{gap:0;}.toolbar-divider{margin:0 3px;}.compact-week{gap:1px;}.week-date{gap:3px;}.compact-app .search-control input{width:80px;}.inline-task-editor{margin-left:10px;margin-right:4px;}.compact-app .settings-layout>nav{width:40px;}.compact-app .settings-content{padding:13px;}}
 @media(prefers-reduced-motion:reduce){.drawer-enter-active,.drawer-leave-active{transition:none;}}
+
+/* Checklist interaction refinement. */
+.app-header .header-actions,.app-header button,.app-header summary {--wails-draggable:no-drag;}
+.compact-app .app-header {gap:6px;padding-right:8px;}
+.compact-app .header-actions {gap:1px;}
+.compact-app .header-actions .icon-button {width:27px;height:28px;}
+.window-close:hover {background:#c33;color:#fff;}
+.compact-app .list-toolbar {padding:4px 10px;gap:3px;}
+.compact-app .search-control {min-width:90px;max-width:none;}
+.compact-app .search-control input {width:100%;min-width:0;}
+.list-footer {height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:flex-end;padding:0 13px;border-top:1px solid var(--border);color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums;}
+.compact-app .task-row.selected {background:var(--secondary);align-items:flex-start;}
+.compact-app .task-row.selected .task-title {white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;text-align:left;}
+.compact-app .task-row.selected .task-check {margin-top:3px;}
+.task-settings-trigger {opacity:0;flex-shrink:0;}
+.task-row:hover .task-settings-trigger,.task-row.selected .task-settings-trigger,.task-row:focus-within .task-settings-trigger {opacity:1;}
+.inline-title-input {width:100%;min-width:0;min-height:24px!important;max-height:210px;resize:none;border:0!important;background:transparent!important;box-shadow:none!important;font:inherit!important;line-height:21px!important;padding:0 2px!important;overflow-wrap:anywhere;}
+.draft-task-row {display:flex;gap:8px;align-items:flex-start;min-height:35px;padding:6px 6px 6px 21px;background:var(--secondary);border-radius:5px;}
+.draft-check {width:15px;height:15px;margin-top:3px;flex-shrink:0;border:1px solid var(--quiet);border-radius:4px;}
+.add-task-button {display:flex;align-items:center;justify-content:center;width:100%;min-height:34px;margin:2px 0;color:var(--muted);border-radius:5px;}
+.add-task-button:hover {color:var(--text);background:var(--secondary);}
+.task-settings-dialog {width:min(460px,calc(100vw - 28px));max-height:calc(100vh - 32px);margin:auto;padding:0;border:1px solid var(--border);border-radius:9px;background:var(--surface);color:var(--text);overflow:auto;box-shadow:0 14px 46px #0002;}
+.task-settings-dialog::backdrop {background:#0004;}
+.task-settings-dialog .dialog-body {padding:14px;max-height:calc(100vh - 145px);overflow:auto;}
+.task-settings-dialog .dialog-header,.task-settings-dialog .dialog-footer {padding:10px 14px;}
+.task-settings-dialog .title-input {font-size:16px;}
+.task-settings-dialog .field {margin-bottom:12px;}
+.task-settings-dialog .field-grid {gap:10px;}
+.task-settings-dialog textarea {height:70px;}
+.task-row.drop-target {background:var(--hover);}
+.task-row.drop-target::after {content:'中间放置为子任务 · 边缘调整顺序';font-size:10px;color:var(--muted);position:absolute;right:8px;top:100%;background:var(--surface);padding:2px 5px;z-index:3;pointer-events:none;}
+.task-row {position:relative;}
+@media(max-width:440px) {.compact-app .brand {font-size:12px;}.compact-app .header-actions .icon-button {width:24px;}.compact-app.on-mac .app-header {padding-left:78px;}.compact-app .toolbar-divider {margin:0 2px;}}
+.window-close {order:10;}
+.about-app-icon {width:56px;height:56px;margin:4px 0 8px;}
+.reminder-popover {max-height:calc(100vh - 24px);overflow:auto;}
+.reminder-popover .field {margin:10px 0;}
+.reminder-popover .field>span {font-size:11px;}
+.repeat-weekdays {display:flex;gap:4px;margin:8px 0;}
+.repeat-weekdays button {width:28px;height:28px;border-radius:4px;font-size:11px;background:var(--secondary);}
+.repeat-weekdays button.active {background:var(--text);color:var(--surface);}
+.task-settings-dialog .title-input {width:100%;margin-bottom:12px;line-height:24px;padding:6px 8px;}

@@ -7,6 +7,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as releases$0 from "./internal/releases/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as todo$0 from "./internal/todo/models.js";
 
 export function Autostart(enabled: boolean): $CancellablePromise<void> {
@@ -25,7 +28,7 @@ export function Boot(): $CancellablePromise<{ [_ in string]?: any } | null> {
     return $Call.ByID(2829616725);
 }
 
-export function CheckUpdate(): $CancellablePromise<void> {
+export function CheckUpdate(): $CancellablePromise<releases$0.Info> {
     return $Call.ByID(3103458742);
 }
 
@@ -77,6 +80,10 @@ export function DismissNotices(): $CancellablePromise<void> {
     return $Call.ByID(2494995928);
 }
 
+export function DownloadUpdate(): $CancellablePromise<void> {
+    return $Call.ByID(4059901816);
+}
+
 export function Duplicate(c: todo$0.Command, date: string | null): $CancellablePromise<void> {
     return $Call.ByID(3186954518, c, date);
 }
@@ -111,6 +118,10 @@ export function Migrate(): $CancellablePromise<void> {
 
 export function Move(c: todo$0.Command): $CancellablePromise<todo$0.Task[] | null> {
     return $Call.ByID(4032750740, c);
+}
+
+export function Nest(c: todo$0.Command, revision: string): $CancellablePromise<todo$0.Task[] | null> {
+    return $Call.ByID(920959243, c, revision);
 }
 
 export function OpenDataDir(): $CancellablePromise<void> {

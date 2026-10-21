@@ -33,6 +33,7 @@ export function row(page: Page, title: string) {
     .filter({ has: page.getByRole("button", { name: title, exact: true }) });
 }
 export async function add(page: Page, title: string) {
+  await page.getByRole("button", { name: "新增待办", exact: true }).click();
   const input = page.getByRole("textbox", { name: "新待办标题" });
   await input.fill(title);
   await input.press("Enter");
