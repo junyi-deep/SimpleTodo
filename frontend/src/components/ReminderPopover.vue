@@ -157,6 +157,7 @@ onUnmounted(() => {
   <div
     ref="panel"
     popover="manual"
+    v-motion
     class="reminder-popover"
     @keydown.esc.stop.prevent="emit('close')"
   >

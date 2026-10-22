@@ -2,6 +2,7 @@
 package main
 
 import (
+	"changeme/internal/releases"
 	"changeme/internal/todo"
 	"context"
 	"encoding/json"
@@ -11,8 +12,10 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"reflect"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -35,7 +38,25 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 	go e.Run(ctx)
-	methods := map[string]any{"Query": e.Query, "SetTimezone": e.SetTimezone, "SeriesImpact": e.SeriesImpact, "FindTask": e.FindTask, "ReadTree": e.ReadTree, "Duplicate": e.Duplicate, "Create": e.Create, "Update": func(c todo.Command) ([]todo.Task, error) {
+	var proxyMu sync.Mutex
+	proxyPath := filepath.Join(*dir, "update-proxy.json")
+	methods := map[string]any{"UpdateProxy": func() (releases.ProxyConfig, error) {
+		proxyMu.Lock()
+		defer proxyMu.Unlock()
+		c, err := releases.ReadProxy(proxyPath)
+		return c.Public(), err
+	}, "SaveUpdateProxy": func(c releases.ProxyConfig) error {
+		proxyMu.Lock()
+		defer proxyMu.Unlock()
+		if c.KeepPassword {
+			old, err := releases.ReadProxy(proxyPath)
+			if err != nil {
+				return err
+			}
+			c.Password = old.Password
+		}
+		return releases.SaveProxy(proxyPath, c)
+	}, "Query": e.Query, "SetTimezone": e.SetTimezone, "SeriesImpact": e.SeriesImpact, "FindTask": e.FindTask, "ReadTree": e.ReadTree, "Duplicate": e.Duplicate, "Create": e.Create, "Update": func(c todo.Command) ([]todo.Task, error) {
 		out, err := e.Update(c)
 		if err == nil && c.RepeatRule != nil {
 			if er := e.EnsureThrough(time.Now().In(mustZone(e.Timezone())).AddDate(0, 0, 7).Format("2006-01-02")); er != nil {

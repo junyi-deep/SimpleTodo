@@ -1862,10 +1862,10 @@ kbd {
   z-index: 1000;
 }
 
-dialog[inert] {
+dialog[inert]:not(.motion-closing) {
   visibility: hidden;
 }
-dialog[inert]::backdrop {
+dialog[inert]:not(.motion-closing)::backdrop {
   background: transparent;
 }
 /* Single-window workspace: dense monochrome controls and a contextual day drawer. */
@@ -1946,8 +1946,6 @@ dialog[inert]::backdrop {
 .drawer-header {display:flex;align-items:center;justify-content:space-between;padding:16px 16px 13px;border-bottom:1px solid var(--border);}
 .drawer-header h2 {margin:0 0 4px;font-size:15px;font-weight:600;}
 .drawer-header small {font-size:11px;color:var(--muted);}
-.drawer-enter-active,.drawer-leave-active {transition:transform .2s cubic-bezier(.16,1,.3,1),opacity .2s ease;}
-.drawer-enter-from,.drawer-leave-to {transform:translateX(22px);opacity:0;}
 .custom-select {min-width:0;position:relative;display:inline-flex;}
 .select-trigger {width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;border:1px solid var(--border);border-radius:5px;padding:6px 9px;min-height:30px;background:var(--surface);font-size:12px;text-align:left;}
 .select-trigger>span {min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -1977,7 +1975,6 @@ dialog[inert]::backdrop {
 .notice-panel p {font-size:12px;}
 .compact-app .toast {font-size:11px;bottom:14px;padding:8px 12px;}
 @media(max-width:520px){.compact-app.on-mac .app-header{padding-left:78px;}.compact-app .app-header{gap:6px;}.compact-app .brand{font-size:12px;}.compact-app .header-actions{gap:0;}.toolbar-divider{margin:0 3px;}.compact-week{gap:1px;}.week-date{gap:3px;}.compact-app .search-control input{width:80px;}.inline-task-editor{margin-left:10px;margin-right:4px;}.compact-app .settings-layout>nav{width:40px;}.compact-app .settings-content{padding:13px;}}
-@media(prefers-reduced-motion:reduce){.drawer-enter-active,.drawer-leave-active{transition:none;}}
 
 /* Checklist interaction refinement. */
 .app-header .header-actions,.app-header button,.app-header summary {--wails-draggable:no-drag;}
@@ -2020,3 +2017,18 @@ dialog[inert]::backdrop {
 .repeat-weekdays button {width:28px;height:28px;border-radius:4px;font-size:11px;background:var(--secondary);}
 .repeat-weekdays button.active {background:var(--text);color:var(--surface);}
 .task-settings-dialog .title-input {width:100%;margin-bottom:12px;line-height:24px;padding:6px 8px;}
+
+/* Motion keeps control hit targets stable while showing state and hierarchy. */
+.task-move { transition: transform 240ms cubic-bezier(.16,1,.3,1); }
+.update-proxy {border:0;margin:14px 0;padding:0;min-width:0;}
+.proxy-fields {margin-top:10px;}
+.proxy-credentials {display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.proxy-credentials .field,.proxy-fields input {min-width:0;width:100%;}
+.update-proxy .setting-row {gap:10px;}
+.select-trigger[aria-expanded="true"] > svg {rotate:180deg;}
+.select-trigger > svg {transition:rotate 180ms ease;}
+@media (prefers-reduced-motion:reduce) {.task-move {transition:none;}}
+
+.all-done {display:inline-flex;align-items:center;gap:4px;margin-right:auto;color:var(--text);}
+
+@media(max-width:520px){.compact-app.on-mac .header-actions .icon-button{width:26px;min-width:26px;}.compact-app.on-mac .toolbar-divider{margin:0 2px;}}

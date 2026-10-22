@@ -186,6 +186,7 @@ async function copy() {
   <section
     :inert="s.maintenance || undefined"
     ref="dialog"
+    v-motion
     class="dialog transfer-dialog embedded-pane"
     @keydown.esc.stop.prevent="emit('close')"
     @keydown.meta.enter.prevent="submitShortcut"

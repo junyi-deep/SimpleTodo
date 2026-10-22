@@ -80,7 +80,7 @@ export function DismissNotices(): $CancellablePromise<void> {
     return $Call.ByID(2494995928);
 }
 
-export function DownloadUpdate(): $CancellablePromise<void> {
+export function DownloadUpdate(): $CancellablePromise<string> {
     return $Call.ByID(4059901816);
 }
 
@@ -208,6 +208,10 @@ export function SaveExport(format: string, q: todo$0.Query, inbox: boolean, ids:
     return $Call.ByID(256414574, format, q, inbox, ids);
 }
 
+export function SaveUpdateProxy(c: releases$0.ProxyConfig): $CancellablePromise<void> {
+    return $Call.ByID(2029527743, c);
+}
+
 export function SeriesImpact(c: todo$0.Command): $CancellablePromise<todo$0.SeriesImpact> {
     return $Call.ByID(1250276674, c);
 }
@@ -265,6 +269,10 @@ export function ToggleWindow(key: string): $CancellablePromise<void> {
 
 export function Update(c: todo$0.Command): $CancellablePromise<todo$0.Task[] | null> {
     return $Call.ByID(203246836, c);
+}
+
+export function UpdateProxy(): $CancellablePromise<releases$0.ProxyConfig> {
+    return $Call.ByID(1362095044);
 }
 
 export function WindowAction(action: string): $CancellablePromise<void> {

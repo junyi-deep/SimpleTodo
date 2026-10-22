@@ -9,6 +9,7 @@ import {
   nextTick,
   type VNode,
 } from "vue";
+import { reveal, leave, cancelMotion } from "../composables/motion";
 import { ChevronDown, Check } from "lucide-vue-next";
 defineOptions({ inheritAttrs: false });
 const props = defineProps<{
@@ -55,8 +56,16 @@ function label() {
   );
 }
 function close(focus = false) {
+  if (!open.value) return;
   open.value = false;
-  if (popup.value?.matches(":popover-open")) popup.value.hidePopover();
+  const p = popup.value;
+  if (p?.matches(":popover-open")) {
+    p.inert = true;
+    leave(p, "popover", () => {
+      if (!open.value && p.matches(":popover-open")) p.hidePopover();
+      p.inert = false;
+    });
+  }
   if (focus) trigger.value?.focus();
 }
 async function toggle() {
@@ -80,7 +89,10 @@ async function toggle() {
         ? rect.bottom + 5
         : Math.max(8, rect.top - height - 5)) + "px",
   });
+  cancelMotion(p);
+  p.inert = false;
   p.showPopover();
+  reveal(p, "popover");
   // Safari does not focus buttons on mouse/AX activation by default.
   trigger.value?.focus();
 }
@@ -136,7 +148,10 @@ onMounted(() => {
   window.addEventListener("resize", outside);
 });
 onUnmounted(() => {
-  close();
+  if (popup.value) {
+    cancelMotion(popup.value);
+    if (popup.value.matches(":popover-open")) popup.value.hidePopover();
+  }
   document.removeEventListener("pointerdown", outside);
   window.removeEventListener("resize", outside);
 });

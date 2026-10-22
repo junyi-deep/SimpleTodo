@@ -91,6 +91,7 @@ async function save() {
   <section
     :inert="s.maintenance || undefined"
     ref="dialog"
+    v-motion
     class="dialog embedded-pane"
     @keydown.esc.stop.prevent="emit('close')"
     @keydown.meta.enter.prevent="save"

@@ -34,6 +34,8 @@ import {
   shiftDay,
 } from "./api/types";
 import { canLeaveEditor, hasDirtyEditor } from "./composables/editorGuard";
+import MotionPresence from "./components/MotionPresence.vue";
+import { setMotionEnabled, installControlMotion } from "./composables/motion";
 import TaskList from "./components/TaskList.vue";
 import CustomSelect from "./components/CustomSelect.vue";
 import FocusPanel from "./components/FocusPanel.vue";
@@ -136,7 +138,11 @@ function applyTheme() {
 watch(() => s.boot?.settings.theme, applyTheme, { immediate: true });
 watch(
   () => s.boot?.settings.animation,
-  (v) => document.documentElement.classList.toggle("no-motion", v === "false"),
+  (v) => {
+    document.documentElement.classList.toggle("no-motion", v === "false");
+    setMotionEnabled(v !== "false");
+  },
+  { immediate: true },
 );
 watch(
   () => s.boot?.today,
@@ -525,6 +531,7 @@ async function keyboard(e: KeyboardEvent) {
   }
 }
 onMounted(async () => {
+  stopListeners.push(installControlMotion());
   await s.init();
   previousToday = s.boot?.today || s.date;
   try {
@@ -650,6 +657,44 @@ onUnmounted(() => {
         >
           <Pin :size="14" />
         </button>
+        <div class="tools">
+          <button
+            :aria-expanded="menu"
+            class="icon-button"
+            aria-label="工具菜单"
+            @click.prevent="menu = !menu"
+          >
+            <MoreHorizontal :size="17" />
+          </button>
+          <MotionPresence
+            ><div v-if="menu" class="menu">
+              <button @click="openSettings('general')">
+                <Settings :size="14" />设置</button
+              ><button @click="openTransfer('import')">
+                <Upload :size="14" />导入待办</button
+              ><button @click="openTransfer('export')">
+                <Download :size="14" />导出待办</button
+              ><button
+                @click="
+                  notices = !notices;
+                  menu = false;
+                "
+              >
+                <Bell :size="14" />错过的提醒 {{ s.boot?.notices.length || 0 }}
+              </button>
+              <hr />
+              <button @click="openSettings('about')">帮助与关于</button
+              ><button
+                @click="
+                  quit();
+                  menu = false;
+                "
+              >
+                退出 SimpleTodo
+              </button>
+            </div></MotionPresence
+          >
+        </div>
         <button
           class="icon-button"
           aria-label="最小化窗口"
@@ -667,7 +712,6 @@ onUnmounted(() => {
           <Maximize2 :size="14" />
         </button>
         <button
-          v-if="s.boot?.capabilities.platform === 'windows'"
           class="icon-button window-close"
           aria-label="关闭窗口"
           title="关闭"
@@ -675,41 +719,6 @@ onUnmounted(() => {
         >
           <X :size="15" />
         </button>
-        <details class="tools" :open="menu">
-          <summary
-            class="icon-button"
-            aria-label="工具菜单"
-            @click.prevent="menu = !menu"
-          >
-            <MoreHorizontal :size="17" />
-          </summary>
-          <div class="menu">
-            <button @click="openSettings('general')">
-              <Settings :size="14" />设置</button
-            ><button @click="openTransfer('import')">
-              <Upload :size="14" />导入待办</button
-            ><button @click="openTransfer('export')">
-              <Download :size="14" />导出待办</button
-            ><button
-              @click="
-                notices = !notices;
-                menu = false;
-              "
-            >
-              <Bell :size="14" />错过的提醒 {{ s.boot?.notices.length || 0 }}
-            </button>
-            <hr />
-            <button @click="openSettings('about')">帮助与关于</button
-            ><button
-              @click="
-                quit();
-                menu = false;
-              "
-            >
-              退出 SimpleTodo
-            </button>
-          </div>
-        </details>
       </nav>
     </header>
     <section v-if="s.boot?.startupError" class="recovery-panel">
@@ -909,9 +918,16 @@ onUnmounted(() => {
       />
       <footer
         v-if="panel === 'tasks'"
+        v-motion="completed"
         class="list-footer"
         aria-label="任务完成统计"
       >
+        <span
+          v-if="roots.length && completed === roots.length"
+          v-motion
+          class="all-done"
+          ><CheckCheck :size="13" /> 都完成了</span
+        >
         {{ completed }} / {{ roots.length }} 已完成
       </footer>
       <section
@@ -924,7 +940,7 @@ onUnmounted(() => {
             >周{{ d }}</span
           >
         </div>
-        <div class="calendar-grid">
+        <div v-motion="calendarMode + calendarDays[0]" class="calendar-grid">
           <button
             v-for="day in calendarDays"
             :key="day"
@@ -971,7 +987,7 @@ onUnmounted(() => {
             >
           </button>
         </div>
-        <Transition name="drawer"
+        <MotionPresence kind="drawer"
           ><aside v-if="drawer" class="day-drawer" aria-label="日期任务抽屉">
             <header class="drawer-header">
               <div>
@@ -1003,9 +1019,9 @@ onUnmounted(() => {
               @drop="rootDrop"
               @paste="importLines"
             /></aside
-        ></Transition>
+        ></MotionPresence>
       </section>
-      <section v-if="notices" class="notice-panel">
+      <section v-if="notices" v-motion:popover class="notice-panel">
         <header>
           <strong>错过的提醒</strong
           ><button
@@ -1051,7 +1067,11 @@ onUnmounted(() => {
         <X :size="13" />
       </button>
     </div>
-    <div v-if="s.toast" class="toast" role="status">{{ s.toast }}</div>
+    <MotionPresence kind="toast"
+      ><div v-if="s.toast" class="toast" role="status">
+        {{ s.toast }}
+      </div></MotionPresence
+    >
   </main>
   <div v-if="s.maintenance" class="maintenance-mask" role="status">
     正在处理数据，请稍候…

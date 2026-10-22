@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import MotionPresence from "./MotionPresence.vue";
+import { reveal, leave, cancelMotion } from "../composables/motion";
 import { computed, ref, nextTick, onMounted, onUnmounted, watch } from "vue";
 import {
   ChevronRight,
@@ -416,7 +418,17 @@ async function dropNode(e: DragEvent, t: Task) {
         </button>
       </template>
     </nav>
-    <div role="list" :aria-label="root.title">
+    <TransitionGroup
+      tag="div"
+      role="list"
+      :aria-label="root.title"
+      :css="false"
+      @enter="(el, done) => reveal(el, 'row', done)"
+      @leave="(el, done) => leave(el, 'row', done)"
+      @enter-cancelled="cancelMotion"
+      @leave-cancelled="cancelMotion"
+      move-class="task-move"
+    >
       <div v-for="{ task: t, depth } in rows" :key="t.id" role="listitem">
         <div
           class="task-row group"
@@ -475,6 +487,7 @@ async function dropNode(e: DragEvent, t: Task) {
             /></button
           ><span v-else class="tree-toggle spacer" />
           <button
+            v-complete="t.status === 'completed'"
             class="task-check"
             :class="{
               checked: t.status === 'completed',
@@ -563,57 +576,59 @@ async function dropNode(e: DragEvent, t: Task) {
               <MoreHorizontal :size="16" />
             </summary>
             <Teleport to="body"
-              ><div
-                v-if="menu === t.id"
-                class="menu node-menu"
-                :data-popup="root.id"
-                :style="{
-                  left: menuPosition.left + 'px',
-                  top: menuPosition.top + 'px',
-                }"
-                @keydown.esc.stop="menu = null"
-              >
-                <button v-if="t.parentId" @click="indent(t)">
-                  <IndentIncrease :size="14" />缩进一级</button
-                ><button v-if="t.parentId" @click="indent(t, true)">
-                  <IndentDecrease :size="14" />提升一级
-                </button>
-                <button
-                  v-if="children(t.id).length"
-                  @click="
-                    focused = t.id;
-                    expanded = new Set(nodes.map((n) => n.id));
-                    menu = null;
-                  "
+              ><MotionPresence
+                ><div
+                  v-if="menu === t.id"
+                  class="menu node-menu"
+                  :data-popup="root.id"
+                  :style="{
+                    left: menuPosition.left + 'px',
+                    top: menuPosition.top + 'px',
+                  }"
+                  @keydown.esc.stop="menu = null"
                 >
-                  <Focus :size="14" />聚焦此分支</button
-                ><button
-                  v-if="!t.parentId && !t.seriesId"
-                  @click="
-                    s.move(t, t.date ? null : s.date);
-                    menu = null;
-                  "
-                >
-                  <CalendarDays :size="14" />{{
-                    t.date ? "移到收集箱" : "安排到所选日期"
-                  }}
-                </button>
-                <button
-                  v-if="t.parentId || !t.seriesId"
-                  @click="
-                    placement = t;
-                    menu = null;
-                  "
-                >
-                  {{ t.parentId ? "移动到其他父任务…" : "调整计划日期…" }}
-                </button>
-                <hr />
-                <button class="danger" @click="del(t)">
-                  <Trash2 :size="14" />删除{{
-                    children(t.id).length ? "整个分支" : ""
-                  }}
-                </button>
-              </div></Teleport
+                  <button v-if="t.parentId" @click="indent(t)">
+                    <IndentIncrease :size="14" />缩进一级</button
+                  ><button v-if="t.parentId" @click="indent(t, true)">
+                    <IndentDecrease :size="14" />提升一级
+                  </button>
+                  <button
+                    v-if="children(t.id).length"
+                    @click="
+                      focused = t.id;
+                      expanded = new Set(nodes.map((n) => n.id));
+                      menu = null;
+                    "
+                  >
+                    <Focus :size="14" />聚焦此分支</button
+                  ><button
+                    v-if="!t.parentId && !t.seriesId"
+                    @click="
+                      s.move(t, t.date ? null : s.date);
+                      menu = null;
+                    "
+                  >
+                    <CalendarDays :size="14" />{{
+                      t.date ? "移到收集箱" : "安排到所选日期"
+                    }}
+                  </button>
+                  <button
+                    v-if="t.parentId || !t.seriesId"
+                    @click="
+                      placement = t;
+                      menu = null;
+                    "
+                  >
+                    {{ t.parentId ? "移动到其他父任务…" : "调整计划日期…" }}
+                  </button>
+                  <hr />
+                  <button class="danger" @click="del(t)">
+                    <Trash2 :size="14" />删除{{
+                      children(t.id).length ? "整个分支" : ""
+                    }}
+                  </button>
+                </div></MotionPresence
+              ></Teleport
             >
           </details>
         </div>
@@ -645,7 +660,7 @@ async function dropNode(e: DragEvent, t: Task) {
           </button>
         </div>
       </div>
-    </div>
+    </TransitionGroup>
   </section>
   <ReminderPopover
     v-if="reminding"

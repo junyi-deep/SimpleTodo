@@ -10,7 +10,6 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/services/notifications"
-	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -21,6 +20,8 @@ import (
 )
 
 type TodoService struct {
+	proxyMu      sync.Mutex
+	downloading  atomic.Bool
 	forceQuit    atomic.Bool
 	maintenance  atomic.Bool
 	confirming   atomic.Int32
@@ -343,15 +344,76 @@ func (s *TodoService) OpenDataDir() error {
 	}
 	return s.app.Browser.OpenFile(dir)
 }
-func (s *TodoService) CheckUpdate() (releases.Info, error) {
-	return releases.Latest(s.ctx, &http.Client{Timeout: 12 * time.Second}, releases.Endpoint, todo.Version, runtime.GOOS, runtime.GOARCH)
+func (s *TodoService) proxyPath() string {
+	if custom := os.Getenv("SIMPLETODO_DATA_DIR"); custom != "" {
+		return filepath.Join(custom, "update-proxy.json")
+	}
+	return filepath.Join(filepath.Dir(s.bootstrap), "update-proxy.json")
 }
-func (s *TodoService) DownloadUpdate() error {
+func (s *TodoService) UpdateProxy() (releases.ProxyConfig, error) {
+	s.proxyMu.Lock()
+	defer s.proxyMu.Unlock()
+	c, err := releases.ReadProxy(s.proxyPath())
+	return c.Public(), err
+}
+func (s *TodoService) SaveUpdateProxy(c releases.ProxyConfig) error {
+	s.proxyMu.Lock()
+	defer s.proxyMu.Unlock()
+	if c.KeepPassword {
+		old, err := releases.ReadProxy(s.proxyPath())
+		if err != nil {
+			return err
+		}
+		c.Password = old.Password
+	}
+	return releases.SaveProxy(s.proxyPath(), c)
+}
+func (s *TodoService) CheckUpdate() (releases.Info, error) {
+	s.proxyMu.Lock()
+	c, err := releases.ReadProxy(s.proxyPath())
+	s.proxyMu.Unlock()
+	if err != nil {
+		return releases.Info{}, err
+	}
+	client, err := releases.NewClient(c, 20*time.Second)
+	if err != nil {
+		return releases.Info{}, err
+	}
+	defer client.CloseIdleConnections()
+	return releases.Latest(s.ctx, client, releases.Endpoint, todo.Version, runtime.GOOS, runtime.GOARCH)
+}
+func (s *TodoService) DownloadUpdate() (string, error) {
+	if !s.downloading.CompareAndSwap(false, true) {
+		return "", fmt.Errorf("安装包正在下载")
+	}
+	defer s.downloading.Store(false)
 	info, err := s.CheckUpdate()
 	if err != nil {
-		return err
+		return "", err
 	}
-	return s.app.Browser.OpenURL(info.DownloadURL)
+	name := "SimpleTodo-windows-amd64.zip"
+	if runtime.GOOS == "darwin" {
+		name = "SimpleTodo-macos-arm64.zip"
+	}
+	path, err := s.app.Dialog.SaveFile().SetFilename(name).PromptForSingleSelection()
+	if err != nil || path == "" {
+		return "", err
+	}
+	s.proxyMu.Lock()
+	c, err := releases.ReadProxy(s.proxyPath())
+	s.proxyMu.Unlock()
+	if err != nil {
+		return "", err
+	}
+	client, err := releases.NewClient(c, 10*time.Minute)
+	if err != nil {
+		return "", err
+	}
+	defer client.CloseIdleConnections()
+	if err = releases.Download(s.ctx, client, info.DownloadURL, path); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 func (s *TodoService) Autostart(enabled bool) error {
 	var err error

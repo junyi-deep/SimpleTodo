@@ -28,7 +28,7 @@ func Latest(ctx context.Context, client *http.Client, endpoint, current, platfor
 	req.Header.Set("User-Agent", "SimpleTodo/"+current)
 	res, err := client.Do(req)
 	if err != nil {
-		return Info{}, fmt.Errorf("无法连接 GitHub，请稍后重试：%w", err)
+		return Info{}, fmt.Errorf("无法连接 GitHub，请检查网络与代理设置后重试")
 	}
 	defer res.Body.Close()
 	if res.StatusCode != http.StatusOK {

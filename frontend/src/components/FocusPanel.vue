@@ -121,7 +121,7 @@ async function enabled(c: Countdown) {
 }
 </script>
 <template>
-  <section class="focus-page">
+  <section v-motion="mode" class="focus-page">
     <div class="segmented">
       <button :class="{ active: mode === 'focus' }" @click="mode = 'focus'">
         <Timer :size="15" />专注时钟</button

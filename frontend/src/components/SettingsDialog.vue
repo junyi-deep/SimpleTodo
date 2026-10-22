@@ -45,6 +45,7 @@ const tabs = [
 restoreDialogFocus();
 onMounted(async () => {
   await loadBackups();
+  await loadProxy();
 
   emoji.value = s.boot?.settings.emoji || "☺";
   for (const key of ["main", "quick", "mini"])
@@ -63,8 +64,64 @@ function checkbox(e: Event) {
 async function set(key: string, e: Event) {
   await s.setting(key, (e.target as HTMLInputElement).value);
 }
+type ProxyConfig = {
+  mode: string;
+  address: string;
+  username: string;
+  password: string;
+  hasPassword?: boolean;
+  keepPassword?: boolean;
+};
+const proxy = ref<ProxyConfig>({
+  mode: "system",
+  address: "",
+  username: "",
+  password: "",
+});
+const proxyLoaded = ref(false),
+  proxySaving = ref(false),
+  downloading = ref(false),
+  downloadPath = ref("");
+async function loadProxy() {
+  const result = await s.run(() => api<ProxyConfig>("UpdateProxy"));
+  if (result) proxy.value = result;
+  proxyLoaded.value = true;
+}
+async function saveProxy() {
+  if (!proxyLoaded.value) return false;
+  proxySaving.value = true;
+  try {
+    await api("SaveUpdateProxy", { ...proxy.value });
+    proxy.value.hasPassword =
+      !!proxy.value.password || !!proxy.value.keepPassword;
+    proxy.value.keepPassword = proxy.value.hasPassword;
+    proxy.value.password = "";
+    s.error = "";
+    return true;
+  } catch (error) {
+    s.error = String(error);
+    return false;
+  } finally {
+    proxySaving.value = false;
+  }
+}
+async function downloadUpdate() {
+  if (!(await saveProxy())) return;
+  downloading.value = true;
+  try {
+    const path = await s.run(() => api<string>("DownloadUpdate"));
+    if (path) {
+      downloadPath.value = path;
+      s.inform("安装包已保存");
+    }
+  } finally {
+    downloading.value = false;
+  }
+}
 async function checkUpdate() {
+  if (!(await saveProxy())) return;
   checking.value = true;
+  latestRelease.value = null;
   try {
     const result = await s.run(() =>
       api<{ version: string; available: boolean; downloadURL: string }>(
@@ -147,6 +204,7 @@ async function migrate() {
   <section
     :inert="s.maintenance || undefined"
     ref="dialog"
+    v-motion
     class="dialog settings-dialog embedded-pane"
     @keydown.esc.stop.prevent="emit('close')"
   >
@@ -169,7 +227,7 @@ async function migrate() {
           <component :is="t.icon" :size="16" />{{ t.label }}
         </button>
       </nav>
-      <div class="settings-content">
+      <div v-motion="tab" class="settings-content">
         <template v-if="tab === 'general'"
           ><h2>按自己的节奏安排</h2>
           <p class="muted section-description"></p>
@@ -394,25 +452,104 @@ async function migrate() {
           <h2>SimpleTodo</h2>
           <p class="muted">版本 {{ s.boot?.version }} · 把每一天安排得刚刚好</p>
           <p class="about-copy">
-            从一个想法开始，拆成可执行的步骤。按天规划、桌面待办、专注计时，所有任务和数据都留在你的电脑上。
+            简洁地记录、安排与完成。所有任务数据仅存放在本地电脑上。
           </p>
           <h3>发布与更新</h3>
           <p class="muted small">
             从 GitHub Release 检查并下载适合当前电脑的安装包。
           </p>
+          <fieldset
+            class="update-proxy"
+            :disabled="!proxyLoaded || checking || downloading || proxySaving"
+          >
+            <label class="setting-row"
+              ><span>更新代理</span
+              ><CustomSelect v-model="proxy.mode" aria-label="更新代理"
+                ><option value="system">系统代理</option>
+                <option value="none">无代理</option>
+                <option value="custom">自定义代理</option></CustomSelect
+              ></label
+            >
+            <div v-if="proxy.mode === 'custom'" v-motion class="proxy-fields">
+              <label class="field"
+                ><span>HTTP 代理地址</span
+                ><input
+                  v-model="proxy.address"
+                  aria-label="HTTP 代理地址"
+                  placeholder="http://127.0.0.1:7890"
+                  autocomplete="off"
+                  spellcheck="false"
+              /></label>
+              <div class="proxy-credentials">
+                <label class="field"
+                  ><span>用户名（可选）</span
+                  ><input
+                    v-model="proxy.username"
+                    aria-label="代理用户名"
+                    autocomplete="off"
+                /></label>
+                <label class="field"
+                  ><span>密码（可选）</span
+                  ><input
+                    v-model="proxy.password"
+                    type="password"
+                    aria-label="代理密码"
+                    :placeholder="
+                      proxy.hasPassword && proxy.keepPassword
+                        ? '已保存，留空保留'
+                        : '无需认证可留空'
+                    "
+                    autocomplete="new-password"
+                    @input="proxy.keepPassword = false"
+                /></label>
+              </div>
+              <button
+                v-if="proxy.hasPassword"
+                class="text-button"
+                @click="
+                  proxy.password = '';
+                  proxy.keepPassword = false;
+                  proxy.hasPassword = false;
+                "
+              >
+                清除已保存的密码
+              </button>
+            </div>
+            <p class="muted small">
+              仅用于检查更新和下载安装包。支持 HTTP 代理。
+            </p>
+            <button
+              class="text-button"
+              @click="
+                saveProxy().then((ok) => {
+                  if (ok) s.inform('更新代理已保存');
+                })
+              "
+            >
+              保存代理设置
+            </button>
+          </fieldset>
           <div class="inline-actions">
-            <button class="button" :disabled="checking" @click="checkUpdate">
+            <button
+              class="button"
+              :disabled="checking || downloading || !proxyLoaded"
+              @click="checkUpdate"
+            >
               <ExternalLink :size="14" />{{
                 checking ? "检查中…" : "检查更新"
               }}</button
             ><button
               v-if="latestRelease?.available"
               class="button primary"
-              @click="s.run(() => api('DownloadUpdate'))"
+              :disabled="downloading || checking"
+              @click="downloadUpdate"
             >
-              下载 {{ latestRelease.version }}
+              {{ downloading ? "下载中…" : "下载 " + latestRelease.version }}
             </button>
           </div>
+          <p v-if="downloadPath" class="muted small path-output" role="status">
+            已保存到 {{ downloadPath }}
+          </p>
           <p v-if="latestRelease" class="muted small">
             {{
               latestRelease.available
@@ -420,15 +557,7 @@ async function migrate() {
                 : "当前已是最新版本（" + latestRelease.version + "）"
             }}
           </p>
-          <h3>使用提示</h3>
-          <p class="muted small">
-            Enter 连续记录，Shift+Enter
-            拆分子任务；从任务菜单可调整层级。拖动根任务到日期栏即可改期，收集箱保存还没安排日期的想法。
-          </p>
-          <p class="quiet-note">
-            由 Go、Wails、Vue 和 SQLite 构建。运行不依赖远程字体或在线服务。
-          </p></template
-        >
+        </template>
         <p v-if="s.error" class="inline-error" role="alert">{{ s.error }}</p>
       </div>
     </div>

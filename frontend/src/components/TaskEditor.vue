@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reveal, leave, cancelMotion } from "../composables/motion";
 import CustomSelect from "./CustomSelect.vue";
 import { registerEditorGuard } from "../composables/editorGuard";
 import { restoreDialogFocus } from "../composables/dialogFocus";
@@ -73,7 +74,20 @@ async function canLeave() {
   return !s.saving && (!dirty() || (await confirmAction("放弃未保存的修改？")));
 }
 const releaseGuard = registerEditorGuard(dirty, canLeave);
-onUnmounted(releaseGuard);
+onUnmounted(() => {
+  releaseGuard();
+  if (dialog.value) cancelMotion(dialog.value);
+});
+const closing = ref(false);
+async function dismiss() {
+  if (closing.value) return;
+  closing.value = true;
+  await new Promise<void>((resolve) => {
+    if (dialog.value) leave(dialog.value, "dialog", resolve);
+    else resolve();
+  });
+  emit("close");
+}
 function toLocal(ms: number) {
   const d = new Date(ms);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
@@ -81,6 +95,7 @@ function toLocal(ms: number) {
 restoreDialogFocus(props.task.id);
 onMounted(async () => {
   dialog.value?.showModal();
+  if (dialog.value) reveal(dialog.value, "dialog");
   dialog.value?.querySelector("input")?.focus();
   if (props.task.seriesId) {
     try {
@@ -147,7 +162,7 @@ async function save(addChild = false) {
   );
   if (!changed) return;
   if (reminder.value) await s.requestNotifications();
-  emit("close");
+  await dismiss();
   if (addChild) {
     await nextTick();
     document.dispatchEvent(
@@ -175,7 +190,7 @@ async function stopFollowing() {
       await api("StopFollowing", editCommand());
       ok = true;
     });
-    if (ok) emit("close");
+    if (ok) await dismiss();
   }
 }
 function toggleWeekday(n: number) {
@@ -184,13 +199,14 @@ function toggleWeekday(n: number) {
     : [...weekdays.value, n];
 }
 async function cancel() {
-  if (await canLeave()) emit("close");
+  if (await canLeave()) await dismiss();
 }
 </script>
 <template>
   <Teleport to="body"
     ><dialog
-      :inert="s.maintenance || undefined"
+      :inert="s.maintenance || closing || undefined"
+      :class="{ 'motion-closing': closing && !s.maintenance }"
       ref="dialog"
       class="task-settings-dialog"
       aria-label="任务详细设置"

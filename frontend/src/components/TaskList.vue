@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { reveal, leave, cancelMotion } from "../composables/motion";
 import { ref, nextTick, onMounted, onUnmounted } from "vue";
 import { Plus, CornerDownLeft } from "lucide-vue-next";
 import InlineTitle from "./InlineTitle.vue";
@@ -33,31 +34,40 @@ onMounted(() => document.addEventListener("todo:new-task", requestAdd));
 onUnmounted(() => document.removeEventListener("todo:new-task", requestAdd));
 </script>
 <template>
-  <section class="task-list" :aria-busy="s.loading">
-    <div v-for="t in roots" :key="t.id" class="root-entry">
-      <div class="selectable-root">
-        <input
-          v-if="batch"
-          class="root-select"
-          type="checkbox"
-          :aria-label="'选择 ' + t.title"
-          :checked="s.selected.includes(t.id)"
-          @change="
-            s.selected = s.selected.includes(t.id)
-              ? s.selected.filter((x) => x !== t.id)
-              : [...s.selected, t.id]
-          "
-        />
-        <TaskTree
-          :root="t"
-          :editing="editing"
-          @edit="emit('edit', $event)"
-          @drag="emit('drag', $event)"
-          @drop="(t, e) => emit('drop', t, e)"
-        />
+  <section v-motion="date" class="task-list" :aria-busy="s.loading">
+    <TransitionGroup
+      :css="false"
+      @enter="(el, done) => reveal(el, 'row', done)"
+      @leave="(el, done) => leave(el, 'row', done)"
+      @enter-cancelled="cancelMotion"
+      @leave-cancelled="cancelMotion"
+      move-class="task-move"
+    >
+      <div v-for="t in roots" :key="t.id" class="root-entry">
+        <div class="selectable-root">
+          <input
+            v-if="batch"
+            class="root-select"
+            type="checkbox"
+            :aria-label="'选择 ' + t.title"
+            :checked="s.selected.includes(t.id)"
+            @change="
+              s.selected = s.selected.includes(t.id)
+                ? s.selected.filter((x) => x !== t.id)
+                : [...s.selected, t.id]
+            "
+          />
+          <TaskTree
+            :root="t"
+            :editing="editing"
+            @edit="emit('edit', $event)"
+            @drag="emit('drag', $event)"
+            @drop="(t, e) => emit('drop', t, e)"
+          />
+        </div>
       </div>
-    </div>
-    <div v-if="adding" class="draft-task-row">
+    </TransitionGroup>
+    <div v-if="adding" v-motion:row class="draft-task-row">
       <span class="draft-check" /><InlineTitle
         :date="date"
         @done="adding = false"

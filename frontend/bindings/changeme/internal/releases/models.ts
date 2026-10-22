@@ -7,3 +7,15 @@ export interface Info {
     "downloadURL": string;
     "releaseURL": string;
 }
+
+/**
+ * ProxyConfig is stored separately from task backups. Password is never returned to the UI.
+ */
+export interface ProxyConfig {
+    "mode": string;
+    "address": string;
+    "username": string;
+    "password": string;
+    "hasPassword"?: boolean;
+    "keepPassword"?: boolean;
+}
