@@ -6,11 +6,13 @@ import (
 	"embed"
 	"encoding/json"
 	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v3/pkg/events"
 	"github.com/wailsapp/wails/v3/pkg/services/notifications"
 	"log"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -27,7 +29,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ns := notifications.New()
-	s := &TodoService{ns: ns, windows: map[string]*application.WebviewWindow{}, shortcuts: map[string]string{}, warnings: []string{}}
+	ready := make(chan struct{})
+	s := &TodoService{ns: ns, desktopReady: ready, windows: map[string]*application.WebviewWindow{}, shortcuts: map[string]string{}, warnings: []string{}}
 	app := application.New(application.Options{Name: "SimpleTodo", Description: "本地优先的个人待办与专注工具", OnShutdown: cancel, ShouldQuit: func() bool {
 		if s.forceQuit.Load() {
 			return true
@@ -37,6 +40,10 @@ func main() {
 	}, Services: []application.Service{application.NewService(s), application.NewService(ns)}, Assets: application.AssetOptions{Handler: application.AssetFileServerFS(assets)}, Mac: application.MacOptions{ApplicationShouldTerminateAfterLastWindowClosed: false}, SingleInstance: &application.SingleInstanceOptions{UniqueID: "com.junyi.simpletodo", OnSecondInstanceLaunch: func(data application.SecondInstanceData) { _ = s.ShowWindow("main") }}})
 	s.app = app
 	s.ctx = ctx
+	var started sync.Once
+	app.Event.OnApplicationEvent(events.Common.ApplicationStarted, func(*application.ApplicationEvent) {
+		started.Do(func() { close(ready) })
+	})
 	base, err := os.UserConfigDir()
 	if err != nil {
 		log.Fatal(err)
@@ -103,7 +110,7 @@ func main() {
 	menu.Add("退出 SimpleTodo").OnClick(func(ctx *application.Context) { s.requestQuit() })
 	tray.SetMenu(menu)
 	tray.OnClick(func() { s.ToggleWindow("main") })
-	go func() {
+	go afterDesktopReady(ctx, ready, func() {
 		ticker := time.NewTicker(200 * time.Millisecond)
 		defer ticker.Stop()
 		for {
@@ -114,10 +121,16 @@ func main() {
 				s.edgeTick()
 			}
 		}
-	}()
+	})
 	// Register shortcuts after startup so registration failures are observable.
-	go func() {
-		time.Sleep(time.Second)
+	go afterDesktopReady(ctx, ready, func() {
+		timer := time.NewTimer(time.Second)
+		defer timer.Stop()
+		select {
+		case <-ctx.Done():
+			return
+		case <-timer.C:
+		}
 		if s.core() == nil {
 			return
 		}
@@ -137,7 +150,7 @@ func main() {
 				}
 			}
 		}
-	}()
+	})
 	if err = app.Run(); err != nil {
 		log.Print(err)
 	}

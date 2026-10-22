@@ -21,31 +21,32 @@ import (
 )
 
 type TodoService struct {
-	forceQuit   atomic.Bool
-	maintenance atomic.Bool
-	confirming  atomic.Int32
-	viewMode    string
-	listBounds  application.Rect
-	edgeEditing bool
-	edgeTicks   int
-	shortcutMu  sync.Mutex
-	engine      atomic.Pointer[todo.Engine]
-	startupErr  atomic.Pointer[string]
-	dataPath    string
-	ctx         context.Context
-	app         *application.App
-	ns          *notifications.NotificationService
-	mu          sync.Mutex
-	windows     map[string]*application.WebviewWindow
-	shortcuts   map[string]string
-	bootstrap   string
-	warnings    []string
-	edgeHidden  bool
-	edgeBounds  application.Rect
-	edgeSince   time.Time
-	edgeBusy    bool
-	modalBusy   bool
-	menuBusy    bool
+	forceQuit    atomic.Bool
+	maintenance  atomic.Bool
+	confirming   atomic.Int32
+	viewMode     string
+	listBounds   application.Rect
+	edgeEditing  bool
+	edgeTicks    int
+	shortcutMu   sync.Mutex
+	engine       atomic.Pointer[todo.Engine]
+	startupErr   atomic.Pointer[string]
+	dataPath     string
+	ctx          context.Context
+	desktopReady <-chan struct{}
+	app          *application.App
+	ns           *notifications.NotificationService
+	mu           sync.Mutex
+	windows      map[string]*application.WebviewWindow
+	shortcuts    map[string]string
+	bootstrap    string
+	warnings     []string
+	edgeHidden   bool
+	edgeBounds   application.Rect
+	edgeSince    time.Time
+	edgeBusy     bool
+	modalBusy    bool
+	menuBusy     bool
 }
 
 func (s *TodoService) Boot() (map[string]any, error) {
@@ -772,7 +773,7 @@ func (s *TodoService) installEngine(e *todo.Engine) {
 	}
 	s.engine.Store(e)
 	s.startupErr.Store(nil)
-	go e.Run(s.ctx)
+	go afterDesktopReady(s.ctx, s.desktopReady, func() { e.Run(s.ctx) })
 }
 
 func (s *TodoService) SeriesImpact(c todo.Command) (todo.SeriesImpact, error) {

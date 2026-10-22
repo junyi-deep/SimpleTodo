@@ -562,7 +562,11 @@ hr {
   opacity: 0;
   color: var(--muted);
   cursor: grab;
+  user-select: none;
+  align-self: flex-start;
+  margin-top: 6px;
 }
+.drag-handle svg { pointer-events: none; }
 .task-row:hover .drag-handle {
   opacity: 1;
 }

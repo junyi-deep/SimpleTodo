@@ -89,17 +89,32 @@ test("拖动到任务中央作为子任务，整个分支持久化", async ({ pa
     b = await root(request, unique("将被嵌套"));
   await page.goto("/?preview=1");
   const r = row(page, a.title),
-    box = (await r.boundingBox())!;
-  const data = await page.evaluateHandle((id) => {
-    const d = new DataTransfer();
-    d.setData("text/plain", id);
-    return d;
-  }, b.id);
-  await r.dispatchEvent("drop", {
-    dataTransfer: data,
-    clientY: box.y + box.height / 2,
-    clientX: box.x + box.width / 2,
+    source = row(page, b.title);
+  await source.scrollIntoViewIfNeeded();
+  await r.scrollIntoViewIfNeeded();
+  await source.hover();
+  const box = (await r.boundingBox())!;
+  await expect(source.locator(".drag-handle")).toHaveAttribute(
+    "draggable",
+    "true",
+  );
+  const grip = (await source.locator(".drag-handle").boundingBox())!;
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    grip.x + grip.width / 2 + 12,
+    grip.y + grip.height / 2,
+    { steps: 5 },
+  );
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, {
+    steps: 10,
   });
+  await page.mouse.move(box.x + box.width / 2 + 1, box.y + box.height / 2);
+  await page.screenshot({
+    path: "../.impeccable/review/checklist-real-drag-preview.png",
+    animations: "disabled",
+  });
+  await page.mouse.up();
   await expect(row(page, b.title)).toBeVisible();
   await expect
     .poll(async () => {
@@ -110,6 +125,10 @@ test("拖动到任务中央作为子任务，整个分支持久化", async ({ pa
   await page.reload();
   await row(page, a.title).getByLabel("展开子任务").click();
   await expect(row(page, b.title)).toBeVisible();
+  await page.screenshot({
+    path: "../.impeccable/review/checklist-real-drag-nested.png",
+    animations: "disabled",
+  });
 });
 test("提醒气泡可以创建每周重复及选择星期", async ({ page, request }) => {
   const t = await root(request, unique("重复提醒"));
