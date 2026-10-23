@@ -50,7 +50,7 @@ test("五层展开图标保持朝向和对齐，第六层快捷新增被阻止",
       Math.abs(arrow.y + arrow.height / 2 - title.y - title.height / 2),
     ).toBeLessThan(3);
   }
-  await row(page, chain[4].title).click();
+  await row(page, chain[4].title).focus();
   await page.keyboard.press("Shift+Enter");
   await expect(page.getByRole("status")).toContainText("最多支持 5 层");
   await expect(page.locator("[data-new-child]")).toHaveCount(0);
@@ -60,7 +60,7 @@ test("五层展开图标保持朝向和对齐，第六层快捷新增被阻止",
   });
 });
 
-test("双击光标在行尾，柔和编辑样式，完成后标题变浅并划线", async ({
+test("单击光标在行尾，柔和编辑样式，完成后标题变浅并划线", async ({
   page,
   request,
 }) => {
@@ -68,7 +68,7 @@ test("双击光标在行尾，柔和编辑样式，完成后标题变浅并划�
   await page.goto("/?preview=1");
   await row(page, t.title)
     .getByRole("button", { name: t.title, exact: true })
-    .dblclick();
+    .click();
   const input = page.getByLabel("编辑任务标题", { exact: true });
   await expect(input).toBeFocused();
   expect(
@@ -105,10 +105,8 @@ test("计划日期为模态框，不挤动列表，Esc 返回任务", async ({
     )
     .toBe(0);
   const before = (await r.boundingBox())!;
-  await r.getByLabel("更多任务操作").click();
-  await page
-    .getByRole("button", { name: "调整计划日期…", exact: true })
-    .click();
+  await r.hover();
+  await r.getByRole("button", { name: "调整计划日期", exact: true }).click();
   const dialog = page.getByRole("dialog", {
     name: "调整计划日期",
     exact: true,
@@ -122,7 +120,7 @@ test("计划日期为模态框，不挤动列表，Esc 返回任务", async ({
   });
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
-  await expect(r).toBeFocused();
+  await expect(r.getByLabel("调整计划日期", { exact: true })).toBeFocused();
 });
 
 test("真实指针拖动可取消，边缘排序保持同级并持久化", async ({

@@ -11,8 +11,7 @@ const props = defineProps<{ task: Task }>(),
   s = useTodo(),
   dialog = ref<HTMLDialogElement>();
 const parent = ref(props.task.parentId || props.task.rootId),
-  date = ref(props.task.date || s.boot?.today || s.date),
-  inbox = ref(!props.task.date);
+  date = ref(props.task.date || s.boot?.today || s.date);
 const expectedVersion = ref(
   s.taskMap.get(props.task.rootId)?.version || props.task.version,
 );
@@ -77,14 +76,8 @@ async function save() {
       ok = true;
     });
   } else {
-    if (
-      inbox.value &&
-      props.task.remindAt &&
-      !(await confirmAction("移入收集箱将取消未发送的提醒。继续？"))
-    )
-      return;
     await s.run(async () => {
-      await api("Move", { ...c, date: inbox.value ? null : date.value });
+      await api("Move", { ...c, date: date.value });
       ok = true;
     });
   }
@@ -126,9 +119,7 @@ async function save() {
               </option></CustomSelect
             ><small>携带完整子树；不能跨根任务或移入自身后代。</small></label
           ><template v-else
-            ><label class="check-label"
-              ><input v-model="inbox" type="checkbox" />移到收集箱</label
-            ><label v-if="!inbox" class="field"
+            ><label class="field"
               ><span>计划日期</span
               ><input
                 v-model="date"

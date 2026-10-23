@@ -1,23 +1,18 @@
 <script setup lang="ts">
 import { startTaskDrag, cancelTaskDrag } from "../composables/taskDrag";
 onUnmounted(cancelTaskDrag);
-import MotionPresence from "./MotionPresence.vue";
 import { reveal, leave, cancelMotion } from "../composables/motion";
 import { computed, ref, nextTick, onMounted, onUnmounted, watch } from "vue";
 import {
   ChevronRight,
-  Plus,
-  MoreHorizontal,
   GripVertical,
   CornerDownRight,
   Repeat2,
   Bell,
   CalendarDays,
   Trash2,
-  IndentIncrease,
-  IndentDecrease,
-  Focus,
   Pencil,
+  Check,
 } from "lucide-vue-next";
 import InlineTitle from "./InlineTitle.vue";
 import { canLeaveEditor } from "../composables/editorGuard";
@@ -25,7 +20,7 @@ import TaskEditor from "./TaskEditor.vue";
 import ReminderPopover from "./ReminderPopover.vue";
 import TaskPlacement from "./TaskPlacement.vue";
 import { api, confirmAction } from "../api";
-import { type Task, parseDay } from "../api/types";
+import { type Task } from "../api/types";
 import { useTodo } from "../stores/todo";
 const props = defineProps<{
   root: Task;
@@ -41,20 +36,16 @@ const s = useTodo(),
   expanded = ref(new Set<string>()),
   adding = ref<string | null>(null),
   draft = ref(""),
-  menu = ref<string | null>(null),
   placement = ref<Task | null>(null),
   reminding = ref(false),
   dropHint = ref<string | null>(null),
   draggedId = ref<string | null>(null),
-  focused = ref<string | null>(null),
   rowFocus = ref(props.root.id),
   composing = ref(false),
-  menuPosition = ref({ left: 0, top: 0 });
+  deletePending = ref<string | null>(null);
+let deleteTimer: ReturnType<typeof setTimeout>;
 watch(placement, () => {
   if (s.key === "mini") void api("SetEdgeModalBusy", !!placement.value);
-});
-watch(menu, () => {
-  if (s.key === "mini") void api("SetEdgeMenuBusy", menu.value !== null);
 });
 const nodes = computed(() =>
     s.snapshot.tasks.filter((t) => t.rootId === props.root.id),
@@ -90,20 +81,8 @@ const rows = computed(() => {
         .filter((c) => !s.hideCompleted || c.status !== "completed")
         .forEach((c) => walk(c, depth + 1));
   };
-  walk(
-    focused.value ? index.value.get(focused.value) || props.root : props.root,
-    0,
-  );
+  walk(props.root, 0);
   return out;
-});
-const breadcrumbs = computed(() => {
-  const path: Task[] = [];
-  let task = focused.value ? index.value.get(focused.value) : undefined;
-  while (task) {
-    path.unshift(task);
-    task = task.parentId ? index.value.get(task.parentId) : undefined;
-  }
-  return path;
 });
 function toggle(id: string) {
   const next = new Set(expanded.value);
@@ -112,60 +91,31 @@ function toggle(id: string) {
   expanded.value = next;
 }
 async function titleClick(t: Task) {
-  s.activeTask = t.id;
-  document.querySelector<HTMLElement>(`[data-node="${t.id}"]`)?.focus();
-}
-async function titleDoubleClick(t: Task) {
-  if (!(await canLeaveEditor())) return;
+  if (s.titleEditing === t.id || !(await canLeaveEditor())) return;
   s.activeTask = t.id;
   s.titleEditing = t.id;
 }
-async function moveOrder(t: Task, step: number) {
-  const peers = t.parentId
-    ? children(t.parentId)
-    : s.roots.filter((n) => n.date === t.date);
-  const i = peers.findIndex((n) => n.id === t.id),
-    j = i + step;
-  if (j < 0 || j >= peers.length) return;
-  const ids = peers.map((n) => n.id);
-  [ids[i], ids[j]] = [ids[j], ids[i]];
-  if (t.parentId) {
-    const before = ids[ids.indexOf(t.id) + 1] || "";
-    await s.run(() =>
-      api("Reparent", {
-        ...s.command(t),
-        parentId: t.parentId,
-        beforeId: before,
-      }),
-    );
-  } else await s.run(() => api("Reorder", ids, s.snapshot.revision));
-  menu.value = null;
-}
-function openMenu(t: Task, e: MouseEvent) {
-  if (menu.value === t.id) {
-    menu.value = null;
-    return;
-  }
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-  menuPosition.value = {
-    left: Math.max(8, Math.min(window.innerWidth - 220, rect.right - 210)),
-    top: Math.max(
-      8,
-      Math.min(
-        window.innerHeight - Math.min(430, window.innerHeight - 20),
-        rect.bottom + 4,
-      ),
-    ),
-  };
-  menu.value = t.id;
+function resetDelete() {
+  clearTimeout(deleteTimer);
+  deletePending.value = null;
 }
 function outside(e: PointerEvent) {
-  const target = e.target as HTMLElement;
   if (
-    !target.closest(`[data-owner="${props.root.id}"]`) &&
-    !target.closest(`[data-popup="${props.root.id}"]`)
+    !(e.target as HTMLElement).closest(`[data-delete-owner="${props.root.id}"]`)
   )
-    menu.value = null;
+    resetDelete();
+}
+async function del(t: Task) {
+  if (!(await canLeaveEditor())) return;
+  if (deletePending.value !== t.id) {
+    resetDelete();
+    deletePending.value = t.id;
+    deleteTimer = setTimeout(resetDelete, 4000);
+    return;
+  }
+  const latest = s.taskMap.get(t.id);
+  if (latest) await s.remove(latest);
+  resetDelete();
 }
 function addRequested(e: Event) {
   const detail = (e as CustomEvent).detail;
@@ -179,6 +129,7 @@ onMounted(() => {
   document.addEventListener("todo:add-child", addRequested);
 });
 onUnmounted(() => {
+  resetDelete();
   document.removeEventListener("pointerdown", outside);
   document.removeEventListener("todo:add-child", addRequested);
 });
@@ -197,7 +148,6 @@ async function add(t: Task) {
   expanded.value = new Set([...expanded.value, ...ancestors]);
   adding.value = t.id;
   draft.value = "";
-  menu.value = null;
   await nextTick();
   document
     .querySelector<HTMLInputElement>(`[data-new-child="${t.id}"]`)
@@ -232,25 +182,6 @@ async function saveChild(parent: Task, event: KeyboardEvent) {
       ?.focus();
   }
 }
-async function del(t: Task) {
-  const count = nodes.value.filter((n) => {
-    let cur = n;
-    while (cur.parentId) {
-      if (cur.parentId === t.id) return true;
-      cur = index.value.get(cur.parentId)!;
-      if (!cur) break;
-    }
-    return false;
-  }).length;
-  if (
-    await confirmAction(
-      `删除「${t.title}」${count ? `及全部 ${count} 个后代` : ""}？此操作无法逐条撤销。`,
-    )
-  ) {
-    await s.remove(t);
-  }
-  menu.value = null;
-}
 async function indent(t: Task, out = false) {
   if (!t.parentId) return;
   let parent: string | undefined,
@@ -278,13 +209,12 @@ async function indent(t: Task, out = false) {
     api("Reparent", { ...s.command(t), parentId: parent, beforeId: before }),
   );
   if (parent) expanded.value = new Set([...expanded.value, parent]);
-  menu.value = null;
 }
 async function keydown(e: KeyboardEvent, t: Task) {
-  if (e.key === "Escape" && menu.value) {
+  if (e.key === "Escape" && deletePending.value) {
     e.preventDefault();
     e.stopPropagation();
-    menu.value = null;
+    resetDelete();
     return;
   }
   if ((e.target as HTMLElement).matches("input,textarea")) return;
@@ -300,7 +230,7 @@ async function keydown(e: KeyboardEvent, t: Task) {
     await add(t);
   } else if (e.key === "Enter") {
     e.preventDefault();
-    await titleDoubleClick(t);
+    await titleClick(t);
   } else if (e.key === " ") {
     e.preventDefault();
     await s.complete(t);
@@ -424,18 +354,6 @@ async function dropNode(e: DragEvent, t: Task) {
 </script>
 <template>
   <section class="task-tree" :class="{ compact }" :aria-label="root.title">
-    <nav v-if="focused" class="branch-path" aria-label="任务层级路径">
-      <template v-for="(ancestor, i) in breadcrumbs" :key="ancestor.id">
-        <ChevronRight v-if="i" :size="12" />
-        <button
-          class="branch-back"
-          :aria-current="ancestor.id === focused ? 'location' : undefined"
-          @click="focused = ancestor.parentId ? ancestor.id : null"
-        >
-          {{ ancestor.title }}
-        </button>
-      </template>
-    </nav>
     <TransitionGroup
       tag="div"
       role="list"
@@ -481,7 +399,11 @@ async function dropNode(e: DragEvent, t: Task) {
             rowFocus = t.id;
             s.activeTask = t.id;
           "
-          @click="s.activeTask = t.id"
+          @click="
+            ($event.target as HTMLElement).closest(
+              'button,input,textarea,.drag-handle',
+            ) || titleClick(t)
+          "
           @dragover.prevent="dropHint = t.id"
           @drop.stop="dropNode($event, t)"
         >
@@ -539,7 +461,6 @@ async function dropNode(e: DragEvent, t: Task) {
               class="task-title"
               :title="t.title"
               @click="titleClick(t)"
-              @dblclick="titleDoubleClick(t)"
               :disabled="s.saving"
             >
               {{ t.title }}</button
@@ -563,98 +484,56 @@ async function dropNode(e: DragEvent, t: Task) {
             :size="12"
             title="重复任务"
           />
-          <button
-            v-if="!t.parentId"
-            class="icon-button reminder-trigger"
-            :class="{ scheduled: !!t.remindAt }"
-            :data-reminder-trigger="t.id"
-            aria-label="设置提醒"
-            @click.stop="reminding = !reminding"
+          <div
+            class="task-actions"
+            :class="{ 'confirming-delete': deletePending === t.id }"
           >
-            <Bell :size="14" />
-          </button>
-          <button
-            class="icon-button task-settings-trigger"
-            aria-label="任务设置"
-            title="任务设置"
-            @click.stop="emit('edit', t)"
-          >
-            <Pencil :size="13" />
-          </button>
-          <details
-            class="node-more"
-            :data-owner="root.id"
-            :open="menu === t.id"
-            @toggle="
-              (e) => {
-                if (!(e.target as HTMLDetailsElement).open && menu === t.id)
-                  menu = null;
-              }
-            "
-          >
-            <summary
-              class="icon-button"
-              aria-label="更多任务操作"
-              @click.prevent="openMenu(t, $event)"
+            <button
+              v-if="!t.parentId"
+              class="icon-button reminder-trigger action-reminder"
+              :data-reminder-trigger="t.id"
+              aria-label="设置提醒"
+              title="设置提醒"
+              @click.stop="reminding = !reminding"
             >
-              <MoreHorizontal :size="16" />
-            </summary>
-            <Teleport to="body"
-              ><MotionPresence
-                ><div
-                  v-if="menu === t.id"
-                  class="menu node-menu"
-                  :data-popup="root.id"
-                  :style="{
-                    left: menuPosition.left + 'px',
-                    top: menuPosition.top + 'px',
-                  }"
-                  @keydown.esc.stop="menu = null"
-                >
-                  <button v-if="t.parentId" @click="indent(t)">
-                    <IndentIncrease :size="14" />缩进一级</button
-                  ><button v-if="t.parentId" @click="indent(t, true)">
-                    <IndentDecrease :size="14" />提升一级
-                  </button>
-                  <button
-                    v-if="children(t.id).length"
-                    @click="
-                      focused = t.id;
-                      expanded = new Set(nodes.map((n) => n.id));
-                      menu = null;
-                    "
-                  >
-                    <Focus :size="14" />聚焦此分支</button
-                  ><button
-                    v-if="!t.parentId && !t.seriesId"
-                    @click="
-                      s.move(t, t.date ? null : s.date);
-                      menu = null;
-                    "
-                  >
-                    <CalendarDays :size="14" />{{
-                      t.date ? "移到收集箱" : "安排到所选日期"
-                    }}
-                  </button>
-                  <button
-                    v-if="t.parentId || !t.seriesId"
-                    @click="
-                      placement = t;
-                      menu = null;
-                    "
-                  >
-                    {{ t.parentId ? "移动到其他父任务…" : "调整计划日期…" }}
-                  </button>
-                  <hr />
-                  <button class="danger" @click="del(t)">
-                    <Trash2 :size="14" />删除{{
-                      children(t.id).length ? "整个分支" : ""
-                    }}
-                  </button>
-                </div></MotionPresence
-              ></Teleport
+              <Bell :size="14" />
+            </button>
+            <button
+              class="icon-button task-settings-trigger action-edit"
+              aria-label="任务设置"
+              title="任务设置"
+              @click.stop="emit('edit', t)"
             >
-          </details>
+              <Pencil :size="14" />
+            </button>
+            <button
+              v-if="t.parentId || !t.seriesId"
+              class="icon-button action-date"
+              :aria-label="t.parentId ? '移动到其他父任务' : '调整计划日期'"
+              :title="t.parentId ? '移动到其他父任务' : '调整计划日期'"
+              @click.stop="placement = t"
+            >
+              <CalendarDays :size="14" />
+            </button>
+            <button
+              class="icon-button action-delete"
+              :class="{ armed: deletePending === t.id }"
+              :data-delete-owner="root.id"
+              :aria-label="deletePending === t.id ? '确认删除任务' : '删除任务'"
+              :title="
+                deletePending === t.id
+                  ? '再次点击确认删除整个分支；Esc 取消'
+                  : '删除任务及其子任务'
+              "
+              :disabled="s.saving"
+              @click.stop="del(t)"
+            >
+              <Check v-if="deletePending === t.id" :size="15" /><Trash2
+                v-else
+                :size="14"
+              />
+            </button>
+          </div>
         </div>
         <TaskEditor
           v-if="editing === t.id"
@@ -665,10 +544,11 @@ async function dropNode(e: DragEvent, t: Task) {
         <div
           v-if="adding === t.id"
           class="child-entry"
-          :style="{ paddingLeft: `${Math.min(depth + 1, 5) * 16 + 31}px` }"
+          :style="{ paddingLeft: `${Math.min(depth + 1, 5) * 22 + 31}px` }"
         >
           <CornerDownRight :size="14" /><input
             v-model="draft"
+            v-sparks
             :data-new-child="t.id"
             placeholder="添加子任务，Enter 连续录入"
             maxlength="500"

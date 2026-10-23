@@ -1,9 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { root, row, add, call, unique, select, tools } from "./helpers";
-test("单击选中显示全文，双击在原条目编辑，单独图标打开详细设置", async ({
-  page,
-  request,
-}) => {
+test("单击在原条目编辑，单独图标打开详细设置", async ({ page, request }) => {
   const t = await root(
     request,
     unique("这是需要完整阅读的清单任务".repeat(12)),
@@ -12,10 +9,7 @@ test("单击选中显示全文，双击在原条目编辑，单独图标打开�
   const r = row(page, t.title);
   await expect(r.locator(".task-title")).toHaveCSS("white-space", "nowrap");
   await r.getByRole("button", { name: t.title, exact: true }).click();
-  await expect(r).toHaveClass(/selected/);
-  await expect(r.locator(".task-title")).toHaveCSS("white-space", "normal");
   await expect(page.locator("dialog")).toHaveCount(0);
-  await r.getByRole("button", { name: t.title, exact: true }).dblclick();
   const input = page.getByLabel("编辑任务标题", { exact: true });
   await expect(input).toBeFocused();
   await page.screenshot({
@@ -26,6 +20,7 @@ test("单击选中显示全文，双击在原条目编辑，单独图标打开�
   await input.press("Enter");
   await expect(row(page, "就地修改完成")).toBeVisible();
   expect((await call(request, "FindTask", t.id)).title).toBe("就地修改完成");
+  await row(page, "就地修改完成").hover();
   await row(page, "就地修改完成").getByLabel("任务设置").click();
   await expect(
     page.getByRole("dialog", { name: "任务详细设置" }),

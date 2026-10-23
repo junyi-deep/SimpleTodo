@@ -4,6 +4,7 @@ import { unique, call, root, row, add, select } from "./helpers";
 test("行内编辑仍固定版本并支持冲突后显式重试", async ({ page, request }) => {
   const t = await root(request, unique("冲突草稿"));
   await page.goto("/?preview=1");
+  await row(page, t.title).hover();
   await row(page, t.title).getByLabel("任务设置").click();
   const editor = page.locator(".task-settings-dialog");
   await editor.getByLabel("任务标题").fill(t.title + "草稿");
@@ -35,6 +36,7 @@ test("行内编辑仍固定版本并支持冲突后显式重试", async ({ page,
 test("重复模板使用行内编辑器和自定义周期下拉", async ({ page, request }) => {
   const t = await root(request, unique("每天复盘"));
   await page.goto("/?preview=1");
+  await row(page, t.title).hover();
   await row(page, t.title).getByLabel("任务设置").click();
   const editor = page.locator(".task-settings-dialog");
   await select(page, "不重复", "每日");
@@ -67,16 +69,11 @@ test("拖动显示预览和落点并保存根任务顺序", async ({ page, reque
     })
     .toBe(true);
 });
-test("Esc 仅关闭菜单或子任务输入，取消后恢复父任务焦点", async ({ page }) => {
+test("Esc 取消子任务输入并恢复父任务焦点", async ({ page }) => {
   await page.goto("/?preview=1");
   const t = unique("取消录入");
   await add(page, t);
-  const r = row(page, t),
-    trigger = r.getByLabel("更多任务操作");
-  await r.hover();
-  await trigger.click();
-  await trigger.press("Escape");
-  await expect(page.locator(".node-menu")).toHaveCount(0);
+  const r = row(page, t);
   await r.focus();
   await r.press("Shift+Enter");
   const input = page.getByPlaceholder("添加子任务，Enter 连续录入");
@@ -128,6 +125,7 @@ test("输入法确认不误提交，多行粘贴仍先预览", async ({ page }) 
 test("详细设置弹窗未保存时 Esc 取消保护草稿", async ({ page, request }) => {
   const t = await root(request, unique("弹窗草稿"));
   await page.goto("/?preview=1");
+  await row(page, t.title).hover();
   await row(page, t.title).getByLabel("任务设置").click();
   const editor = page.locator(".task-settings-dialog");
   await editor.getByLabel("任务标题").fill(t.title + "未保存");

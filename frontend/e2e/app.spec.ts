@@ -41,6 +41,7 @@ test("收集箱显示全部任务，详情弹窗保存，无颜色入口", async
   await expect(
     page.getByRole("button", { name: inbox.title, exact: true }),
   ).toBeVisible();
+  await row(page, inbox.title).hover();
   await row(page, inbox.title).getByLabel("任务设置").click();
   const editor = page.locator(".task-settings-dialog");
   await expect(editor).toBeVisible();
@@ -114,7 +115,7 @@ test("月周日历共用页面，宽抽屉可用 Esc 和外部点击关闭", asy
   });
   expect(popups).toBe(0);
 });
-test("更多菜单收敛、标题省略完整提示、提醒气泡保存和移除", async ({
+test("无更多菜单、标题省略完整提示、提醒气泡保存和移除", async ({
   page,
   request,
 }) => {
@@ -131,13 +132,7 @@ test("更多菜单收敛、标题省略完整提示、提醒气泡保存和移�
     "nowrap",
   );
   await target.hover();
-  await target.getByLabel("更多任务操作").click();
-  await expect(
-    page.getByRole("button", {
-      name: /添加子任务|编辑任务|复制为普通任务|上移一位|下移一位/,
-    }),
-  ).toHaveCount(0);
-  await target.getByLabel("更多任务操作").press("Escape");
+  await expect(target.getByLabel("更多任务操作")).toHaveCount(0);
   await target.getByLabel("设置提醒", { exact: true }).click();
   const popover = page.locator(".reminder-popover");
   await expect(popover).toBeVisible();

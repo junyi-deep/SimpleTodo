@@ -92,7 +92,16 @@ function key(e: KeyboardEvent) {
     focusAfter = true;
     e.preventDefault();
     e.stopPropagation();
-    void commit();
+    void commit().then(async (ok) => {
+      if (ok && e.shiftKey && base) {
+        await nextTick();
+        document.dispatchEvent(
+          new CustomEvent("todo:add-child", {
+            detail: { id: base.id, rootId: base.rootId },
+          }),
+        );
+      }
+    });
   }
 }
 function paste(e: ClipboardEvent) {
@@ -118,6 +127,7 @@ onMounted(async () => {
 <template>
   <textarea
     ref="input"
+    v-sparks
     v-model="draft"
     class="inline-title-input"
     :aria-label="task ? '编辑任务标题' : '新待办标题'"

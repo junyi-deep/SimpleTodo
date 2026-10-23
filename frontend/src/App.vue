@@ -814,8 +814,8 @@ onUnmounted(() => {
           ><Search :size="13" /><input
             v-model="search"
             placeholder="搜索任务"
-            aria-label="搜索当前视图" /></label
-        ><span class="grow" />
+            aria-label="搜索当前视图"
+        /></label>
         <button
           class="text-button"
           @click="

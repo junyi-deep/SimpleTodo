@@ -129,6 +129,7 @@ test("macOS 最窄标题栏完整，详情退出期间保持可见", async ({
     .getByLabel("关闭窗口", { exact: true })
     .boundingBox();
   expect(close!.x + close!.width).toBeLessThanOrEqual(400);
+  await row(page, t.title).hover();
   await row(page, t.title).getByLabel("任务设置").click();
   await page.keyboard.press("Escape");
   const closing = page.locator("dialog.motion-closing");
