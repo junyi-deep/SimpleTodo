@@ -34,7 +34,7 @@ onMounted(() => document.addEventListener("todo:new-task", requestAdd));
 onUnmounted(() => document.removeEventListener("todo:new-task", requestAdd));
 </script>
 <template>
-  <section v-motion="date" class="task-list" :aria-busy="s.loading">
+  <section v-motion:timeline="date" class="task-list" :aria-busy="s.loading">
     <TransitionGroup
       :css="false"
       @enter="(el, done) => reveal(el, 'row', done)"

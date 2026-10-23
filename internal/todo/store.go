@@ -418,7 +418,7 @@ func (e *Engine) mutate(c Command, op string, fn func(map[string]Task, int64) er
 	if err = fn(m, now); err != nil {
 		return nil, err
 	}
-	if err = validateTree(m); err != nil {
+	if err = validateTree(m, old); err != nil {
 		return nil, err
 	}
 	for id := range old {

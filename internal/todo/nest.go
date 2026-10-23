@@ -70,6 +70,13 @@ func (e *Engine) Nest(c Command, revision string) ([]Task, error) {
 			return nil, err
 		}
 	}
+	previous := map[string]Task{}
+	for id, task := range source {
+		previous[id] = task
+	}
+	for id, task := range target {
+		previous[id] = task
+	}
 	branch := descendants(source, c.ID)
 	if branch[*c.ParentID] {
 		return nil, fail("VALIDATION_ERROR", "不能移动到自身或后代")
@@ -129,10 +136,10 @@ func (e *Engine) Nest(c Command, revision string) ([]Task, error) {
 	aggregate(target, now)
 	markException(source, c.RootID)
 	markException(target, targetRoot)
-	if err = validateTree(source); err != nil {
+	if err = validateTree(source, previous); err != nil {
 		return nil, err
 	}
-	if err = validateTree(target); err != nil {
+	if err = validateTree(target, previous); err != nil {
 		return nil, err
 	}
 	out := []Task{}

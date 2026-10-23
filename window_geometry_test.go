@@ -12,6 +12,9 @@ func TestChecklistWindowDefaultsAndWindowsTitlebar(t *testing.T) {
 		if opts.Width != 480 || opts.Height != 720 || opts.MinWidth != 400 || opts.MinHeight != 440 || opts.URL != "/?window=main" {
 			t.Fatalf("unexpected checklist window defaults: %+v", opts)
 		}
+		if opts.MinimiseButtonState != application.ButtonHidden || opts.CloseButtonState != application.ButtonHidden || opts.MaximiseButtonState != application.ButtonHidden {
+			t.Fatal("native buttons must be hidden")
+		}
 		if opts.Frameless != (platform == "windows") {
 			t.Fatalf("incorrect native titlebar on %s", platform)
 		}

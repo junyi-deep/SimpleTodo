@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-22T15:15:39.215308+00:00",
+  "generatedAt": "2026-10-22T23:55:56.733765+00:00",
   "title": "Design System: SimpleTodo",
   "extensions": {
     "colorMeta": {
@@ -420,8 +420,8 @@
       },
       {
         "name": "drag-preview",
-        "value": "0 8px 24px rgb(0 0 0 / .2)",
-        "purpose": "当前行拖动预览。"
+        "value": "0 10px 28px #0002",
+        "purpose": "保持源行宽高的指针拖动预览。"
       },
       {
         "name": "task-settings",
@@ -437,8 +437,8 @@
       },
       {
         "name": "tree-toggle",
-        "value": "transform .18s",
-        "purpose": "展开箭头。"
+        "value": "rotate .18s; expanded 90deg",
+        "purpose": "首行对齐的展开箭头使用独立 rotate，不参与通用按钮缩放。"
       },
       {
         "name": "day-drawer",
@@ -478,7 +478,17 @@
       {
         "name": "control-press",
         "value": "Motion 200ms; scale(1) → scale(.82) → scale(1)",
-        "purpose": "按下时只缩放按钮或 summary 内部图标，按钮命中区域保持稳定；任务勾选使用独立完成反馈。"
+        "purpose": "按下时只缩放按钮或 summary 内部图标，按钮命中区域保持稳定；任务勾选使用独立完成反馈，树箭头使用独立旋转。"
+      },
+      {
+        "name": "pointer-drag-settle",
+        "value": "Motion 180ms; cubic-bezier(.16,1,.3,1)",
+        "purpose": "松手或取消时预览回落并淡出；减少动态效果时直接移除。"
+      },
+      {
+        "name": "day-timeline",
+        "value": "Motion 280ms; cubic-bezier(.16,1,.3,1)",
+        "purpose": "日期滑块从当前可见位置接续；内容按日期方向从 ±14px、opacity .55 归位。"
       }
     ],
     "breakpoints": [
@@ -513,7 +523,11 @@
         "docs/更新代理与动效.md",
         "frontend/src/composables/motion.ts",
         "frontend/src/components/MotionPresence.vue",
-        "frontend/src/components/SettingsDialog.vue"
+        "frontend/src/components/SettingsDialog.vue",
+        "docs/任务列表优化.md",
+        "frontend/src/components/DayTimeline.vue",
+        "frontend/src/components/TaskPlacement.vue",
+        "frontend/src/composables/taskDrag.ts"
       ],
       "screenshots": [
         "docs/images/tasks.png",
@@ -523,9 +537,15 @@
         ".impeccable/review/checklist-settings-modal.png",
         ".impeccable/review/checklist-repeat-reminder.png",
         "build/appicon.png",
-        ".impeccable/review/checklist-sibling-order.png"
+        ".impeccable/review/checklist-sibling-order.png",
+        ".impeccable/review/list-five-levels.png",
+        ".impeccable/review/list-date-dialog.png",
+        ".impeccable/review/list-day-timeline.png",
+        ".impeccable/review/checklist-real-drag-preview.png",
+        ".impeccable/review/motion-mac-400.png",
+        ".impeccable/review/redesign-dark-1080.png"
       ],
-      "scope": "当前浏览器界面、应用资产、代码与 macOS 隔离数据原生补验；已验证标题栏、关于、代理保存/错误提示、系统代理查询 GitHub、任务完成与详情关闭焦点恢复。Windows 原生 GUI 未实测；下载代理链路使用 HTTP CONNECT 集成测试，未完成原生下载保存全流程。",
+      "scope": "本轮任务列表以当前组件、CSS、浏览器截图与自动化为证据；主任务报告 31 项 E2E、额外跨根拖动用例、Go 测试、前端构建/类型检查与 9 项 Vitest 通过，macOS arm64 生产打包与临时签名检查通过。此前 macOS 原生补验属于 2026-10-22 版本；本轮 macOS 已在隔离数据库中完成系统按钮隐藏、放大/还原、行末编辑、子任务展开/折叠、拖入子任务、完成样式、日期弹窗及退出验证。Windows 原生 GUI 未实测。浏览器布局、窗口选项检查、打包和跨平台编译均不代表原生验收。",
       "tonalRamps": "八阶 OKLCH 为面板展示合成，不新增产品主题色；应用图标蓝与窗口关闭悬停仅按各自范围使用。"
     }
   },
@@ -573,15 +593,15 @@
       "name": "选中任务与提醒",
       "kind": "custom",
       "refersTo": "task-row",
-      "description": "选中项完整换行，未选中项保持单行省略；提醒为下方小字。",
+      "description": "选中项完整换行，未选中项单行省略；箭头与完成框固定对齐标题首行，完成标题使用次要文字色与删除线。",
       "html": "<div class=\"ds-task ds-selected\"><button class=\"ds-check\" aria-label=\"完成任务\"></button><div class=\"ds-copy\"><button class=\"ds-title\" title=\"准备周五的产品讨论\">准备周五的产品讨论</button><small class=\"ds-reminder\"><svg width=\"10\" height=\"10\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4\"/></svg> 10/23 09:30</small></div><button class=\"ds-more\" aria-label=\"更多任务操作\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"5\" cy=\"12\" r=\"1\"/><circle cx=\"12\" cy=\"12\" r=\"1\"/><circle cx=\"19\" cy=\"12\" r=\"1\"/></svg></button></div>",
-      "css": ".ds-task{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);display:flex;align-items:center;gap:5px;min-height:35px;padding:5px 3px 5px 1px;border-radius:6px;transition:background .14s ease,opacity .14s ease;}.ds-task:hover{background:var(--secondary);}.ds-check{width:15px;height:15px;min-width:16px;border:1.25px solid color-mix(in srgb,var(--muted) 65%,transparent);border-radius:4px;background:none;cursor:pointer;}.ds-check:hover{border-color:var(--accent);}.ds-copy{flex:1;min-width:0;}.ds-title{font-family:inherit;font-size:13px;line-height:21px;text-align:left;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:0;background:none;color:var(--text);padding:0;cursor:pointer;}.ds-reminder{display:block;font-size:10px;line-height:16px;color:var(--muted);font-variant-numeric:tabular-nums;}.ds-more{border:0;background:none;color:var(--muted);opacity:0;cursor:pointer;}.ds-task:hover .ds-more,.ds-task:focus-within .ds-more{opacity:1;}.ds-task button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;} .ds-task.ds-selected{background:var(--secondary);align-items:flex-start;}.ds-selected .ds-title{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;}.ds-selected .ds-check{margin-top:3px;}"
+      "css": ".ds-task{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);display:flex;align-items:flex-start;gap:5px;min-height:35px;padding:5px 3px 5px 1px;border-radius:6px;transition:background .14s ease,opacity .14s ease;}.ds-task:hover{background:var(--secondary);}.ds-check{width:15px;height:15px;min-width:16px;border:1.25px solid color-mix(in srgb,var(--muted) 65%,transparent);border-radius:4px;background:none;cursor:pointer;}.ds-check:hover{border-color:var(--accent);}.ds-copy{flex:1;min-width:0;}.ds-title{font-family:inherit;font-size:13px;line-height:21px;text-align:left;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:0;background:none;color:var(--text);padding:0;cursor:pointer;}.ds-reminder{display:block;font-size:10px;line-height:16px;color:var(--muted);font-variant-numeric:tabular-nums;}.ds-more{border:0;background:none;color:var(--muted);opacity:0;cursor:pointer;}.ds-task:hover .ds-more,.ds-task:focus-within .ds-more{opacity:1;}.ds-task button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;} .ds-task.ds-selected{background:var(--secondary);align-items:flex-start;}.ds-selected .ds-title{white-space:normal;overflow:visible;text-overflow:clip;overflow-wrap:anywhere;}.ds-check{align-self:flex-start;margin-top:4px;}.ds-task.ds-done .ds-title{color:var(--muted);text-decoration:line-through;}"
     },
     {
       "name": "任务详细设置",
       "kind": "custom",
       "refersTo": "task-settings-dialog",
-      "description": "主窗口内 HTML dialog 的表面和密度；示例以普通容器呈现，不声称模拟原生窗口或模态行为。",
+      "description": "主窗口内 HTML dialog 的表面和密度，计划日期与分支父任务对话框复用同一表面；示例以普通容器呈现，不模拟模态行为。",
       "html": "<section class=\"ds-settings\"><header><strong>任务详情</strong><button aria-label=\"关闭\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></header><div><input aria-label=\"任务标题\" value=\"准备周五的产品讨论\"/><label>描述<textarea placeholder=\"补充说明、链接或执行步骤…\"></textarea></label></div><footer><button class=\"ds-cancel\">取消</button><button class=\"ds-save\">保存修改</button></footer></section>",
       "css": ".ds-settings{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);width:min(460px,calc(100vw - 28px));max-height:calc(100vh - 32px);margin:auto;border:1px solid var(--border);border-radius:9px;background:var(--surface);overflow:auto;box-shadow:0 14px 46px #0002;}.ds-settings header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;}.ds-settings header button{border:0;background:none;color:var(--muted);cursor:pointer;}.ds-settings>div{padding:14px;max-height:calc(100vh - 145px);overflow:auto;}.ds-settings input{font-family:inherit;font-size:16px;line-height:24px;width:100%;padding:6px 8px;margin-bottom:12px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);}.ds-settings label{font-size:11px;color:var(--muted);}.ds-settings textarea{display:block;width:100%;height:70px;font:inherit;padding:9px 10px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);}.ds-settings footer{display:flex;justify-content:flex-end;gap:8px;padding:10px 14px;border-top:1px solid var(--border);}.ds-settings footer button{font-family:inherit;font-size:12px;padding:8px 12px;border:1px solid var(--border);border-radius:7px;background:var(--surface);cursor:pointer;}.ds-settings footer .ds-save{background:var(--accent);color:var(--surface);border-color:var(--accent);}.ds-settings footer button:hover{background:var(--hover);}.ds-settings footer .ds-save:hover{background:var(--accent-strong);}.ds-settings button:focus-visible,.ds-settings input:focus-visible,.ds-settings textarea:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
     },
@@ -589,9 +609,9 @@
       "name": "原位标题草稿",
       "kind": "input",
       "refersTo": "inline-title",
-      "description": "任务标题原位编辑，继承当前文字并随内容增高；示例仅展示输入表面。",
+      "description": "原位标题编辑沿用透明、无边框的输入表面；进入时光标在末尾，不选中原文。任务行保留键盘焦点提示；静态示例仅展示表面。",
       "html": "<div class=\"ds-draft\"><span class=\"ds-draft-check\"></span><textarea rows=\"2\" aria-label=\"编辑任务标题\">准备周五的产品讨论，整理需要确认的问题</textarea></div>",
-      "css": ".ds-draft{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);display:flex;gap:8px;align-items:flex-start;min-height:35px;padding:6px 6px 6px 21px;background:var(--secondary);border-radius:5px;}.ds-draft-check{width:15px;height:15px;margin-top:3px;flex-shrink:0;border:1px solid var(--quiet);border-radius:4px;}.ds-draft textarea{font:inherit;width:100%;min-width:0;min-height:24px;max-height:210px;resize:none;border:0;background:transparent;color:var(--text);box-shadow:none;line-height:21px;padding:0 2px;overflow-wrap:anywhere;}.ds-draft textarea:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
+      "css": ".ds-draft{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);display:flex;gap:8px;align-items:flex-start;min-height:35px;padding:6px 6px 6px 21px;background:var(--secondary);border-radius:5px;}.ds-draft-check{width:15px;height:15px;margin-top:3px;flex-shrink:0;border:1px solid var(--quiet);border-radius:4px;}.ds-draft textarea{font:inherit;width:100%;min-width:0;min-height:24px;max-height:210px;resize:none;border:0;background:transparent;color:var(--text);box-shadow:none;line-height:21px;padding:0 2px;overflow-wrap:anywhere;}.ds-draft textarea,.ds-draft textarea:focus,.ds-draft textarea:focus-visible{outline:none;border:0;border-radius:0;box-shadow:none;background:transparent;}"
     },
     {
       "name": "日期任务抽屉",
@@ -611,7 +631,7 @@
     }
   ],
   "narrative": {
-    "overview": "SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一工作现场。白色与黑色表面、层次灰文字、系统字体和细分隔线保持任务密度；顶栏品牌只保留 SimpleTodo 文字，不显示对钩或本地徽标。应用图标与关于页共用蓝底白色交叉双对钩，蓝色不扩展为界面强调色。\n\n最新清单交互在现有紧凑单窗口上扩展：单击选中后长标题完整换行，双击在原位置编辑标题，铅笔打开主窗口内的 HTML 详细设置对话框。本文依据最终 CSS、组件、浏览器截图及 2026-10-22 macOS 原生补验。原生窗口已验证新增、原位编辑、详细设置、重复提醒及月/周视图切换与尺寸恢复；Windows 浏览器布局和窗口选项检查不构成 Windows 原生 GUI 实测。",
+    "overview": "SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一工作现场。白色与黑色表面、层次灰文字、系统字体和细分隔线保持任务密度；顶栏品牌只保留 SimpleTodo 文字，不显示对钩或本地徽标。应用图标与关于页共用蓝底白色交叉双对钩，蓝色不扩展为界面强调色。\n\n最新任务列表交互延续紧凑单窗口：选中长标题完整换行，原位标题编辑保持安静表面，详细设置、改期与移动分支在主窗口内使用 HTML 模态对话框。五层任务、指针拖动预览和日计划连续日期滑块沿用现有黑白灰语言。本文依据当前组件、CSS 与本轮浏览器截图；2026-10-22 原生补验属于此前版本，本轮 macOS 已在隔离数据库中验证系统按钮隐藏、放大/还原、行末编辑、子任务展开/折叠、拖入子任务、完成样式、日期弹窗及退出；Windows 原生 GUI 仍未实测。",
     "keyCharacteristics": [
       "黑白灰浅深主题配对，系统字体与 Lucide 线性图标。",
       "唯一原生主窗口；列表、月/周日历、专注、设置和数据工具原位切换。",

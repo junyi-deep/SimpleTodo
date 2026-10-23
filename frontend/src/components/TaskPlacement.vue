@@ -9,7 +9,7 @@ import { useTodo } from "../stores/todo";
 const props = defineProps<{ task: Task }>(),
   emit = defineEmits<{ close: [] }>(),
   s = useTodo(),
-  dialog = ref<HTMLElement>();
+  dialog = ref<HTMLDialogElement>();
 const parent = ref(props.task.parentId || props.task.rootId),
   date = ref(props.task.date || s.boot?.today || s.date),
   inbox = ref(!props.task.date);
@@ -60,6 +60,10 @@ function path(t: Task) {
   return parts.join(" / ");
 }
 restoreDialogFocus(props.task.id);
+onMounted(() => {
+  dialog.value?.showModal();
+  dialog.value?.querySelector<HTMLInputElement>("input")?.focus();
+});
 
 async function save() {
   let ok = false;
@@ -88,65 +92,74 @@ async function save() {
 }
 </script>
 <template>
-  <section
-    :inert="s.maintenance || undefined"
-    ref="dialog"
-    v-motion
-    class="dialog embedded-pane"
-    @keydown.esc.stop.prevent="emit('close')"
-    @keydown.meta.enter.prevent="save"
-    @keydown.ctrl.enter.prevent="save"
-  >
-    <form @submit.prevent="save">
-      <header class="dialog-header">
-        <span>{{ task.parentId ? "移动整个分支" : "调整计划日期" }}</span
-        ><button
-          type="button"
-          class="icon-button"
-          aria-label="关闭移动面板"
-          @click="emit('close')"
-        >
-          <X :size="18" />
-        </button>
-      </header>
-      <div class="dialog-body">
-        <p class="muted small">{{ task.title }}</p>
-        <label v-if="task.parentId" class="field"
-          ><span>新的父任务</span
-          ><CustomSelect v-model="parent">
-            <option v-for="t in candidates" :key="t.id" :value="t.id">
-              {{ path(t) }}
-            </option></CustomSelect
-          ><small>携带完整子树；不能跨根任务或移入自身后代。</small></label
-        ><template v-else
-          ><label class="check-label"
-            ><input v-model="inbox" type="checkbox" />移到收集箱</label
-          ><label v-if="!inbox" class="field"
-            ><span>计划日期</span
-            ><input
-              v-model="date"
-              type="date"
-              min="2000-01-01"
-              max="2100-12-31"
-              required /></label
-        ></template>
-        <p v-if="s.error" class="inline-error" role="alert">{{ s.error }}</p>
-        <template v-if="s.error.includes('CONFLICT')"
-          ><button type="button" class="button" @click="refresh">
-            加载最新任务树
-          </button></template
-        >
-        <div v-if="latest" class="path-output">
-          最新根任务：{{ latest.title }}<br />{{ latest.date || "收集箱" }} ·
-          当前移动选择仍保留<button type="button" class="button" @click="retry">
-            基于最新版本确认移动
+  <Teleport to="body"
+    ><dialog
+      :inert="s.maintenance || undefined"
+      ref="dialog"
+      v-motion
+      class="task-settings-dialog placement-dialog"
+      :aria-label="task.parentId ? '移动整个分支' : '调整计划日期'"
+      @cancel.prevent="emit('close')"
+      @keydown.esc.stop.prevent="emit('close')"
+      @keydown.meta.enter.prevent="save"
+      @keydown.ctrl.enter.prevent="save"
+    >
+      <form @submit.prevent="save">
+        <header class="dialog-header">
+          <span>{{ task.parentId ? "移动整个分支" : "调整计划日期" }}</span
+          ><button
+            type="button"
+            class="icon-button"
+            aria-label="关闭移动面板"
+            @click="emit('close')"
+          >
+            <X :size="18" />
           </button>
+        </header>
+        <div class="dialog-body">
+          <p class="muted small">{{ task.title }}</p>
+          <label v-if="task.parentId" class="field"
+            ><span>新的父任务</span
+            ><CustomSelect v-model="parent">
+              <option v-for="t in candidates" :key="t.id" :value="t.id">
+                {{ path(t) }}
+              </option></CustomSelect
+            ><small>携带完整子树；不能跨根任务或移入自身后代。</small></label
+          ><template v-else
+            ><label class="check-label"
+              ><input v-model="inbox" type="checkbox" />移到收集箱</label
+            ><label v-if="!inbox" class="field"
+              ><span>计划日期</span
+              ><input
+                v-model="date"
+                type="date"
+                min="2000-01-01"
+                max="2100-12-31"
+                required /></label
+          ></template>
+          <p v-if="s.error" class="inline-error" role="alert">{{ s.error }}</p>
+          <template v-if="s.error.includes('CONFLICT')"
+            ><button type="button" class="button" @click="refresh">
+              加载最新任务树
+            </button></template
+          >
+          <div v-if="latest" class="path-output">
+            最新根任务：{{ latest.title }}<br />{{ latest.date || "收集箱" }} ·
+            当前移动选择仍保留<button
+              type="button"
+              class="button"
+              @click="retry"
+            >
+              基于最新版本确认移动
+            </button>
+          </div>
         </div>
-      </div>
-      <footer class="dialog-footer">
-        <button type="button" class="button" @click="emit('close')">取消</button
-        ><button class="button primary" :disabled="s.saving">确认移动</button>
-      </footer>
-    </form>
-  </section>
+        <footer class="dialog-footer">
+          <button type="button" class="button" @click="emit('close')">
+            取消</button
+          ><button class="button primary" :disabled="s.saving">确认移动</button>
+        </footer>
+      </form>
+    </dialog></Teleport
+  >
 </template>

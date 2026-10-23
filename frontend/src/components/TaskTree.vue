@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { startTaskDrag, cancelTaskDrag } from "../composables/taskDrag";
+onUnmounted(cancelTaskDrag);
 import MotionPresence from "./MotionPresence.vue";
 import { reveal, leave, cancelMotion } from "../composables/motion";
 import { computed, ref, nextTick, onMounted, onUnmounted, watch } from "vue";
@@ -187,6 +189,10 @@ async function add(t: Task) {
     ancestors.push(current.parentId);
     current = index.value.get(current.parentId)!;
     if (!current) break;
+  }
+  if (ancestors.length >= 5) {
+    s.inform("任务最多支持 5 层（包含根任务）");
+    return;
   }
   expanded.value = new Set([...expanded.value, ...ancestors]);
   adding.value = t.id;
@@ -398,10 +404,22 @@ async function dropNode(e: DragEvent, t: Task) {
     ))
   )
     return;
+  const parentId = mode !== "inside" && t.parentId ? t.parentId : t.id;
+  const peers = children(parentId).filter((node) => node.id !== source.id);
+  const beforeId =
+    mode !== "inside" && t.parentId
+      ? mode === "before"
+        ? t.id
+        : peers[peers.findIndex((node) => node.id === t.id) + 1]?.id || ""
+      : "";
   const result = await s.run(() =>
-    api("Nest", { ...s.command(source), parentId: t.id }, s.snapshot.revision),
+    api(
+      "Nest",
+      { ...s.command(source), parentId, beforeId },
+      s.snapshot.revision,
+    ),
   );
-  if (result) expanded.value = new Set([...expanded.value, t.id]);
+  if (result) expanded.value = new Set([...expanded.value, parentId]);
 }
 </script>
 <template>
@@ -471,6 +489,12 @@ async function dropNode(e: DragEvent, t: Task) {
             class="drag-handle"
             :draggable="!s.saving && s.sortMode === 'manual'"
             @dragstart="startDrag($event, t)"
+            @pointerdown="
+              !s.saving &&
+              !editing &&
+              s.sortMode === 'manual' &&
+              startTaskDrag($event, t.id)
+            "
             title="拖动；子任务放到节点下，按住 Alt 可同级排序"
             ><GripVertical :size="13"
           /></span>

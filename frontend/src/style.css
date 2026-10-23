@@ -522,7 +522,7 @@ hr {
   flex: 1;
   padding: 3px 0;
 }
-.task-row.done > .task-title {
+.task-row.done .task-title {
   text-decoration: line-through;
   text-decoration-thickness: 1px;
   color: var(--muted);
@@ -578,10 +578,10 @@ hr {
   color: var(--muted);
 }
 .tree-toggle svg {
-  transition: transform 0.18s;
+  transition: rotate 0.18s;
 }
 .tree-toggle .rotate {
-  transform: rotate(90deg);
+  rotate: 90deg;
 }
 .tree-toggle.spacer {
   width: 0;
@@ -2032,3 +2032,26 @@ dialog[inert]:not(.motion-closing)::backdrop {
 .all-done {display:inline-flex;align-items:center;gap:4px;margin-right:auto;color:var(--text);}
 
 @media(max-width:520px){.compact-app.on-mac .header-actions .icon-button{width:26px;min-width:26px;}.compact-app.on-mac .toolbar-divider{margin:0 2px;}}
+
+/* Stable first-line alignment; editing uses a quiet surface, not a boxed field. */
+.compact-app .task-row,.compact-app .task-row.selected {align-items:flex-start;}
+.compact-app .task-row .tree-toggle {height:21px;align-items:center;margin-top:2px;align-self:flex-start;}
+.compact-app .task-row .task-check,.compact-app .task-row.selected .task-check {margin-top:4px;}
+
+.inline-title-input,.inline-title-input:focus,.inline-title-input:focus-visible {border:0;outline:none;box-shadow:none;background:transparent;border-radius:0;}
+.placement-dialog .dialog-body {max-height:calc(100vh - 170px);overflow:auto;}
+.compact-app.on-mac .app-header {padding-left:12px;}
+@media(max-width:520px){.compact-app.on-mac .app-header {padding-left:12px;}}
+.pointer-drag-preview {position:fixed!important;z-index:10000;pointer-events:none!important;box-shadow:0 10px 28px #0002;background:var(--surface);border-radius:6px;opacity:.94;will-change:transform;}
+.pointer-drag-preview .drag-handle,.pointer-drag-preview .node-more,.pointer-drag-preview .reminder-trigger,.pointer-drag-preview .task-settings-trigger {visibility:hidden;}
+.task-row[data-pointer-source] {opacity:.22;}
+.task-dragging,.task-dragging * {cursor:grabbing!important;user-select:none!important;}
+.drag-handle {touch-action:none;}
+.task-row[data-drop-placement="inside"] {background:var(--hover);box-shadow:inset 0 0 0 1px var(--muted);}
+.task-row[data-drop-placement="before"]::before,.task-row[data-drop-placement="after"]::before {content:"";position:absolute;left:20px;right:2px;height:2px;background:var(--text);border-radius:2px;pointer-events:none;}
+.task-row[data-drop-placement="before"]::before {top:-2px;}
+.task-row[data-drop-placement="after"]::before {bottom:-2px;}
+.smooth-timeline {position:relative;isolation:isolate;}
+.timeline-pill {position:absolute;left:0;opacity:0;background:var(--text);border-radius:5px;pointer-events:none;z-index:-1;}
+.smooth-timeline .week-date.selected {background:transparent;}
+.smooth-timeline .week-date {transition:color 160ms ease;}

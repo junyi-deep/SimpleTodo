@@ -111,7 +111,7 @@ onUnmounted(release);
 onMounted(async () => {
   await nextTick();
   input.value?.focus();
-  input.value?.select();
+  input.value?.setSelectionRange(draft.value.length, draft.value.length);
   resize();
 });
 </script>

@@ -16,7 +16,7 @@ export function motionAllowed() {
   return enabled && !preference.matches;
 }
 const ease = [0.16, 1, 0.3, 1] as const;
-function run(
+export function runMotion(
   el: Element,
   frames: DOMKeyframesDefinition,
   duration: number,
@@ -74,7 +74,7 @@ export function reveal(el: Element, kind: Kind = "pane", done?: () => void) {
                 opacity: [0.35, 1],
                 transform: ["translateY(6px)", "translateY(0)"],
               };
-  run(el, frames, kind === "drawer" ? 0.28 : 0.2, done);
+  runMotion(el, frames, kind === "drawer" ? 0.28 : 0.2, done);
 }
 export function leave(el: Element, kind: Kind = "pane", done?: () => void) {
   if (kind === "row") {
@@ -82,7 +82,7 @@ export function leave(el: Element, kind: Kind = "pane", done?: () => void) {
     el.setAttribute("inert", "");
     el.setAttribute("aria-hidden", "true");
   }
-  run(
+  runMotion(
     el,
     {
       opacity: [1, 0],
@@ -113,19 +113,33 @@ export const vMotion: Directive<
     reveal(el, (binding.arg || "pane") as Kind);
   },
   updated(el, binding) {
-    if (binding.value !== binding.oldValue)
-      reveal(el, (binding.arg || "pane") as Kind);
+    if (binding.value === binding.oldValue) return;
+    if (binding.arg === "timeline" && binding.value && binding.oldValue) {
+      const direction = binding.value > binding.oldValue ? 1 : -1;
+      runMotion(
+        el,
+        {
+          opacity: [0.55, 1],
+          transform: [`translateX(${direction * 14}px)`, "translateX(0)"],
+        },
+        0.28,
+      );
+    } else reveal(el, (binding.arg || "pane") as Kind);
   },
   beforeUnmount: cancelMotion,
 };
 export const vComplete: Directive<HTMLElement, boolean> = {
   updated(el, binding) {
     if (binding.value && !binding.oldValue) {
-      run(el, { transform: ["scale(1)", "scale(1.18)", "scale(1)"] }, 0.28);
+      runMotion(
+        el,
+        { transform: ["scale(1)", "scale(1.18)", "scale(1)"] },
+        0.28,
+      );
       const path = el.querySelector("path");
       if (path && motionAllowed()) {
         const length = (path as SVGPathElement).getTotalLength();
-        run(
+        runMotion(
           path,
           {
             strokeDasharray: [`${length} ${length}`, `${length} ${length}`],
@@ -148,12 +162,17 @@ export function installControlMotion() {
     if (
       !target ||
       target.hasAttribute("disabled") ||
-      target.classList.contains("task-check")
+      target.classList.contains("task-check") ||
+      target.classList.contains("tree-toggle")
     )
       return;
     const icon = target.querySelector("svg");
     if (icon)
-      run(icon, { transform: ["scale(1)", "scale(.82)", "scale(1)"] }, 0.2);
+      runMotion(
+        icon,
+        { transform: ["scale(1)", "scale(.82)", "scale(1)"] },
+        0.2,
+      );
   }
   document.addEventListener("pointerdown", press);
   return () => {

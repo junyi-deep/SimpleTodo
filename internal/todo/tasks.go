@@ -16,7 +16,12 @@ func commandNodeID(c Command) string {
 	h := sha256.Sum256([]byte(c.CommandID))
 	return fmt.Sprintf("%x", h[:16])
 }
-func validateTree(m map[string]Task) error {
+
+const MaxTaskDepth = 5
+
+// Existing overdeep trees remain editable after upgrade, but no node may
+// grow deeper and all newly created/copied/imported nodes must fit five levels.
+func validateTree(m map[string]Task, previous ...map[string]Task) error {
 	if len(m) == 0 {
 		return nil
 	}
@@ -58,6 +63,10 @@ func validateTree(m map[string]Task) error {
 		if t.RootID != root.ID {
 			return fail("VALIDATION_ERROR", "不允许跨根任务移动")
 		}
+		limit := MaxTaskDepth
+		if len(previous) > 0 {
+			limit = max(limit, taskDepth(previous[0], t.ID))
+		}
 		seen := map[string]bool{}
 		cur := t
 		for cur.ParentID != nil {
@@ -65,6 +74,9 @@ func validateTree(m map[string]Task) error {
 				return fail("VALIDATION_ERROR", "不能将任务移入自身或后代")
 			}
 			seen[cur.ID] = true
+			if len(seen) >= limit {
+				return fail("VALIDATION_ERROR", "任务最多支持 5 层（包含根任务）")
+			}
 			parent, ok := m[*cur.ParentID]
 			if !ok {
 				return fail("VALIDATION_ERROR", "父节点不存在")
@@ -77,6 +89,21 @@ func validateTree(m map[string]Task) error {
 	}
 	return nil
 }
+
+// Bounded traversal also tolerates malformed historical input without hanging.
+func taskDepth(m map[string]Task, id string) int {
+	seen := map[string]bool{}
+	for id != "" {
+		t, ok := m[id]
+		if !ok || seen[id] {
+			return 0
+		}
+		seen[id] = true
+		id = val(t.ParentID)
+	}
+	return len(seen)
+}
+
 func descendants(m map[string]Task, id string) map[string]bool {
 	out := map[string]bool{id: true}
 	for changed := true; changed; {

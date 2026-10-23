@@ -264,7 +264,11 @@ func TestDeepTreeLimitAndBatchIntegrity(t *testing.T) {
 	for i := 0; i < 200; i++ {
 		id := ID()
 		ts = append(ts, Task{ID: id, RootID: "root", ParentID: ptr(parent), Title: "nested", Status: "pending", Version: 1})
-		parent = id
+		if i%4 == 3 {
+			parent = "root"
+		} else {
+			parent = id
+		}
 	}
 	raw, _ := json.Marshal(Transfer{Version: 1, Tasks: ts})
 	p, err := e.PreviewImport(string(raw), "json", nil, false)

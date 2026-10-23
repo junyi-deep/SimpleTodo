@@ -36,6 +36,7 @@ import {
 import { canLeaveEditor, hasDirtyEditor } from "./composables/editorGuard";
 import MotionPresence from "./components/MotionPresence.vue";
 import { setMotionEnabled, installControlMotion } from "./composables/motion";
+import DayTimeline from "./components/DayTimeline.vue";
 import TaskList from "./components/TaskList.vue";
 import CustomSelect from "./components/CustomSelect.vue";
 import FocusPanel from "./components/FocusPanel.vue";
@@ -75,10 +76,6 @@ const dateLabel = computed(() =>
     weekday: "long",
   }),
 );
-const week = computed(() => {
-  const n = (parseDay(s.date).getDay() + 6) % 7;
-  return Array.from({ length: 7 }, (_, i) => shiftDay(s.date, i - n));
-});
 const monthDays = computed(() => {
   const first = month.value + "-01",
     n = (parseDay(first).getDay() + 6) % 7;
@@ -384,7 +381,7 @@ async function rootDrop(target: Task, e: DragEvent) {
   const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
   ids.splice(
     ids.indexOf(target.id) +
-      (e.clientY > rect.top + rect.height * 0.75 ? 1 : 0),
+      (!e.altKey && e.clientY > rect.top + rect.height * 0.75 ? 1 : 0),
     0,
     source.id,
   );
@@ -767,30 +764,15 @@ onUnmounted(() => {
             <Settings :size="14" />
           </button>
         </div>
-        <div v-if="listView === 'day'" class="compact-week">
-          <button class="icon-button" aria-label="前一天" @click="step(-1)">
-            <ChevronLeft :size="14" /></button
-          ><button
-            v-for="(day, i) in week"
-            :key="day"
-            class="week-date"
-            :class="{ selected: s.date === day, today: day === s.boot?.today }"
-            :aria-label="
-              '周' +
-              ['一', '二', '三', '四', '五', '六', '日'][i] +
-              ' ' +
-              Number(day.slice(-2))
-            "
-            @click="selectListDay(day)"
-            @dragover.prevent
-            @drop="dropDate($event, day)"
-          >
-            <small>{{ ["一", "二", "三", "四", "五", "六", "日"][i] }}</small
-            >{{ Number(day.slice(-2)) }}</button
-          ><button class="icon-button" aria-label="后一天" @click="step(1)">
-            <ChevronRight :size="14" /></button
-          ><button class="text-button" @click="today">今天</button>
-        </div>
+        <DayTimeline
+          v-if="listView === 'day'"
+          :date="s.date"
+          :today="s.boot?.today"
+          @select="selectListDay"
+          @step="step"
+          @today="today"
+          @drop="(event, day) => dropDate(event, day)"
+        />
       </section>
       <section v-else class="calendar-toolbar">
         <div class="calendar-month-picker">

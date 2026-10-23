@@ -155,6 +155,8 @@ test("日历复制仍以选区首日为相对日期锚点", async ({
   await page.goto("/?preview=1");
   await page.getByLabel("日历视图", { exact: true }).click();
   await page.getByRole("button", { name: anchor, exact: true }).click();
+  // The right drawer can cover Friday–Sunday; close it before extending the range.
+  await page.getByLabel("关闭日期任务", { exact: true }).click();
   await page
     .getByRole("button", { name: t.date, exact: true })
     .click({ modifiers: ["Shift"] });
