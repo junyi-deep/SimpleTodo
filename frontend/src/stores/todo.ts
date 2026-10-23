@@ -210,7 +210,7 @@ export const useTodo = defineStore("todo", () => {
       !(await confirmAction("移入收集箱将取消未发送的提醒。继续？"))
     )
       return;
-    return run(() => api("Move", { ...command(t), date }));
+    return run(() => api<Task[]>("Move", { ...command(t), date }));
   }
   async function remove(t: Task) {
     return run(() => api("Delete", command(t)));

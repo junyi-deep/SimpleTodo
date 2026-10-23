@@ -2059,3 +2059,41 @@ dialog[inert]:not(.motion-closing)::backdrop {
 .no-motion .typing-stars {display:none;}
 
 [data-node]:focus-visible {outline:1px solid var(--muted);outline-offset:-1px;}
+
+/* One first-line centre for selection, hierarchy, completion and text. */
+.compact-app .root-select {appearance:none;box-sizing:border-box;flex:0 0 16px;width:16px;min-width:16px;height:15px;padding:0;margin:9px 4px 0 2px;border:1.25px solid color-mix(in srgb,var(--muted) 65%,transparent);border-radius:4px;background:var(--surface);display:grid;place-items:center;}
+.compact-app .root-select:checked {background:var(--accent);border-color:var(--accent);}
+.compact-app .root-select:checked::after {content:"";width:4px;height:8px;border:solid var(--surface);border-width:0 1.8px 1.8px 0;transform:translateY(-1px) rotate(45deg);}
+.compact-app .task-row .tree-toggle {height:23px;margin-top:0;}
+.compact-app .task-title {line-height:23px;}
+.compact-app .inline-title-input {line-height:23px!important;}
+.compact-app .calendar-day {cursor:default;}
+.compact-app .calendar-number {width:100%;min-height:19px;padding:0;text-align:left;}
+.calendar-task-list {flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;display:flex;flex-direction:column;gap:3px;scrollbar-width:thin;scrollbar-color:var(--muted) var(--secondary);}
+.calendar-task-list::-webkit-scrollbar {width:5px;}
+.calendar-task-list::-webkit-scrollbar-thumb {background:var(--muted);}
+.compact-app .calendar-task,.calendar-drag-preview {background:#2563eb;color:#fff;min-height:22px;line-height:22px;padding:0 5px;border-radius:3px;font-size:11px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex-shrink:0;cursor:grab;touch-action:none;}
+.compact-app .calendar-task:hover {background:#1d4ed8;}
+.compact-app .calendar-task.done {background:#4064a5;color:#fff;text-decoration:line-through;}
+.calendar-task[data-pointer-source] {opacity:.3;}
+.calendar-drag-preview {z-index:10000;}
+.calendar-task[draggable="false"] {cursor:pointer;}
+.compact-app .day-drawer > .drawer-task-editor {position:static;display:flex;flex:1;min-height:0;width:100%;max-width:none;max-height:none;margin:0;padding:0;border:0;border-radius:0;box-shadow:none;background:var(--surface);color:var(--text);}
+.drawer-task-editor > form {display:flex;flex-direction:column;min-height:0;width:100%;flex:1;}
+.compact-app .drawer-task-editor .dialog-body {flex:1;min-height:0;max-height:none;overflow:auto;}
+.drawer-task-editor .dialog-footer {flex-shrink:0;}
+
+/* Keep scroll affordances visible in calendar cells, including macOS WebViews. */
+.calendar-task-list {scrollbar-width:auto;scrollbar-color:auto;scrollbar-gutter:stable;}
+.calendar-task-list::-webkit-scrollbar-track {background:var(--secondary);border-radius:3px;}
+.compact-app .calendar-day.outside {opacity:1;}
+.compact-app .calendar-day.outside .calendar-number {color:var(--muted);}
+/* A real persistent rail avoids platform overlay-scrollbar disappearance. */
+.calendar-task-viewport {position:relative;flex:1;min-height:0;overflow:hidden;}
+.calendar-task-viewport .calendar-task-list {height:100%;display:block;scrollbar-width:none;scrollbar-gutter:auto;padding:0;}
+.calendar-task-viewport .calendar-task-list::-webkit-scrollbar {display:none;}
+.calendar-task-content {display:flex;flex-direction:column;gap:3px;}
+.calendar-task-viewport.has-overflow .calendar-task-content {padding-right:10px;}
+.calendar-scrollbar {position:absolute;top:0;right:0;bottom:0;width:6px;background:var(--secondary);border-radius:3px;cursor:default;touch-action:none;}
+.calendar-scroll-thumb {width:6px;border-radius:3px;background:var(--muted);pointer-events:none;}
+.calendar-scrollbar:hover .calendar-scroll-thumb {background:var(--text);}

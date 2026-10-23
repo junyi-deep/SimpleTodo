@@ -9,7 +9,7 @@ export function startTaskDrag(event: PointerEvent, id: string) {
     return;
   cancelCurrent?.();
   const handle = event.currentTarget as HTMLElement;
-  const source = handle.closest<HTMLElement>(".task-row")!;
+  const source = handle.closest<HTMLElement>(".task-row,.calendar-task")!;
   const bounds = source.getBoundingClientRect();
   const origin = { x: event.clientX, y: event.clientY };
   let x = origin.x,
@@ -74,13 +74,16 @@ export function startTaskDrag(event: PointerEvent, id: string) {
       document.documentElement.classList.add("task-dragging");
       ghost = source.cloneNode(true) as HTMLElement;
       ghost.removeAttribute("data-node");
+      ghost.removeAttribute("data-calendar-task");
       ghost.removeAttribute("data-pointer-source");
       ghost.removeAttribute("tabindex");
       ghost.setAttribute("aria-hidden", "true");
       ghost
         .querySelectorAll("button,input,textarea")
         .forEach((el) => el.setAttribute("tabindex", "-1"));
-      ghost.className = "task-row pointer-drag-preview";
+      ghost.className = source.classList.contains("calendar-task")
+        ? "calendar-task calendar-drag-preview pointer-drag-preview"
+        : "task-row pointer-drag-preview";
       Object.assign(ghost.style, {
         width: bounds.width + "px",
         height: bounds.height + "px",
@@ -106,6 +109,21 @@ export function startTaskDrag(event: PointerEvent, id: string) {
     const destination = target;
     clearTarget();
     cancelCurrent = undefined;
+    if (started) {
+      // A pointer drag ends in a click in WebViews; do not open the dragged task.
+      const suppress = (event: MouseEvent) => {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      };
+      document.addEventListener("click", suppress, {
+        capture: true,
+        once: true,
+      });
+      setTimeout(
+        () => document.removeEventListener("click", suppress, true),
+        0,
+      );
+    }
     if (commit && started && destination) {
       const data = new DataTransfer();
       data.setData("text/plain", id);

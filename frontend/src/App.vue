@@ -38,6 +38,9 @@ import MotionPresence from "./components/MotionPresence.vue";
 import { setMotionEnabled, installControlMotion } from "./composables/motion";
 import DayTimeline from "./components/DayTimeline.vue";
 import TaskList from "./components/TaskList.vue";
+import TaskEditor from "./components/TaskEditor.vue";
+import CalendarTaskScroll from "./components/CalendarTaskScroll.vue";
+import { startTaskDrag, cancelTaskDrag } from "./composables/taskDrag";
 import CustomSelect from "./components/CustomSelect.vue";
 import FocusPanel from "./components/FocusPanel.vue";
 import SettingsDialog from "./components/SettingsDialog.vue";
@@ -303,6 +306,7 @@ async function today() {
   }
 }
 async function pickDay(day: string, e?: MouseEvent) {
+  if (day < "2000-01-01" || day > "2100-12-31") return;
   if (!(await canLeaveEditor())) return;
   if (rangeMoved.value) {
     rangeMoved.value = false;
@@ -319,13 +323,36 @@ async function pickDay(day: string, e?: MouseEvent) {
   }
   selectRange();
 }
+function calendarNativeDrag(event: DragEvent, task: Task) {
+  if (task.seriesId || s.saving) {
+    event.preventDefault();
+    return;
+  }
+  event.dataTransfer?.setData("text/plain", task.id);
+  if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+}
+async function openCalendarTask(task: Task) {
+  if (!(await canLeaveEditor())) return;
+  activeDay.value = task.date || activeDay.value;
+  drawer.value = true;
+  rangeAnchor.value = activeDay.value;
+  rangeEnd.value = activeDay.value;
+  selectRange();
+  s.activeTask = task.id;
+  editor.value = task;
+}
 function selectRange() {
   s.selected = s.snapshot.tasks
     .filter((t) => !t.parentId && isRange(t.date || ""))
     .map((t) => t.id);
 }
 function rangeStart(day: string, e: PointerEvent) {
-  if (hasDirtyEditor()) return;
+  if (day < "2000-01-01" || day > "2100-12-31") return;
+  if (
+    hasDirtyEditor() ||
+    (e.target as HTMLElement).closest(".calendar-task-list")
+  )
+    return;
   if (e.button !== 0 || e.shiftKey) return;
   rangeDragging.value = true;
   rangeMoved.value = false;
@@ -362,7 +389,9 @@ async function dropDate(e: DragEvent, date: string | null) {
     s.inform("子任务随根任务日期移动");
     return;
   }
-  await s.move(t, date);
+  if (t.date === date || !(await canLeaveEditor())) return;
+  const moved = await s.move(t, date);
+  if (moved) editor.value = null;
   dragging.value = false;
 }
 async function rootDrop(target: Task, e: DragEvent) {
@@ -589,6 +618,7 @@ onMounted(async () => {
   );
 });
 onUnmounted(() => {
+  cancelTaskDrag();
   clearInterval(poll);
   stopListeners.forEach((fn) => fn());
   document.removeEventListener("keydown", keyboard);
@@ -923,7 +953,7 @@ onUnmounted(() => {
           >
         </div>
         <div v-motion="calendarMode + calendarDays[0]" class="calendar-grid">
-          <button
+          <div
             v-for="day in calendarDays"
             :key="day"
             class="calendar-day"
@@ -934,40 +964,49 @@ onUnmounted(() => {
               inrange: isRange(day) && rangeAnchor !== rangeEnd,
               weekend: [0, 6].includes(parseDay(day).getDay()),
             }"
-            :disabled="day < '2000-01-01' || day > '2100-12-31'"
-            :aria-label="day"
+            :data-day="day"
+            role="group"
+            :aria-label="'日历日期 ' + day"
             @pointerdown="rangeStart(day, $event)"
             @pointerenter="rangeOver(day, $event)"
             @click="pickDay(day, $event)"
             @dragover.prevent
             @drop="dropDate($event, day)"
           >
-            <span class="calendar-number"
-              >{{ Number(day.slice(-2))
+            <button
+              class="calendar-number"
+              :aria-label="day"
+              :disabled="day < '2000-01-01' || day > '2100-12-31'"
+            >
+              {{ Number(day.slice(-2))
               }}<small v-if="holidays.find((h) => h.date === day)">{{
                 holidays.find((h) => h.date === day)?.name
-              }}</small></span
-            ><span
-              v-for="t in calendarTasks(day).slice(
-                0,
-                calendarMode === 'week' ? 12 : 3,
-              )"
-              :key="t.id"
-              class="calendar-task"
-              :class="{ done: t.status === 'completed' }"
-              :title="t.title"
-              >{{ t.title }}</span
-            ><small
-              v-if="
-                calendarTasks(day).length > (calendarMode === 'week' ? 12 : 3)
-              "
-              class="calendar-overflow"
-              >+{{
-                calendarTasks(day).length - (calendarMode === "week" ? 12 : 3)
-              }}
-              项</small
-            >
-          </button>
+              }}</small>
+            </button>
+            <CalendarTaskScroll :label="day + ' 任务'">
+              <button
+                v-for="t in calendarTasks(day)"
+                :key="t.id"
+                class="calendar-task"
+                :class="{ done: t.status === 'completed' }"
+                :title="
+                  t.seriesId
+                    ? t.title + '（重复任务请在详情中调整规则）'
+                    : t.title
+                "
+                :data-calendar-task="t.id"
+                :aria-label="'编辑任务：' + t.title"
+                :draggable="!t.seriesId && !s.saving"
+                @pointerdown.stop="
+                  !t.seriesId && !s.saving && startTaskDrag($event, t.id)
+                "
+                @click.stop="openCalendarTask(t)"
+                @dragstart.stop="calendarNativeDrag($event, t)"
+              >
+                {{ t.title }}
+              </button>
+            </CalendarTaskScroll>
+          </div>
         </div>
         <MotionPresence kind="drawer"
           ><aside v-if="drawer" class="day-drawer" aria-label="日期任务抽屉">
@@ -992,10 +1031,18 @@ onUnmounted(() => {
                 <X :size="16" />
               </button>
             </header>
+            <TaskEditor
+              v-if="editor"
+              :key="editor.id"
+              :task="editor"
+              embedded
+              @close="editor = null"
+            />
             <TaskList
+              v-else
+              details-on-click
               :roots="roots"
               :date="activeDay"
-              :editing="editor?.id"
               @edit="chooseEditor"
               @drag="dragging = true"
               @drop="rootDrop"

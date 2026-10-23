@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-23T14:11:25.489819+00:00",
+  "generatedAt": "2026-10-23T15:32:00.140658+00:00",
   "title": "Design System: SimpleTodo",
   "extensions": {
     "colorMeta": {
@@ -311,6 +311,28 @@
           "oklch(87% 0 0)",
           "oklch(95% 0 0)"
         ]
+      },
+      "calendar-task-blue": {
+        "role": "secondary",
+        "displayName": "日历任务蓝",
+        "tonalRamp": [
+          "oklch(15% 0.2143 262.88)",
+          "oklch(27% 0.2143 262.88)",
+          "oklch(39% 0.2143 262.88)",
+          "oklch(51% 0.2143 262.88)",
+          "oklch(63% 0.2143 262.88)",
+          "oklch(75% 0.2143 262.88)",
+          "oklch(87% 0.2143 262.88)",
+          "oklch(95% 0.2143 262.88)"
+        ]
+      },
+      "calendar-task-hover": {
+        "role": "secondary",
+        "displayName": "日历任务悬停蓝"
+      },
+      "calendar-task-completed": {
+        "role": "secondary",
+        "displayName": "日历已完成蓝"
       },
       "app-icon-blue": {
         "role": "primary",
@@ -716,7 +738,9 @@
         "frontend/src/components/TaskPlacement.vue",
         "frontend/src/composables/taskDrag.ts",
         "docs/直接编辑与悬停操作.md",
-        "frontend/src/composables/typingStars.ts"
+        "frontend/src/composables/typingStars.ts",
+        "docs/日历交互与对齐修复.md",
+        "frontend/src/components/CalendarTaskScroll.vue"
       ],
       "screenshots": [
         ".impeccable/review/direct-400.png",
@@ -724,13 +748,17 @@
         ".impeccable/review/direct-stars.png",
         "docs/images/tasks.png",
         "docs/images/calendar.png",
-        ".impeccable/review/redesign-dark-1080.png"
+        ".impeccable/review/redesign-dark-1080.png",
+        ".impeccable/review/calendar-batch-alignment.png",
+        ".impeccable/review/calendar-scroll-month.png",
+        ".impeccable/review/calendar-scroll-week.png",
+        ".impeccable/review/calendar-drawer-editor.png"
       ],
-      "scope": "本轮直接编辑以当前组件、CSS、400px 布局、子任务输入及星星截图为依据。完整 35 项 E2E 与本轮 4 项针对测试通过，共覆盖 36 个不同场景；Go 全量测试、9 项 Vitest、类型检查、前端生产构建及 macOS arm64 打包/临时签名检查通过。macOS 使用独立临时数据库补验单击追加、编辑中 Shift+Enter、新增子任务无边框、紧凑彩色操作与两次删除，测试构建仅覆盖 bundle/single-instance 标识。Windows amd64 生产交叉编译通过；Windows 原生 GUI 未验收，编译不代表 GUI 验收。",
-      "tonalRamps": "八阶 OKLCH 为面板展示合成，不新增产品主题色；应用图标蓝、窗口关闭悬停、任务操作色与短暂输入星星各自限定范围。",
+      "scope": "本轮日历与批量对齐以当前组件、CSS 及 calendar-batch-alignment、calendar-scroll-month/week、calendar-drawer-editor 截图为依据，后三张均为 1080×720。最终完整 40 项 E2E、Go 全量测试、9 项 Vitest、类型检查、前端生产构建与 macOS arm64 打包/临时签名验证通过；Windows amd64 生产交叉编译通过。本轮原生 macOS 验收因锁屏未完成，Windows 原生 GUI 未验收；浏览器与构建不代表原生 GUI 验收。",
+      "tonalRamps": "八阶 OKLCH 为面板展示合成，不新增产品主题色；应用图标蓝、窗口关闭悬停、任务操作色、日历任务蓝与短暂输入星星各自限定范围。",
       "knownDrift": [
         "现有窄 macOS 顶栏规则具有更高选择器优先级，按钮仍为 26px；常规顶栏规则为 25px。",
-        "PRODUCT.md 的黑白灰承诺继续约束整体工作区；直接编辑文档优先允许任务操作和输入星星局部彩色。"
+        "PRODUCT.md 的黑白灰承诺继续约束整体工作区；直接编辑及日历修复文档优先允许任务操作、输入星星和日历任务条局部彩色。"
       ]
     }
   },
@@ -778,9 +806,9 @@
       "name": "直接编辑任务与悬停操作",
       "kind": "custom",
       "refersTo": "task-row",
-      "description": "单击直接编辑；22px 层级缩进与 12px 箭头列稳定对齐，23px 彩色操作在悬停/按钮聚焦时滑入。静态示例展示正常删除与绿色待确认按钮，行为由应用执行。",
+      "description": "单击直接编辑；22px 层级缩进与 12px 箭头列稳定对齐，23px 彩色操作在悬停/按钮聚焦时滑入。静态示例展示正常删除与绿色待确认按钮，行为由应用执行。 批量选择框为 16×15px、顶部偏移 9px，标题和箭头对齐 23px 首行。",
       "html": "<div class=\"ds-task ds-selected\"><span class=\"ds-toggle\" aria-hidden=\"true\"></span><button class=\"ds-check\" aria-label=\"完成任务\"></button><div class=\"ds-copy\"><button class=\"ds-title\" title=\"准备周五的产品讨论\">准备周五的产品讨论</button><small class=\"ds-reminder\">10/23 09:30</small></div><span class=\"ds-progress\">0/1</span><div class=\"ds-actions\"><button class=\"ds-action ds-remind\" aria-label=\"设置提醒\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4\"/></svg></button><button class=\"ds-action ds-edit\" aria-label=\"任务设置\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m16 3 5 5-12 12-6 1 1-6ZM14 5l5 5\"/></svg></button><button class=\"ds-action ds-date\" aria-label=\"调整计划日期\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"16\" rx=\"2\"/><path d=\"M3 11h18M8 3v4M16 3v4\"/></svg></button><button class=\"ds-action ds-delete\" aria-label=\"删除任务及其子任务\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7\"/></svg></button></div></div><div class=\"ds-confirm-sample\"><small>待再次确认（4 秒）</small><button class=\"ds-action ds-delete ds-armed\" aria-label=\"确认删除任务\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m5 12 4 4L19 6\"/></svg></button></div>",
-      "css": ".ds-task{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);display:flex;align-items:flex-start;gap:4px;min-height:35px;padding:5px 3px 5px calc(var(--depth,0)*22px + 1px);border-radius:6px;transition:background .14s ease,opacity .14s ease;}.ds-task:hover,.ds-task.ds-selected{background:var(--secondary);}.ds-toggle{width:12px;min-width:12px;height:21px;margin-top:2px;}.ds-check{width:15px;min-width:16px;height:15px;margin-top:4px;align-self:flex-start;border:1.25px solid color-mix(in srgb,var(--muted) 65%,transparent);border-radius:4px;background:none;cursor:pointer;}.ds-check:hover{border-color:var(--accent);}.ds-copy{flex:1;min-width:0;}.ds-title{font-family:inherit;font-size:13px;line-height:21px;text-align:left;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:0;background:none;color:var(--text);padding:0;cursor:pointer;}.ds-selected .ds-title{white-space:normal;overflow:visible;overflow-wrap:anywhere;}.ds-reminder{display:block;font-size:10px;line-height:16px;color:var(--muted);font-variant-numeric:tabular-nums;}.ds-progress{height:23px;line-height:23px;margin-right:2px;font-size:10px;color:var(--muted);}.ds-actions{display:flex;gap:0;max-width:0;opacity:0;overflow:hidden;transform:translateX(9px);pointer-events:none;transition:max-width 200ms cubic-bezier(.16,1,.3,1),opacity 160ms ease,transform 200ms cubic-bezier(.16,1,.3,1);}.ds-task:hover .ds-actions,.ds-actions:focus-within{max-width:96px;opacity:1;transform:translateX(0);pointer-events:auto;}.ds-action{display:inline-flex;align-items:center;justify-content:center;width:23px;min-width:23px;height:23px;padding:3px;border:0;border-radius:4px;background:none;cursor:pointer;}.ds-action:hover{background:var(--hover);}.ds-remind{color:#9b6909;}.ds-edit{color:#3269aa;}.ds-date{color:#7853a5;}.ds-delete{color:#bd4545;}.ds-delete.ds-armed{color:#248046;background:color-mix(in srgb,#248046 12%,transparent);}.ds-task button:focus-visible,.ds-confirm-sample button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}.ds-task.ds-done .ds-title{color:var(--muted);text-decoration:line-through;}.ds-confirm-sample{display:flex;align-items:center;justify-content:flex-end;gap:6px;color:var(--muted);font:11px -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}:host-context([data-theme=\"dark\"]) .ds-remind{color:#e5b957;}:host-context([data-theme=\"dark\"]) .ds-edit{color:#86b9f1;}:host-context([data-theme=\"dark\"]) .ds-date{color:#c0a0e8;}:host-context([data-theme=\"dark\"]) .ds-delete{color:#ef9696;}:host-context([data-theme=\"dark\"]) .ds-delete.ds-armed{color:#7cce98;}@media(prefers-reduced-motion:reduce){.ds-actions{transition:none;}}:host-context(.no-motion) .ds-actions{transition:none;}"
+      "css": ".ds-task{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);display:flex;align-items:flex-start;gap:4px;min-height:35px;padding:5px 3px 5px calc(var(--depth,0)*22px + 1px);border-radius:6px;transition:background .14s ease,opacity .14s ease;}.ds-task:hover,.ds-task.ds-selected{background:var(--secondary);}.ds-toggle{width:12px;min-width:12px;height:23px;margin-top:0;}.ds-check{width:15px;min-width:16px;height:15px;margin-top:4px;align-self:flex-start;border:1.25px solid color-mix(in srgb,var(--muted) 65%,transparent);border-radius:4px;background:none;cursor:pointer;}.ds-check:hover{border-color:var(--accent);}.ds-copy{flex:1;min-width:0;}.ds-title{font-family:inherit;font-size:13px;line-height:23px;text-align:left;width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:0;background:none;color:var(--text);padding:0;cursor:pointer;}.ds-selected .ds-title{white-space:normal;overflow:visible;overflow-wrap:anywhere;}.ds-reminder{display:block;font-size:10px;line-height:16px;color:var(--muted);font-variant-numeric:tabular-nums;}.ds-progress{height:23px;line-height:23px;margin-right:2px;font-size:10px;color:var(--muted);}.ds-actions{display:flex;gap:0;max-width:0;opacity:0;overflow:hidden;transform:translateX(9px);pointer-events:none;transition:max-width 200ms cubic-bezier(.16,1,.3,1),opacity 160ms ease,transform 200ms cubic-bezier(.16,1,.3,1);}.ds-task:hover .ds-actions,.ds-actions:focus-within{max-width:96px;opacity:1;transform:translateX(0);pointer-events:auto;}.ds-action{display:inline-flex;align-items:center;justify-content:center;width:23px;min-width:23px;height:23px;padding:3px;border:0;border-radius:4px;background:none;cursor:pointer;}.ds-action:hover{background:var(--hover);}.ds-remind{color:#9b6909;}.ds-edit{color:#3269aa;}.ds-date{color:#7853a5;}.ds-delete{color:#bd4545;}.ds-delete.ds-armed{color:#248046;background:color-mix(in srgb,#248046 12%,transparent);}.ds-task button:focus-visible,.ds-confirm-sample button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}.ds-task.ds-done .ds-title{color:var(--muted);text-decoration:line-through;}.ds-confirm-sample{display:flex;align-items:center;justify-content:flex-end;gap:6px;color:var(--muted);font:11px -apple-system,BlinkMacSystemFont,\"Segoe UI\",sans-serif;}:host-context([data-theme=\"dark\"]) .ds-remind{color:#e5b957;}:host-context([data-theme=\"dark\"]) .ds-edit{color:#86b9f1;}:host-context([data-theme=\"dark\"]) .ds-date{color:#c0a0e8;}:host-context([data-theme=\"dark\"]) .ds-delete{color:#ef9696;}:host-context([data-theme=\"dark\"]) .ds-delete.ds-armed{color:#7cce98;}@media(prefers-reduced-motion:reduce){.ds-actions{transition:none;}}:host-context(.no-motion) .ds-actions{transition:none;}"
     },
     {
       "name": "任务详细设置",
@@ -802,8 +830,8 @@
       "name": "日期任务抽屉",
       "kind": "custom",
       "refersTo": "day-drawer",
-      "description": "覆盖日历右侧的日期工作区；内部复用最新选择、原位编辑和加号草稿。示例不模拟打开行为。",
-      "html": "<aside class=\"ds-drawer\"><header><div><h2>10月21日星期三</h2><small>5 项任务</small></div><button aria-label=\"关闭日期抽屉\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></header><p>在这里查看与编辑当天任务。</p></aside>",
+      "description": "覆盖日历右侧的日期工作区；当天列表点击具体任务后切换为内嵌完整 TaskEditor，保存/取消返回当天清单。普通清单保留原位编辑。示例不模拟打开行为。",
+      "html": "<aside class=\"ds-drawer\"><header><div><h2>10月21日星期三</h2><small>5 项任务</small></div><button aria-label=\"关闭日期抽屉\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></header><p>点击具体任务，在抽屉内编辑完整详情。</p></aside>",
       "css": ".ds-drawer{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);width:clamp(360px,42vw,480px);max-width:calc(100% - 28px);min-height:180px;background:var(--surface);box-shadow:-12px 0 40px rgb(0 0 0/.14);display:flex;flex-direction:column;}.ds-drawer header{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 13px;border-bottom:1px solid var(--border);}.ds-drawer h2{margin:0 0 4px;font-size:15px;font-weight:600;}.ds-drawer small{font-size:11px;color:var(--muted);}.ds-drawer button{width:27px;height:27px;border:0;border-radius:5px;background:none;color:var(--muted);cursor:pointer;}.ds-drawer button:hover{background:var(--hover);}.ds-drawer button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}.ds-drawer p{margin:12px 16px;font-size:12px;color:var(--muted);}"
     },
     {
@@ -813,12 +841,20 @@
       "description": "时间、重复频率、间隔与星期的紧凑浮层；下拉外观独立展开，无框架运行时。",
       "html": "<section class=\"ds-reminder-panel\"><header><strong>设置提醒</strong><button aria-label=\"关闭提醒设置\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></header><label>提醒时间<input aria-label=\"提醒时间\" type=\"datetime-local\" value=\"2026-10-22T09:30\"/></label><label>重复提醒<button class=\"ds-repeat-trigger\" role=\"combobox\" aria-expanded=\"false\">每周<svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 9 6 6 6-6\"/></svg></button></label><label>重复间隔<input aria-label=\"重复间隔\" type=\"number\" value=\"2\"/></label><div class=\"ds-weekdays\"><button aria-pressed=\"false\">日</button><button aria-pressed=\"false\">一</button><button aria-pressed=\"false\">二</button><button aria-pressed=\"false\">三</button><button class=\"ds-active\" aria-pressed=\"true\">四</button><button aria-pressed=\"false\">五</button><button aria-pressed=\"false\">六</button></div><footer><button class=\"ds-remove\">移除提醒</button><button class=\"ds-save-reminder\">保存提醒</button></footer></section>",
       "css": ".ds-reminder-panel{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);width:284px;max-height:calc(100vh - 24px);overflow:auto;border:1px solid var(--border);border-radius:8px;background:var(--surface);box-shadow:0 8px 28px rgb(0 0 0/.14);padding:12px;}.ds-reminder-panel header,.ds-reminder-panel footer{display:flex;justify-content:space-between;align-items:center;gap:7px;}.ds-reminder-panel strong{font-size:12px;}.ds-reminder-panel header button{border:0;background:none;color:var(--muted);cursor:pointer;}.ds-reminder-panel label{display:block;margin:10px 0;font-size:11px;color:var(--muted);}.ds-reminder-panel input{display:block;font-family:inherit;font-size:12px;width:100%;margin:10px 0;padding:7px;border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);}.ds-repeat-trigger{display:flex;align-items:center;justify-content:space-between;width:100%;padding:6px 9px;min-height:30px;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:5px;font:inherit;font-size:12px;cursor:pointer;}.ds-repeat-trigger:hover{background:var(--hover);}.ds-weekdays{display:flex;gap:4px;margin:8px 0;}.ds-weekdays button{width:28px;height:28px;border:0;border-radius:4px;background:var(--secondary);color:var(--text);font-family:inherit;font-size:11px;cursor:pointer;}.ds-weekdays .ds-active{background:var(--text);color:var(--surface);}.ds-reminder-panel footer button{font-family:inherit;font-size:12px;border:0;background:none;color:var(--muted);padding:5px 10px;min-height:29px;cursor:pointer;}.ds-reminder-panel footer .ds-save-reminder{background:var(--accent);color:var(--surface);border-radius:7px;}.ds-reminder-panel .ds-save-reminder:hover{background:var(--accent-strong);}.ds-reminder-panel button:focus-visible,.ds-reminder-panel input:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
+    },
+    {
+      "name": "日历任务条与溢出轨道",
+      "kind": "chip",
+      "refersTo": "calendar-task",
+      "description": "月/周日期格内的蓝白根任务条；完成项加删除线，溢出时显示 6px DOM 轨道。示例仅展示表面，滚轮、拖动、键盘及 ARIA 数值由 CalendarTaskScroll 维护。",
+      "html": "<div class=\"ds-calendar-cell\"><div class=\"ds-calendar-tasks\"><button class=\"ds-calendar-chip\">准备周五的产品讨论</button><button class=\"ds-calendar-chip ds-calendar-done\">已完成的任务</button></div><div class=\"ds-calendar-rail\" aria-hidden=\"true\"><div class=\"ds-calendar-thumb\"></div></div></div>",
+      "css": ".ds-calendar-cell{position:relative;width:180px;height:54px;background:var(--surface);}.ds-calendar-tasks{display:flex;flex-direction:column;gap:3px;padding-right:10px;}.ds-calendar-chip{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;font-size:11px;line-height:22px;min-height:22px;padding:0 5px;border:0;border-radius:3px;background:#2563eb;color:#fff;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;}.ds-calendar-chip:hover{background:#1d4ed8;}.ds-calendar-chip:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}.ds-calendar-chip.ds-calendar-done{background:#4064a5;text-decoration:line-through;}.ds-calendar-rail{position:absolute;top:0;right:0;bottom:0;width:6px;border-radius:3px;background:var(--secondary);}.ds-calendar-thumb{width:6px;height:18px;min-height:12px;border-radius:3px;background:var(--muted);}.ds-calendar-rail:hover .ds-calendar-thumb{background:var(--text);}"
     }
   ],
   "narrative": {
-    "overview": "SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一工作现场。白色与黑色表面、层次灰文字、系统字体和细分隔线保持任务密度；顶栏品牌只保留 SimpleTodo 文字，不显示对钩或本地徽标。应用图标与关于页共用蓝底白色交叉双对钩，图标蓝色不扩展为全局强调色。任务操作与输入星星使用本轮确认的局部彩色反馈。\n\n最新任务列表交互延续紧凑单窗口：单击标题或行空白直接编辑，光标在末尾；编辑中 Shift+Enter 保存并进入子任务输入。悬停操作在首行紧凑滑出，删除通过两次点击确认，输入光标附近提供短暂星星。详细设置、改期与更换父任务继续使用主窗口内 HTML 模态对话框，五层任务、拖动预览和日计划连续日期滑块保持现有密度。本文以当前代码、直接编辑截图和本轮自动化为依据；macOS 已使用独立临时数据库补验单击追加、Shift+Enter、无边框子输入、彩色操作和两次删除，Windows 原生 GUI 仍未实测。",
+    "overview": "SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一工作现场。白色与黑色表面、层次灰文字、系统字体和细分隔线保持任务密度；顶栏品牌只保留 SimpleTodo 文字，不显示对钩或本地徽标。应用图标与关于页共用蓝底白色交叉双对钩，图标蓝色不扩展为全局强调色。任务操作、输入星星与日历任务条使用已确认的局部彩色反馈。\n\n最新任务列表交互延续紧凑单窗口：单击标题或行空白直接编辑，光标在末尾；编辑中 Shift+Enter 保存并进入子任务输入。悬停操作在首行紧凑滑出，删除通过两次点击确认，输入光标附近提供短暂星星。普通清单详细设置、改期与更换父任务继续使用主窗口内 HTML 模态对话框；日历具体任务在日期抽屉内嵌入同一详细编辑器。五层任务、拖动预览和日计划连续日期滑块保持现有密度。最新日历规则见 [日历交互与对齐修复](docs/日历交互与对齐修复.md)；本轮浏览器回归与构建已验证，原生 macOS 验收因锁屏未完成，Windows 原生 GUI 仍未实测。",
     "keyCharacteristics": [
-      "黑白灰浅深主题配对，系统字体与 Lucide 线性图标；任务操作和输入星星使用局部彩色反馈。",
+      "黑白灰浅深主题配对，系统字体与 Lucide 线性图标；任务操作、输入星星和日历任务条使用局部彩色反馈。",
       "唯一原生主窗口；列表、月/周日历、专注、设置和数据工具原位切换。",
       "35px 最小任务行、22px 层级缩进与稳定箭头列；单击原位编辑、加号草稿与独立详细设置。",
       "搜索填满剩余行宽、固定底部统计、自定义下拉、宽日期抽屉和拖动预览。"
@@ -826,7 +862,8 @@
     "rules": [],
     "dos": [
       "Do 沿用前置 token 的浅深配对、系统字体和 Lucide 线性图标。",
-      "Do 让单击直接编辑并将光标置于末尾，Shift+Enter 保存后添加子任务；铅笔仍打开详细设置。",
+      "Do 让普通清单单击原位编辑、光标置于末尾，Shift+Enter 保存后添加子任务；日历具体任务在日期抽屉内打开完整编辑器。",
+      "Do 让月/周日期格内的全部已加载根任务独立滚动，溢出时显示持久轨道；蓝白任务条只用于日历。",
       "Do 让加号先创建界面草稿，保护输入法组合、版本冲突草稿和空白取消。",
       "Do 使用自定义 combobox/listbox，保留键盘选择、禁用状态与焦点返回。",
       "Do 同时检查 400px 紧凑布局、固定 footer、日历抽屉、深色与减少动画。"

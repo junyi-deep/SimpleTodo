@@ -26,6 +26,7 @@ const props = defineProps<{
   root: Task;
   compact?: boolean;
   editing?: string;
+  detailsOnClick?: boolean;
 }>();
 const emit = defineEmits<{
   edit: [Task | null];
@@ -91,6 +92,10 @@ function toggle(id: string) {
   expanded.value = next;
 }
 async function titleClick(t: Task) {
+  if (props.detailsOnClick) {
+    emit("edit", t);
+    return;
+  }
   if (s.titleEditing === t.id || !(await canLeaveEditor())) return;
   s.activeTask = t.id;
   s.titleEditing = t.id;

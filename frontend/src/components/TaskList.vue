@@ -12,6 +12,7 @@ const props = defineProps<{
   date: string | null;
   editing?: string;
   batch?: boolean;
+  detailsOnClick?: boolean;
 }>();
 const emit = defineEmits<{
   edit: [Task | null];
@@ -59,6 +60,7 @@ onUnmounted(() => document.removeEventListener("todo:new-task", requestAdd));
           />
           <TaskTree
             :root="t"
+            :details-on-click="detailsOnClick"
             :editing="editing"
             @edit="emit('edit', $event)"
             @drag="emit('drag', $event)"

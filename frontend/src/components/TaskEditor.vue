@@ -8,10 +8,10 @@ import { X, CalendarDays, Bell, Repeat2, AlignLeft } from "lucide-vue-next";
 import { type Task, type Rule } from "../api/types";
 import { api, confirmAction } from "../api";
 import { useTodo } from "../stores/todo";
-const props = defineProps<{ task: Task }>(),
+const props = defineProps<{ task: Task; embedded?: boolean }>(),
   emit = defineEmits<{ close: [] }>(),
   s = useTodo(),
-  dialog = ref<HTMLDialogElement>();
+  dialog = ref<HTMLElement>();
 const expectedVersion = ref(
   s.taskMap.get(props.task.rootId)?.version || props.task.version,
 );
@@ -94,7 +94,7 @@ function toLocal(ms: number) {
 }
 restoreDialogFocus(props.task.id);
 onMounted(async () => {
-  dialog.value?.showModal();
+  if (!props.embedded) (dialog.value as HTMLDialogElement)?.showModal();
   if (dialog.value) reveal(dialog.value, "dialog");
   dialog.value?.querySelector("input")?.focus();
   if (props.task.seriesId) {
@@ -203,12 +203,17 @@ async function cancel() {
 }
 </script>
 <template>
-  <Teleport to="body"
-    ><dialog
+  <Teleport to="body" :disabled="embedded"
+    ><component
+      :is="embedded ? 'section' : 'dialog'"
       :inert="s.maintenance || closing || undefined"
-      :class="{ 'motion-closing': closing && !s.maintenance }"
+      :class="{
+        'motion-closing': closing && !s.maintenance,
+        'drawer-task-editor': embedded,
+      }"
       ref="dialog"
       class="task-settings-dialog"
+      :role="embedded ? 'region' : undefined"
       aria-label="任务详细设置"
       @cancel.prevent="cancel"
       @keydown.esc.stop.prevent="cancel"
@@ -221,7 +226,7 @@ async function cancel() {
           ><button
             type="button"
             class="icon-button"
-            aria-label="关闭"
+            :aria-label="embedded ? '返回当天任务' : '关闭'"
             @click="cancel"
           >
             <X :size="18" />
@@ -396,6 +401,6 @@ async function cancel() {
           </button>
         </footer>
       </form>
-    </dialog></Teleport
+    </component></Teleport
   >
 </template>
