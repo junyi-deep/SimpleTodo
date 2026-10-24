@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-10-23T15:32:00.140658+00:00",
+  "generatedAt": "2026-10-23T16:19:37.487833+00:00",
   "title": "Design System: SimpleTodo",
   "extensions": {
     "colorMeta": {
@@ -626,6 +626,11 @@
         "name": "task-settings",
         "value": "0 14px 46px #0002",
         "purpose": "主窗口内 HTML 详细设置对话框，背板 #0004。"
+      },
+      {
+        "name": "calendar-repeat-menu",
+        "value": "0 6px 24px rgb(0 0 0 / .18)",
+        "purpose": "日历选区中仅含“创建重复任务”的右键菜单。"
       }
     ],
     "motion": [
@@ -641,7 +646,7 @@
       },
       {
         "name": "day-drawer",
-        "value": "Motion: enter 280ms / translateX 28px; exit 120ms / translateX 18px; cubic-bezier(.16,1,.3,1)",
+        "value": "Motion: enter 320ms / translateX 100% → 0; exit 240ms / translateX 0 → 100% and fade; cubic-bezier(.16,1,.3,1)",
         "purpose": "抽屉方向与进入退出关系。"
       },
       {
@@ -698,6 +703,11 @@
         "name": "typing-stars",
         "value": "canvas requestAnimationFrame; 5 stars/input; 480ms; ≤80 particles; 2–4.5px",
         "purpose": "插入输入与 compositionend 后从多行光标发出；组合中间态忽略，减少动态效果或关闭动画时清理。"
+      },
+      {
+        "name": "calendar-drop-number",
+        "value": "transform 180ms ease-out; translateY(0) → translateY(-2px)",
+        "purpose": "任务拖动落点的日期数字上移；关闭动画或系统减少动态效果时停用过渡。"
       }
     ],
     "breakpoints": [
@@ -712,6 +722,10 @@
       {
         "name": "narrow-window",
         "value": "440px"
+      },
+      {
+        "name": "calendar-selection-hint",
+        "value": "760px"
       }
     ],
     "evidence": {
@@ -740,7 +754,9 @@
         "docs/直接编辑与悬停操作.md",
         "frontend/src/composables/typingStars.ts",
         "docs/日历交互与对齐修复.md",
-        "frontend/src/components/CalendarTaskScroll.vue"
+        "frontend/src/components/CalendarTaskScroll.vue",
+        "docs/重复任务与日历增强.md",
+        "frontend/src/components/RepeatTaskComposer.vue"
       ],
       "screenshots": [
         ".impeccable/review/direct-400.png",
@@ -752,13 +768,17 @@
         ".impeccable/review/calendar-batch-alignment.png",
         ".impeccable/review/calendar-scroll-month.png",
         ".impeccable/review/calendar-scroll-week.png",
-        ".impeccable/review/calendar-drawer-editor.png"
+        ".impeccable/review/calendar-drawer-editor.png",
+        ".impeccable/review/repeat-native-composer.png",
+        ".impeccable/review/calendar-drop-feedback.png",
+        ".impeccable/review/repeat-native-list-return.png"
       ],
-      "scope": "本轮日历与批量对齐以当前组件、CSS 及 calendar-batch-alignment、calendar-scroll-month/week、calendar-drawer-editor 截图为依据，后三张均为 1080×720。最终完整 40 项 E2E、Go 全量测试、9 项 Vitest、类型检查、前端生产构建与 macOS arm64 打包/临时签名验证通过；Windows amd64 生产交叉编译通过。本轮原生 macOS 已在独立临时数据库完成对齐、月/周溢出滚动、滑块/滚轮、真实拖动改期、日期清单与抽屉编辑保存验证，Windows 原生 GUI 未验收；浏览器与构建不代表原生 GUI 验收。",
+      "scope": "本轮文档按当前 App、CustomSelect、InlineTitle、TaskTree、TaskList、RepeatTaskComposer、taskDrag、motion 与 CSS 校对同级录入、选中项定位、完整抽屉滑动、日历拖动落点/边缘翻页和选日创建重复任务。documenter 已打开 repeat-native-composer（2160×1440）、calendar-drop-feedback（1080×720）和 repeat-native-list-return（2158×1438）静态截图；静态图不能证明动画时序或拖动清理。主任务报告完整 46 项 Playwright、Go 测试与 vet、9 项 Vitest、类型检查/前端生产构建、最终 macOS arm64 打包以及 Windows amd64 生产交叉编译通过。原生 macOS 独立临时数据库验收覆盖 Enter 同级录入、Esc、年/月滚动、Command 选日与右键创建；SQL 核实每周一/三、2026-10-26 开始、结束 NULL 及 10/26、10/28、11/2、11/4 实例。Windows 原生 GUI 未实测，本轮未提供深色或动画录屏；现有深色截图仅作历史证据。",
       "tonalRamps": "八阶 OKLCH 为面板展示合成，不新增产品主题色；应用图标蓝、窗口关闭悬停、任务操作色、日历任务蓝与短暂输入星星各自限定范围。",
       "knownDrift": [
         "现有窄 macOS 顶栏规则具有更高选择器优先级，按钮仍为 26px；常规顶栏规则为 25px。",
-        "PRODUCT.md 的黑白灰承诺继续约束整体工作区；直接编辑及日历修复文档优先允许任务操作、输入星星和日历任务条局部彩色。"
+        "PRODUCT.md 的黑白灰承诺继续约束整体工作区；直接编辑及日历修复文档优先允许任务操作、输入星星和日历任务条局部彩色。",
+        "repeat-native-list.png 与 repeat-native-list-return.png 均为 2158×1438 宽幅截图；它们不能证明返回列表恢复为 480×720，且本轮不修改既有窗口尺寸策略。"
       ]
     }
   },
@@ -783,9 +803,9 @@
       "name": "居中新增加号",
       "kind": "button",
       "refersTo": "add-task-button",
-      "description": "列表末端的轻量加号；点击后创建界面草稿，此示例不模拟写入。",
+      "description": "列表末端的轻量加号；点击后创建界面草稿，取消后以柔和底色保留焦点，无全宽轮廓；此示例不模拟写入。",
       "html": "<button class=\"ds-add\" aria-label=\"新增待办\"><svg width=\"17\" height=\"17\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M5 12h14M12 5v14\"/></svg></button>",
-      "css": ".ds-add{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);display:flex;align-items:center;justify-content:center;width:100%;min-height:34px;margin:2px 0;color:var(--muted);border:0;border-radius:5px;background:none;cursor:pointer;}.ds-add:hover{color:var(--text);background:var(--secondary);}.ds-add:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
+      "css": ".ds-add{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);display:flex;align-items:center;justify-content:center;width:100%;min-height:34px;margin:2px 0;color:var(--muted);border:0;border-radius:5px;background:none;cursor:pointer;}.ds-add:hover{color:var(--text);background:var(--secondary);}.ds-add:focus-visible{outline:none;box-shadow:none;background:var(--secondary);color:var(--text);}"
     },
     {
       "name": "直接视图切换",
@@ -798,7 +818,7 @@
       "name": "自定义下拉",
       "kind": "custom",
       "refersTo": "select-trigger",
-      "description": "combobox 触发器与 listbox 选项的视觉；此静态示例不模拟选择行为。",
+      "description": "combobox 触发器与 listbox 选项的视觉；展开时滚至当前选中项，年/月沿用同一行为。此静态示例不模拟选择行为。",
       "html": "<div class=\"ds-select\"><button class=\"ds-trigger\" role=\"combobox\" aria-expanded=\"true\" aria-controls=\"ds-list\">月视图<span aria-hidden=\"true\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 9 6 6 6-6\"/></svg></span></button><div class=\"ds-options\" role=\"listbox\" id=\"ds-list\"><button role=\"option\" aria-selected=\"true\" class=\"ds-selected\">月视图<span><svg width=\"13\" height=\"13\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m5 12 4 4L19 6\"/></svg></span></button><button role=\"option\" aria-selected=\"false\">周视图</button></div></div>",
       "css": ".ds-select{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);width:190px;}.ds-trigger{font:inherit;width:100%;display:flex;justify-content:space-between;gap:10px;padding:6px 9px;min-height:30px;background:var(--surface);border:1px solid var(--border);border-radius:5px;font-size:12px;cursor:pointer;}.ds-trigger:hover{background:var(--hover);}.ds-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}.ds-options{margin-top:5px;padding:4px;border:1px solid var(--border);border-radius:7px;background:var(--surface);box-shadow:0 8px 28px rgb(0 0 0/.12);}.ds-options button{font:inherit;font-size:12px;display:flex;justify-content:space-between;width:100%;padding:7px 9px;line-height:18px;border:0;border-radius:4px;background:none;color:var(--text);text-align:left;cursor:pointer;}.ds-options button:hover,.ds-options .ds-selected{background:var(--hover);}.ds-options button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}"
     },
@@ -822,7 +842,7 @@
       "name": "原位标题草稿",
       "kind": "input",
       "refersTo": "inline-title",
-      "description": "单击任务标题或行空白直接编辑，光标在末尾；Enter/失焦保存、Esc 取消，编辑中 Shift+Enter 保存并新增子任务。透明无框输入与短暂光标星星；静态示例仅展示表面。",
+      "description": "单击任务标题或行空白直接编辑，光标在末尾；Enter 保存并继续当前任务后的同级草稿，失焦保存、Esc 取消，Shift+Enter 保存并新增子任务。透明无框输入与短暂光标星星；静态示例仅展示表面。",
       "html": "<div class=\"ds-draft\"><span class=\"ds-draft-check\"></span><textarea rows=\"2\" aria-label=\"编辑任务标题\">准备周五的产品讨论，整理需要确认的问题</textarea></div>",
       "css": ".ds-draft{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);display:flex;gap:8px;align-items:flex-start;min-height:35px;padding:6px 6px 6px 21px;background:var(--secondary);border-radius:5px;}.ds-draft-check{width:15px;height:15px;margin-top:3px;flex-shrink:0;border:1px solid var(--quiet);border-radius:4px;}.ds-draft textarea{font:inherit;width:100%;min-width:0;min-height:24px;max-height:210px;resize:none;border:0;background:transparent;color:var(--text);box-shadow:none;line-height:21px;padding:0 2px;overflow-wrap:anywhere;}.ds-draft textarea,.ds-draft textarea:focus,.ds-draft textarea:focus-visible{outline:none;border:0;border-radius:0;box-shadow:none;background:transparent;}"
     },
@@ -830,7 +850,7 @@
       "name": "日期任务抽屉",
       "kind": "custom",
       "refersTo": "day-drawer",
-      "description": "覆盖日历右侧的日期工作区；当天列表点击具体任务后切换为内嵌完整 TaskEditor，保存/取消返回当天清单。普通清单保留原位编辑。示例不模拟打开行为。",
+      "description": "覆盖日历右侧的日期工作区；完整宽度滑入/滑出。当天任务切换为内嵌 TaskEditor，选区右键可在同一表面创建重复任务，默认按所选星期每周重复且结束日期留空。普通清单保留原位编辑。示例不模拟行为与动效。",
       "html": "<aside class=\"ds-drawer\"><header><div><h2>10月21日星期三</h2><small>5 项任务</small></div><button aria-label=\"关闭日期抽屉\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"m6 6 12 12M18 6 6 18\"/></svg></button></header><p>点击具体任务，在抽屉内编辑完整详情。</p></aside>",
       "css": ".ds-drawer{font-family:-apple-system, BlinkMacSystemFont, \"Segoe UI\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif;color:var(--text);width:clamp(360px,42vw,480px);max-width:calc(100% - 28px);min-height:180px;background:var(--surface);box-shadow:-12px 0 40px rgb(0 0 0/.14);display:flex;flex-direction:column;}.ds-drawer header{display:flex;justify-content:space-between;align-items:center;padding:16px 16px 13px;border-bottom:1px solid var(--border);}.ds-drawer h2{margin:0 0 4px;font-size:15px;font-weight:600;}.ds-drawer small{font-size:11px;color:var(--muted);}.ds-drawer button{width:27px;height:27px;border:0;border-radius:5px;background:none;color:var(--muted);cursor:pointer;}.ds-drawer button:hover{background:var(--hover);}.ds-drawer button:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}.ds-drawer p{margin:12px 16px;font-size:12px;color:var(--muted);}"
     },
@@ -852,7 +872,7 @@
     }
   ],
   "narrative": {
-    "overview": "SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一工作现场。白色与黑色表面、层次灰文字、系统字体和细分隔线保持任务密度；顶栏品牌只保留 SimpleTodo 文字，不显示对钩或本地徽标。应用图标与关于页共用蓝底白色交叉双对钩，图标蓝色不扩展为全局强调色。任务操作、输入星星与日历任务条使用已确认的局部彩色反馈。\n\n最新任务列表交互延续紧凑单窗口：单击标题或行空白直接编辑，光标在末尾；编辑中 Shift+Enter 保存并进入子任务输入。悬停操作在首行紧凑滑出，删除通过两次点击确认，输入光标附近提供短暂星星。普通清单详细设置、改期与更换父任务继续使用主窗口内 HTML 模态对话框；日历具体任务在日期抽屉内嵌入同一详细编辑器。五层任务、拖动预览和日计划连续日期滑块保持现有密度。最新日历规则见 [日历交互与对齐修复](docs/日历交互与对齐修复.md)；本轮浏览器回归与构建已验证，原生 macOS 已在独立临时数据库完成对齐、月/周溢出滚动、滑块/滚轮、真实拖动改期、日期清单与抽屉编辑保存验证，Windows 原生 GUI 仍未实测。",
+    "overview": "SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一工作现场。白色与黑色表面、层次灰文字、系统字体和细分隔线保持任务密度；顶栏品牌只保留 SimpleTodo 文字，不显示对钩或本地徽标。应用图标与关于页共用蓝底白色交叉双对钩，图标蓝色不扩展为全局强调色。任务操作、输入星星与日历任务条使用已确认的局部彩色反馈。\n\n最新任务列表交互延续紧凑单窗口：单击标题或行空白直接编辑，光标在末尾；Enter 保存后立即在当前根任务或子任务后开始同级草稿，Shift+Enter 保存并进入子任务输入。悬停操作在首行紧凑滑出，删除通过两次点击确认，输入光标附近提供短暂星星。普通清单详细设置、改期与更换父任务继续使用主窗口内 HTML 模态对话框；日历具体任务在日期抽屉内嵌入同一详细编辑器。五层任务、拖动预览和日计划连续日期滑块保持现有密度。日历可连续或不连续选日，通过选区右键在同一抽屉创建重复任务。最新行为见 [重复任务与日历增强](docs/重复任务与日历增强.md)；本轮原生 macOS 已在独立临时数据库验证同级连续录入、取消、年/月选中项定位和选日创建每周重复任务，Windows 原生 GUI 仍未实测。",
     "keyCharacteristics": [
       "黑白灰浅深主题配对，系统字体与 Lucide 线性图标；任务操作、输入星星和日历任务条使用局部彩色反馈。",
       "唯一原生主窗口；列表、月/周日历、专注、设置和数据工具原位切换。",
@@ -862,10 +882,11 @@
     "rules": [],
     "dos": [
       "Do 沿用前置 token 的浅深配对、系统字体和 Lucide 线性图标。",
-      "Do 让普通清单单击原位编辑、光标置于末尾，Shift+Enter 保存后添加子任务；日历具体任务在日期抽屉内打开完整编辑器。",
+      "Do 让普通清单单击原位编辑、光标置于末尾，Enter 保存后继续同级录入，Shift+Enter 保存后添加子任务；日历具体任务在日期抽屉内打开完整编辑器。",
       "Do 让月/周日期格内的全部已加载根任务独立滚动，溢出时显示持久轨道；蓝白任务条只用于日历。",
       "Do 让加号先创建界面草稿，保护输入法组合、版本冲突草稿和空白取消。",
-      "Do 使用自定义 combobox/listbox，保留键盘选择、禁用状态与焦点返回。",
+      "Do 使用自定义 combobox/listbox，展开定位当前选中项，保留键盘选择、禁用状态与焦点返回。",
+      "Do 让日历多选保留网格空间，并在同一抽屉创建默认一直重复的任务；日历蓝色落点仅在任务拖动期间出现。",
       "Do 同时检查 400px 紧凑布局、固定 footer、日历抽屉、深色与减少动画。"
     ],
     "donts": [

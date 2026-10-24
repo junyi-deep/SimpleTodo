@@ -418,6 +418,51 @@ func (e *Engine) mutate(c Command, op string, fn func(map[string]Task, int64) er
 	if err = fn(m, now); err != nil {
 		return nil, err
 	}
+	// Insert the new sibling in the same transaction as creation, including root peers.
+	if c.AfterID != "" && (op == "create" || op == "create-node") {
+		created := m[c.ID]
+		if op == "create-node" {
+			after, ok := m[c.AfterID]
+			if !ok || val(after.ParentID) != val(created.ParentID) {
+				return nil, fail("CONFLICT", "同级任务已变化，请刷新后重试")
+			}
+			for id, t := range m {
+				if id != created.ID && val(t.ParentID) == val(created.ParentID) && t.Order > after.Order {
+					t.Order++
+					m[id] = t
+				}
+			}
+			created.Order = after.Order + 1
+		} else {
+			rows, er := tx.Query("SELECT "+columns+" FROM tasks WHERE parent_id IS NULL AND planned_date IS ? ORDER BY sort_order,id", created.Date)
+			if er != nil {
+				return nil, er
+			}
+			peers, er := readTasks(rows)
+			if er != nil {
+				return nil, er
+			}
+			found, order := false, 0
+			for _, t := range peers {
+				t.Order = order
+				order++
+				if t.ID == c.AfterID {
+					found = true
+					created.Order = order
+					order++
+				}
+				t.Version++
+				t.UpdatedAt = now
+				if er = putTask(tx, t); er != nil {
+					return nil, er
+				}
+			}
+			if !found {
+				return nil, fail("CONFLICT", "同级任务已变化，请刷新后重试")
+			}
+		}
+		m[c.ID] = created
+	}
 	if err = validateTree(m, old); err != nil {
 		return nil, err
 	}

@@ -62,6 +62,7 @@ type Command struct {
 	ReminderTime    *string `json:"reminderTime"`
 	Completed       bool    `json:"completed"`
 	BeforeID        string  `json:"beforeId"`
+	AfterID         string  `json:"afterId"`
 }
 type Rule struct {
 	ID               string  `json:"id"`

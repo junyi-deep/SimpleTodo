@@ -18,11 +18,16 @@ export function startTaskDrag(event: PointerEvent, id: string) {
     ghost: HTMLElement | undefined,
     target: HTMLElement | null = null,
     frame = 0,
-    started = false;
+    started = false,
+    edgeDirection = 0,
+    edgeSince = 0,
+    lastPage = 0,
+    ending = false;
   event.preventDefault();
   handle.setPointerCapture(event.pointerId);
   function clearTarget() {
     target?.removeAttribute("data-drop-placement");
+    target?.removeAttribute("data-calendar-drop");
     target = null;
   }
   function draw() {
@@ -50,6 +55,38 @@ export function startTaskDrag(event: PointerEvent, id: string) {
           : fraction > 0.75
             ? "after"
             : "inside";
+    }
+    if (target?.matches(".calendar-day,.week-date"))
+      target.setAttribute("data-calendar-drop", "");
+    // Dwell at either horizontal edge to page without dropping the pointer preview.
+    const grid = document.querySelector<HTMLElement>(".calendar-grid");
+    if (source.classList.contains("calendar-task") && grid) {
+      const r = grid.getBoundingClientRect();
+      const direction =
+        y >= r.top && y <= r.bottom
+          ? x <= r.left + 28
+            ? -1
+            : x >= r.right - 28
+              ? 1
+              : 0
+          : 0;
+      const now = performance.now();
+      if (direction !== edgeDirection) {
+        edgeDirection = direction;
+        edgeSince = now;
+      }
+      if (
+        !ending &&
+        direction &&
+        now - edgeSince > 650 &&
+        now - lastPage > 950
+      ) {
+        lastPage = now;
+        clearTarget();
+        document.dispatchEvent(
+          new CustomEvent("todo:calendar-step", { detail: direction }),
+        );
+      }
     }
     const scroll = document
       .elementFromPoint(x, y)
@@ -100,7 +137,7 @@ export function startTaskDrag(event: PointerEvent, id: string) {
     document.removeEventListener("pointermove", move);
     document.removeEventListener("pointerup", up);
     document.removeEventListener("pointercancel", abort);
-    document.removeEventListener("keydown", key);
+    document.removeEventListener("keydown", key, true);
     window.removeEventListener("blur", abort);
     if (handle.hasPointerCapture(event.pointerId))
       handle.releasePointerCapture(event.pointerId);
@@ -160,6 +197,7 @@ export function startTaskDrag(event: PointerEvent, id: string) {
       y = e.clientY;
       alt = e.altKey;
       if (started) {
+        ending = true;
         cancelAnimationFrame(frame);
         draw();
       }
@@ -180,6 +218,6 @@ export function startTaskDrag(event: PointerEvent, id: string) {
   document.addEventListener("pointermove", move, { passive: false });
   document.addEventListener("pointerup", up);
   document.addEventListener("pointercancel", abort);
-  document.addEventListener("keydown", key);
+  document.addEventListener("keydown", key, true);
   window.addEventListener("blur", abort);
 }

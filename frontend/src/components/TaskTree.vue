@@ -37,6 +37,7 @@ const s = useTodo(),
   expanded = ref(new Set<string>()),
   adding = ref<string | null>(null),
   draft = ref(""),
+  sibling = ref<Task>(),
   placement = ref<Task | null>(null),
   reminding = ref(false),
   dropHint = ref<string | null>(null),
@@ -129,14 +130,24 @@ function addRequested(e: Event) {
     if (t) void add(t);
   }
 }
+async function siblingRequested(e: Event) {
+  const t = index.value.get((e as CustomEvent).detail.id);
+  if (!t?.parentId) return;
+  sibling.value = undefined;
+  adding.value = null;
+  await nextTick();
+  sibling.value = t;
+}
 onMounted(() => {
   document.addEventListener("pointerdown", outside);
   document.addEventListener("todo:add-child", addRequested);
+  document.addEventListener("todo:new-sibling", siblingRequested);
 });
 onUnmounted(() => {
   resetDelete();
   document.removeEventListener("pointerdown", outside);
   document.removeEventListener("todo:add-child", addRequested);
+  document.removeEventListener("todo:new-sibling", siblingRequested);
 });
 async function add(t: Task) {
   const ancestors = [t.id];
@@ -235,7 +246,11 @@ async function keydown(e: KeyboardEvent, t: Task) {
     await add(t);
   } else if (e.key === "Enter") {
     e.preventDefault();
-    await titleClick(t);
+    document.dispatchEvent(
+      new CustomEvent("todo:new-sibling", {
+        detail: { id: t.id, rootId: t.rootId },
+      }),
+    );
   } else if (e.key === " ") {
     e.preventDefault();
     await s.complete(t);
@@ -539,6 +554,17 @@ async function dropNode(e: DragEvent, t: Task) {
               />
             </button>
           </div>
+        </div>
+        <div
+          v-if="sibling?.id === t.id"
+          class="draft-task-row sibling-task-row"
+          :style="{ paddingLeft: `${depth * 22 + 31}px` }"
+        >
+          <span class="draft-check" /><InlineTitle
+            :key="t.id"
+            :after-task="t"
+            @done="sibling = undefined"
+          />
         </div>
         <TaskEditor
           v-if="editing === t.id"

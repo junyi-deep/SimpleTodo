@@ -4,7 +4,11 @@ import { useTodo } from "../stores/todo";
 import { api } from "../api";
 import type { Task } from "../api/types";
 import { registerEditorGuard } from "../composables/editorGuard";
-const props = defineProps<{ task?: Task; date?: string | null }>();
+const props = defineProps<{
+  task?: Task;
+  date?: string | null;
+  afterTask?: Task;
+}>();
 const emit = defineEmits<{ done: []; paste: [string] }>();
 const s = useTodo(),
   input = ref<HTMLTextAreaElement>(),
@@ -43,6 +47,7 @@ async function commit(): Promise<boolean> {
     finish();
     return true;
   }
+  const previousIDs = new Set(s.snapshot.tasks.map((t) => t.id));
   pending = (async () => {
     const changed = base
       ? await s.run(() =>
@@ -57,10 +62,19 @@ async function commit(): Promise<boolean> {
             reminderTime: base.reminderTime,
           }),
         )
-      : await s.create(title, undefined, props.date);
+      : await s.create(
+          title,
+          props.afterTask?.parentId
+            ? s.taskMap.get(props.afterTask.parentId)
+            : undefined,
+          props.afterTask
+            ? s.taskMap.get(props.afterTask.rootId)?.date
+            : props.date,
+          props.afterTask?.id,
+        );
     if (changed) {
       if (!base) {
-        savedID = changed.find((t: any) => !t.parentId)?.id;
+        savedID = changed.find((t: Task) => !previousIDs.has(t.id))?.id;
         if (savedID) s.activeTask = savedID;
       }
       finish();
@@ -89,15 +103,15 @@ function key(e: KeyboardEvent) {
     e.stopPropagation();
     cancel();
   } else if (e.key === "Enter") {
-    focusAfter = true;
+    focusAfter = false;
     e.preventDefault();
     e.stopPropagation();
     void commit().then(async (ok) => {
-      if (ok && e.shiftKey && base) {
+      if (ok && savedID) {
         await nextTick();
         document.dispatchEvent(
-          new CustomEvent("todo:add-child", {
-            detail: { id: base.id, rootId: base.rootId },
+          new CustomEvent(e.shiftKey ? "todo:add-child" : "todo:new-sibling", {
+            detail: { id: savedID, rootId: s.taskMap.get(savedID)?.rootId },
           }),
         );
       }

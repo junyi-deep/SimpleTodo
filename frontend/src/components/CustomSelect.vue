@@ -92,6 +92,12 @@ async function toggle() {
   cancelMotion(p);
   p.inert = false;
   p.showPopover();
+  const selected = p.querySelector<HTMLElement>('[aria-selected="true"]');
+  if (selected)
+    p.scrollTop = Math.max(
+      0,
+      selected.offsetTop - (p.clientHeight - selected.offsetHeight) / 2,
+    );
   reveal(p, "popover");
   // Safari does not focus buttons on mouse/AX activation by default.
   trigger.value?.focus();

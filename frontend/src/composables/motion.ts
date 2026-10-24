@@ -48,7 +48,7 @@ export function reveal(el: Element, kind: Kind = "pane", done?: () => void) {
   restoreLeaving(el);
   const frames =
     kind === "drawer"
-      ? { opacity: [0.3, 1], transform: ["translateX(28px)", "translateX(0)"] }
+      ? { transform: ["translateX(100%)", "translateX(0)"] }
       : kind === "dialog"
         ? {
             opacity: [0.4, 1],
@@ -74,7 +74,7 @@ export function reveal(el: Element, kind: Kind = "pane", done?: () => void) {
                 opacity: [0.35, 1],
                 transform: ["translateY(6px)", "translateY(0)"],
               };
-  runMotion(el, frames, kind === "drawer" ? 0.28 : 0.2, done);
+  runMotion(el, frames, kind === "drawer" ? 0.32 : 0.2, done);
 }
 export function leave(el: Element, kind: Kind = "pane", done?: () => void) {
   if (kind === "row") {
@@ -87,10 +87,10 @@ export function leave(el: Element, kind: Kind = "pane", done?: () => void) {
     {
       opacity: [1, 0],
       ...(kind === "drawer"
-        ? { transform: ["translateX(0)", "translateX(18px)"] }
+        ? { transform: ["translateX(0)", "translateX(100%)"] }
         : {}),
     },
-    0.12,
+    kind === "drawer" ? 0.24 : 0.12,
     done,
   );
 }

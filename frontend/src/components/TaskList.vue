@@ -21,9 +21,21 @@ const emit = defineEmits<{
   paste: [string];
 }>();
 const s = useTodo(),
-  adding = ref(false);
+  adding = ref(false),
+  sibling = ref<Task>();
+async function requestSibling(event: Event) {
+  const t = s.taskMap.get((event as CustomEvent).detail.id);
+  if (!t || t.parentId || !props.roots.some((r) => r.id === t.id)) return;
+  adding.value = false;
+  sibling.value = undefined;
+  await nextTick();
+  sibling.value = t;
+}
 async function start() {
   if (await canLeaveEditor()) {
+    sibling.value = undefined;
+    adding.value = false;
+    await nextTick();
     adding.value = true;
     await nextTick();
   }
@@ -31,8 +43,14 @@ async function start() {
 function requestAdd() {
   void start();
 }
-onMounted(() => document.addEventListener("todo:new-task", requestAdd));
-onUnmounted(() => document.removeEventListener("todo:new-task", requestAdd));
+onMounted(() => {
+  document.addEventListener("todo:new-task", requestAdd);
+  document.addEventListener("todo:new-sibling", requestSibling);
+});
+onUnmounted(() => {
+  document.removeEventListener("todo:new-task", requestAdd);
+  document.removeEventListener("todo:new-sibling", requestSibling);
+});
 </script>
 <template>
   <section v-motion:timeline="date" class="task-list" :aria-busy="s.loading">
@@ -67,6 +85,14 @@ onUnmounted(() => document.removeEventListener("todo:new-task", requestAdd));
             @drop="(t, e) => emit('drop', t, e)"
           />
         </div>
+        <div v-if="sibling?.id === t.id" class="draft-task-row">
+          <span class="draft-check" /><InlineTitle
+            :key="t.id"
+            :after-task="t"
+            @done="sibling = undefined"
+            @paste="emit('paste', $event)"
+          />
+        </div>
       </div>
     </TransitionGroup>
     <div v-if="adding" v-motion:row class="draft-task-row">
@@ -81,6 +107,7 @@ onUnmounted(() => document.removeEventListener("todo:new-task", requestAdd));
       class="add-task-button"
       aria-label="新增待办"
       title="新增待办"
+      @mousedown.prevent
       @click="start"
     >
       <Plus :size="17" />

@@ -22,6 +22,7 @@ import {
   MoreHorizontal,
   Bell,
   AlertCircle,
+  Repeat2,
 } from "lucide-vue-next";
 import { useTodo } from "./stores/todo";
 import { api, listen, confirmAction } from "./api";
@@ -39,6 +40,7 @@ import { setMotionEnabled, installControlMotion } from "./composables/motion";
 import DayTimeline from "./components/DayTimeline.vue";
 import TaskList from "./components/TaskList.vue";
 import TaskEditor from "./components/TaskEditor.vue";
+import RepeatTaskComposer from "./components/RepeatTaskComposer.vue";
 import CalendarTaskScroll from "./components/CalendarTaskScroll.vue";
 import { startTaskDrag, cancelTaskDrag } from "./composables/taskDrag";
 import CustomSelect from "./components/CustomSelect.vue";
@@ -67,6 +69,9 @@ const s = useTodo(),
   rangeEnd = ref(""),
   rangeDragging = ref(false),
   rangeMoved = ref(false),
+  selectedDays = ref<string[]>([]),
+  repeatDays = ref<string[] | null>(null),
+  calendarMenu = ref<{ x: number; y: number } | null>(null),
   pastedText = ref(""),
   pastedPreview = ref<Preview | null>(null);
 const stopListeners: (() => void)[] = [];
@@ -120,13 +125,43 @@ const calendarTasks = (day: string) =>
   s.snapshot.tasks.filter(
     (t) => !t.parentId && t.date === day && t.status !== "skipped",
   );
-const isRange = (day: string) =>
-  !!(
-    rangeAnchor.value &&
-    rangeEnd.value &&
-    day >= [rangeAnchor.value, rangeEnd.value].sort()[0] &&
-    day <= [rangeAnchor.value, rangeEnd.value].sort()[1]
-  );
+const isRange = (day: string) => selectedDays.value.includes(day);
+function fillRange() {
+  const [a, b] = [rangeAnchor.value, rangeEnd.value].sort();
+  if (!a || !b) return;
+  const days: string[] = [];
+  for (let d = a; d <= b && days.length < 366; d = shiftDay(d, 1)) days.push(d);
+  selectedDays.value = days;
+}
+async function calendarContext(day: string, event: MouseEvent) {
+  event.preventDefault();
+  if (!(await canLeaveEditor())) return;
+  if (!isRange(day)) {
+    selectedDays.value = [day];
+    rangeAnchor.value = rangeEnd.value = day;
+    selectRange();
+  }
+  calendarMenu.value = {
+    x: Math.min(event.clientX, innerWidth - 220),
+    y: Math.min(event.clientY, innerHeight - 60),
+  };
+  await nextTick();
+  document.querySelector<HTMLElement>(".calendar-repeat-menu button")?.focus();
+}
+async function composeRepeat() {
+  if (!(await canLeaveEditor())) return;
+  calendarMenu.value = null;
+  editor.value = null;
+  repeatDays.value = [...selectedDays.value].sort();
+  drawer.value = true;
+}
+async function repeatCreated(day: string) {
+  repeatDays.value = null;
+  activeDay.value = day;
+  if (calendarMode.value === "week" || !calendarDays.value.includes(day))
+    month.value = day.slice(0, 7);
+  await loadCalendar();
+}
 function applyTheme() {
   const theme = s.boot?.settings.theme;
   document.documentElement.dataset.theme =
@@ -198,12 +233,16 @@ async function chooseEditor(task: Task | null) {
 async function closeDrawer() {
   if (!(await canLeaveEditor())) return;
   drawer.value = false;
+  repeatDays.value = null;
+  calendarMenu.value = null;
   editor.value = null;
 }
 async function openSettings(tab: string) {
   if (!(await canLeaveEditor())) return;
   editor.value = null;
   drawer.value = false;
+  repeatDays.value = null;
+  calendarMenu.value = null;
   settingsTab.value = tab;
   settingsOpen.value = true;
   menu.value = false;
@@ -212,6 +251,8 @@ async function openTransfer(mode: "import" | "export") {
   if (!(await canLeaveEditor())) return;
   editor.value = null;
   drawer.value = false;
+  repeatDays.value = null;
+  calendarMenu.value = null;
   transfer.value = mode;
   menu.value = false;
 }
@@ -222,10 +263,26 @@ async function changeCalendar(
   if (!(await canLeaveEditor())) return;
   editor.value = null;
   drawer.value = false;
+  repeatDays.value = null;
+  calendarMenu.value = null;
   if (kind === "year") month.value = String(value) + month.value.slice(4);
   else if (kind === "month")
     month.value = month.value.slice(0, 5) + String(value);
   else calendarMode.value = String(value);
+  if (kind !== "mode") {
+    const last = new Date(
+      Number(month.value.slice(0, 4)),
+      Number(month.value.slice(5)),
+      0,
+    ).getDate();
+    activeDay.value =
+      month.value +
+      "-" +
+      String(Math.min(last, Number(activeDay.value.slice(-2)))).padStart(
+        2,
+        "0",
+      );
+  }
   await loadCalendar();
 }
 async function selectListDay(day: string) {
@@ -247,6 +304,8 @@ async function navigate(next: string) {
   menu.value = false;
   editor.value = null;
   drawer.value = false;
+  repeatDays.value = null;
+  calendarMenu.value = null;
   s.selected = [];
   panel.value = next;
   if (next === "calendar") {
@@ -288,9 +347,22 @@ async function step(n: number) {
     activeDay.value = month.value + "-01";
   }
   drawer.value = false;
+  repeatDays.value = null;
+  calendarMenu.value = null;
   rangeAnchor.value = "";
   rangeEnd.value = "";
+  selectedDays.value = [];
   await loadCalendar();
+}
+let dragStepping = false;
+async function dragCalendarStep(event: Event) {
+  if (panel.value !== "calendar" || dragStepping || hasDirtyEditor()) return;
+  dragStepping = true;
+  try {
+    await step((event as CustomEvent<number>).detail);
+  } finally {
+    dragStepping = false;
+  }
 }
 async function today() {
   if (!(await canLeaveEditor())) return;
@@ -310,17 +382,31 @@ async function pickDay(day: string, e?: MouseEvent) {
   if (!(await canLeaveEditor())) return;
   if (rangeMoved.value) {
     rangeMoved.value = false;
-    drawer.value = true;
+    drawer.value = false;
     return;
   }
   activeDay.value = day;
   drawer.value = true;
   editor.value = null;
-  if (e?.shiftKey && rangeAnchor.value) rangeEnd.value = day;
-  else {
+  repeatDays.value = null;
+  if (e?.metaKey || e?.ctrlKey) {
+    drawer.value = false;
+    selectedDays.value = isRange(day)
+      ? selectedDays.value.filter((d) => d !== day)
+      : [...selectedDays.value, day].sort();
+    if (!rangeAnchor.value) rangeAnchor.value = day;
+    rangeEnd.value = day;
+    selectRange();
+    return;
+  }
+  if (e?.shiftKey && rangeAnchor.value) {
+    rangeEnd.value = day;
+    drawer.value = false;
+  } else {
     rangeAnchor.value = day;
     rangeEnd.value = day;
   }
+  fillRange();
   selectRange();
 }
 function calendarNativeDrag(event: DragEvent, task: Task) {
@@ -337,6 +423,8 @@ async function openCalendarTask(task: Task) {
   drawer.value = true;
   rangeAnchor.value = activeDay.value;
   rangeEnd.value = activeDay.value;
+  selectedDays.value = [activeDay.value];
+  repeatDays.value = null;
   selectRange();
   s.activeTask = task.id;
   editor.value = task;
@@ -353,16 +441,19 @@ function rangeStart(day: string, e: PointerEvent) {
     (e.target as HTMLElement).closest(".calendar-task-list")
   )
     return;
-  if (e.button !== 0 || e.shiftKey) return;
+  if (e.button !== 0 || e.shiftKey || e.metaKey || e.ctrlKey) return;
   rangeDragging.value = true;
   rangeMoved.value = false;
   rangeAnchor.value = day;
   rangeEnd.value = day;
+  selectedDays.value = [day];
 }
 function rangeOver(day: string, e: PointerEvent) {
   if (!rangeDragging.value || e.buttons !== 1) return;
-  rangeMoved.value = rangeEnd.value !== day;
+  rangeMoved.value = rangeMoved.value || rangeEnd.value !== day;
   rangeEnd.value = day;
+  activeDay.value = day;
+  fillRange();
   selectRange();
 }
 function rangeStop() {
@@ -370,20 +461,25 @@ function rangeStop() {
 }
 async function outside(e: PointerEvent) {
   const el = e.target as HTMLElement;
+  if (!el.closest(".calendar-repeat-menu")) calendarMenu.value = null;
   if (!el.closest(".tools")) menu.value = false;
   if (
     drawer.value &&
     !el.closest(
-      ".day-drawer,.calendar-day,.select-options,.reminder-popover,.node-menu,.app-header",
+      ".day-drawer,.calendar-day,.select-options,.reminder-popover,.node-menu,.app-header,.calendar-repeat-menu",
     )
   ) {
     if (!(await canLeaveEditor())) return;
     drawer.value = false;
+    repeatDays.value = null;
+    calendarMenu.value = null;
     editor.value = null;
   }
 }
 async function dropDate(e: DragEvent, date: string | null) {
-  const t = s.taskMap.get(e.dataTransfer?.getData("text/plain") || "");
+  const id = e.dataTransfer?.getData("text/plain") || "";
+  if (!id) return;
+  const t = s.taskMap.get(id) || (await s.run(() => api<Task>("FindTask", id)));
   if (!t) return;
   if (t.parentId) {
     s.inform("子任务随根任务日期移动");
@@ -428,8 +524,8 @@ async function copySelection() {
     panel.value === "calendar" && rangeAnchor.value && rangeEnd.value
       ? {
           ...s.query,
-          date: [rangeAnchor.value, rangeEnd.value].sort()[0],
-          end: [rangeAnchor.value, rangeEnd.value].sort()[1],
+          date: [...selectedDays.value].sort()[0] || rangeAnchor.value,
+          end: [...selectedDays.value].sort().at(-1) || rangeEnd.value,
           limit: 10000,
         }
       : s.query;
@@ -545,6 +641,8 @@ async function keyboard(e: KeyboardEvent) {
       transfer.value = null;
     } else if (settingsOpen.value) {
       settingsOpen.value = false;
+    } else if (calendarMenu.value) {
+      calendarMenu.value = null;
     } else if (menu.value) {
       menu.value = false;
     } else if (drawer.value) {
@@ -611,6 +709,7 @@ onMounted(async () => {
   document.addEventListener("keydown", keyboard);
   document.addEventListener("pointerdown", outside);
   document.addEventListener("pointerup", rangeStop);
+  document.addEventListener("todo:calendar-step", dragCalendarStep);
   window.addEventListener("todo:confirm-error", confirmationFailed);
   matchMedia("(prefers-color-scheme: dark)").addEventListener(
     "change",
@@ -624,6 +723,7 @@ onUnmounted(() => {
   document.removeEventListener("keydown", keyboard);
   document.removeEventListener("pointerdown", outside);
   document.removeEventListener("pointerup", rangeStop);
+  document.removeEventListener("todo:calendar-step", dragCalendarStep);
   window.removeEventListener("todo:confirm-error", confirmationFailed);
   matchMedia("(prefers-color-scheme: dark)").removeEventListener(
     "change",
@@ -826,7 +926,12 @@ onUnmounted(() => {
             </option></CustomSelect
           >
         </div>
-        <span class="grow" /><CustomSelect
+        <span class="grow calendar-selection-hint">{{
+          selectedDays.length > 1
+            ? `已选 ${selectedDays.length} 天 · 右键创建重复任务`
+            : "拖选或 ⌘/Ctrl 点选日期"
+        }}</span
+        ><CustomSelect
           :model-value="calendarMode"
           @update:model-value="changeCalendar('mode', $event)"
           aria-label="日历范围"
@@ -961,7 +1066,7 @@ onUnmounted(() => {
               outside: calendarMode === 'month' && day.slice(0, 7) !== month,
               today: day === s.boot?.today,
               selected: drawer && day === activeDay,
-              inrange: isRange(day) && rangeAnchor !== rangeEnd,
+              inrange: isRange(day) && selectedDays.length > 1,
               weekend: [0, 6].includes(parseDay(day).getDay()),
             }"
             :data-day="day"
@@ -970,6 +1075,7 @@ onUnmounted(() => {
             @pointerdown="rangeStart(day, $event)"
             @pointerenter="rangeOver(day, $event)"
             @click="pickDay(day, $event)"
+            @contextmenu="calendarContext(day, $event)"
             @dragover.prevent
             @drop="dropDate($event, day)"
           >
@@ -1014,14 +1120,20 @@ onUnmounted(() => {
               <div>
                 <h2>
                   {{
-                    parseDay(activeDay).toLocaleDateString("zh-CN", {
-                      month: "long",
-                      day: "numeric",
-                      weekday: "long",
-                    })
+                    repeatDays
+                      ? "创建重复任务"
+                      : parseDay(activeDay).toLocaleDateString("zh-CN", {
+                          month: "long",
+                          day: "numeric",
+                          weekday: "long",
+                        })
                   }}
                 </h2>
-                <small>{{ roots.length }} 项任务</small>
+                <small>{{
+                  repeatDays
+                    ? "已选 " + repeatDays.length + " 天 · 可调整重复规则"
+                    : roots.length + " 项任务"
+                }}</small>
               </div>
               <button
                 class="icon-button"
@@ -1031,8 +1143,14 @@ onUnmounted(() => {
                 <X :size="16" />
               </button>
             </header>
+            <RepeatTaskComposer
+              v-if="repeatDays"
+              :days="repeatDays"
+              @close="repeatDays = null"
+              @created="repeatCreated"
+            />
             <TaskEditor
-              v-if="editor"
+              v-else-if="editor"
               :key="editor.id"
               :task="editor"
               embedded
@@ -1096,6 +1214,20 @@ onUnmounted(() => {
         <X :size="13" />
       </button>
     </div>
+    <MotionPresence kind="popover"
+      ><div
+        v-if="calendarMenu"
+        class="calendar-repeat-menu"
+        role="menu"
+        aria-label="日期操作"
+        :style="{ left: calendarMenu.x + 'px', top: calendarMenu.y + 'px' }"
+        @keydown.esc.stop.prevent="calendarMenu = null"
+      >
+        <button role="menuitem" @click="composeRepeat">
+          <Repeat2 :size="15" />创建重复任务
+        </button>
+      </div></MotionPresence
+    >
     <MotionPresence kind="toast"
       ><div v-if="s.toast" class="toast" role="status">
         {{ s.toast }}

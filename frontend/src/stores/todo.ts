@@ -180,12 +180,14 @@ export const useTodo = defineStore("todo", () => {
     title: string,
     parent?: Task,
     plannedDate?: string | null,
+    afterId?: string,
   ) {
     const root = parent ? taskMap.value.get(parent.rootId) : undefined;
     return run(() =>
       api<Task[]>("Create", {
         commandId: crypto.randomUUID(),
         title,
+        afterId,
         date:
           plannedDate !== undefined
             ? plannedDate

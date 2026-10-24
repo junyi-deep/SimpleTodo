@@ -2097,3 +2097,19 @@ dialog[inert]:not(.motion-closing)::backdrop {
 .calendar-scrollbar {position:absolute;top:0;right:0;bottom:0;width:6px;background:var(--secondary);border-radius:3px;cursor:default;touch-action:none;}
 .calendar-scroll-thumb {width:6px;border-radius:3px;background:var(--muted);pointer-events:none;}
 .calendar-scrollbar:hover .calendar-scroll-thumb {background:var(--text);}
+
+/* Entry cancellation returns keyboard focus without a full-width outline. */
+.add-task-button:focus-visible {outline:none;box-shadow:none;background:var(--secondary);color:var(--text);}
+.compact-app .calendar-day[data-calendar-drop] {background:color-mix(in srgb,#2563eb 12%,var(--surface));box-shadow:inset 0 0 0 2px #2563eb;}
+.compact-app .calendar-day[data-calendar-drop] .calendar-number {color:#2563eb;transform:translateY(-2px);transition:transform .18s ease-out;}
+.calendar-repeat-menu {position:fixed;z-index:50;min-width:195px;padding:5px;background:var(--surface);box-shadow:0 6px 24px rgb(0 0 0/.18);border-radius:7px;}
+.calendar-repeat-menu button {display:flex;align-items:center;gap:8px;padding:9px;width:100%;text-align:left;border-radius:4px;font-size:13px;}
+.calendar-repeat-menu button:hover {background:var(--secondary);}
+.repeat-composer {display:flex;flex-direction:column;flex:1;min-height:0;}
+.repeat-composer .dialog-body {flex:1;overflow:auto;}
+.repeat-composer .weekday-picker {display:flex;flex-wrap:wrap;gap:5px;}
+
+.calendar-selection-hint {font-size:11px;color:var(--muted);text-align:right;white-space:nowrap;padding-right:8px;}
+@media(max-width:760px) {.calendar-selection-hint {font-size:0;}}
+
+.repeat-composer input:focus-visible {outline:1px solid var(--muted);outline-offset:1px;}

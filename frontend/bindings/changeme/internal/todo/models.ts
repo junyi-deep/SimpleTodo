@@ -32,6 +32,7 @@ export interface Command {
     "reminderTime": string | null;
     "completed": boolean;
     "beforeId": string;
+    "afterId": string;
 }
 
 export interface Countdown {

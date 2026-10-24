@@ -259,14 +259,21 @@ async function cancel() {
             </label>
             <div class="field-grid">
               <label class="field"
-                ><span><CalendarDays :size="14" />计划日期</span
+                ><span
+                  ><CalendarDays :size="14" />{{
+                    frequency === "none" ? "计划日期" : "开始日期"
+                  }}</span
                 ><input
                   v-model="date"
                   type="date"
                   :disabled="!!task.seriesId"
                   min="2000-01-01"
                   max="2100-12-31"
-                /><small>留空即存入收集箱</small></label
+                /><small>{{
+                  frequency === "none"
+                    ? "留空即存入收集箱"
+                    : "从该日期开始，按规则持续重复"
+                }}</small></label
               ><label class="field"
                 ><span>自动延期</span
                 ><CustomSelect v-model="postpone" :disabled="!!task.seriesId">
@@ -344,8 +351,10 @@ async function cancel() {
                     v-model="until"
                     type="date"
                     :min="date"
+                    max="2100-12-31"
                     :disabled="!!task.seriesId && !following"
-                /></label>
+                  /><small>留空一直重复</small></label
+                >
               </div>
               <div v-if="frequency === 'weekly'" class="weekday-picker">
                 <button
