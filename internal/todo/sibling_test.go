@@ -93,3 +93,35 @@ func TestCreateWeeklyRepeatForeverAndBoundedRange(t *testing.T) {
 		})
 	}
 }
+
+func TestMoveAndRepeatRuleAreAtomic(t *testing.T) {
+	e := testEngine(t)
+	root := mustRoot(t, e, "move repeat", ptr("2026-10-20"))
+	c := cmd(t, e, root)
+	c.Date = ptr("2026-10-22")
+	c.RepeatRule = &Rule{Frequency: "weekly", Interval: 1}
+	if _, err := e.Move(c); err == nil {
+		t.Fatal("accepted no weekdays")
+	}
+	if val(getTree(t, e, root.ID)[root.ID].Date) != "2026-10-20" {
+		t.Fatal("date escaped rollback")
+	}
+	c = cmd(t, e, root)
+	c.Date = ptr("2026-10-22")
+	c.RepeatRule = &Rule{Frequency: "weekly", Interval: 1, Weekdays: []int{4}, Until: ptr("2026-10-29")}
+	if _, err := e.Move(c); err != nil {
+		t.Fatal(err)
+	}
+	q, err := e.Query(Query{View: "month", Date: "2026-10-20", End: "2026-11-05"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(q.Tasks) != 2 {
+		t.Fatal(q.Tasks)
+	}
+	for _, n := range q.Tasks {
+		if val(n.Date) != "2026-10-22" && val(n.Date) != "2026-10-29" {
+			t.Fatal(n)
+		}
+	}
+}

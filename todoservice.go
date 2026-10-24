@@ -20,34 +20,35 @@ import (
 )
 
 type TodoService struct {
-	proxyMu      sync.Mutex
-	downloading  atomic.Bool
-	forceQuit    atomic.Bool
-	maintenance  atomic.Bool
-	confirming   atomic.Int32
-	viewMode     string
-	listBounds   application.Rect
-	edgeEditing  bool
-	edgeTicks    int
-	shortcutMu   sync.Mutex
-	engine       atomic.Pointer[todo.Engine]
-	startupErr   atomic.Pointer[string]
-	dataPath     string
-	ctx          context.Context
-	desktopReady <-chan struct{}
-	app          *application.App
-	ns           *notifications.NotificationService
-	mu           sync.Mutex
-	windows      map[string]*application.WebviewWindow
-	shortcuts    map[string]string
-	bootstrap    string
-	warnings     []string
-	edgeHidden   bool
-	edgeBounds   application.Rect
-	edgeSince    time.Time
-	edgeBusy     bool
-	modalBusy    bool
-	menuBusy     bool
+	proxyMu            sync.Mutex
+	downloading        atomic.Bool
+	forceQuit          atomic.Bool
+	maintenance        atomic.Bool
+	confirming         atomic.Int32
+	confirmationOwners map[string]bool
+	viewMode           string
+	listBounds         application.Rect
+	edgeEditing        bool
+	edgeTicks          int
+	shortcutMu         sync.Mutex
+	engine             atomic.Pointer[todo.Engine]
+	startupErr         atomic.Pointer[string]
+	dataPath           string
+	ctx                context.Context
+	desktopReady       <-chan struct{}
+	app                *application.App
+	ns                 *notifications.NotificationService
+	mu                 sync.Mutex
+	windows            map[string]*application.WebviewWindow
+	shortcuts          map[string]string
+	bootstrap          string
+	warnings           []string
+	edgeHidden         bool
+	edgeBounds         application.Rect
+	edgeSince          time.Time
+	edgeBusy           bool
+	modalBusy          bool
+	menuBusy           bool
 }
 
 func (s *TodoService) Boot() (map[string]any, error) {
@@ -573,28 +574,23 @@ func (s *TodoService) HideWindow(key string) error {
 	return fmt.Errorf("未知窗口")
 }
 
-// Confirm uses a native panel: WKWebView's browser confirm() is unavailable.
-// No affirmative default: Escape cancels without mutating application data.
-func (s *TodoService) Confirm(key, message string) (bool, error) {
-	w := s.windows[key]
-	if w == nil || strings.TrimSpace(message) == "" || len(message) > 20000 {
-		return false, fmt.Errorf("无效确认请求")
+// Component confirmations own their UI; this only prevents edge-hide while open.
+func (s *TodoService) SetConfirmationBusy(key string, busy bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.windows[key] == nil {
+		return fmt.Errorf("未知窗口")
 	}
-	answer := make(chan bool, 1)
-	s.confirming.Add(1)
-	defer s.confirming.Add(-1)
-	d := s.app.Dialog.Question().SetTitle("SimpleTodo").SetMessage(message).AttachToWindow(w)
-	// Wails maps a default button to Return before checking its cancel flag on macOS.
-	// Keep cancellation separate so Escape remains available and Return cannot approve.
-	d.AddButton("取消").SetAsCancel().OnClick(func() { answer <- false })
-	d.AddButton("确认").OnClick(func() { answer <- true })
-	d.Show()
-	select {
-	case ok := <-answer:
-		return ok, nil
-	case <-s.ctx.Done():
-		return false, nil
+	if s.confirmationOwners == nil {
+		s.confirmationOwners = make(map[string]bool)
 	}
+	if busy {
+		s.confirmationOwners[key] = true
+	} else {
+		delete(s.confirmationOwners, key)
+	}
+	s.confirming.Store(int32(len(s.confirmationOwners)))
+	return nil
 }
 func (s *TodoService) WindowConfig(key, mode string, opacity float64, collapsed bool) error {
 	w := s.windows[key]

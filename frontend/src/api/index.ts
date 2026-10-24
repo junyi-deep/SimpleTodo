@@ -1,26 +1,7 @@
 export const previewMode =
   new URLSearchParams(location.search).get("preview") === "1";
-let pendingConfirmation: Promise<boolean> | undefined;
-// WKWebView does not implement browser confirm panels in the desktop shell.
-// Await the owning window's native dialog before performing a destructive action.
-export async function confirmAction(message: string): Promise<boolean> {
-  if (previewMode) return window.confirm(message);
-  // A second action must not reuse approval of the already visible question.
-  if (pendingConfirmation) return false;
-  const key = new URLSearchParams(location.search).get("window") || "main";
-  return (pendingConfirmation = api<boolean>("Confirm", key, message)
-    .catch((error) => {
-      window.dispatchEvent(
-        new CustomEvent("todo:confirm-error", {
-          detail: `无法显示确认窗口，请重试：${error instanceof Error ? error.message : String(error)}`,
-        }),
-      );
-      return false;
-    })
-    .finally(() => {
-      pendingConfirmation = undefined;
-    }));
-}
+import { requestConfirmation } from "../composables/confirmation";
+export const confirmAction = requestConfirmation;
 export async function api<T = void>(
   method: string,
   ...args: unknown[]
@@ -34,6 +15,7 @@ export async function api<T = void>(
         "SetEdgeEditing",
         "SetEdgeMenuBusy",
         "SetEdgeModalBusy",
+        "SetConfirmationBusy",
       ].includes(method)
     )
       return undefined as T;

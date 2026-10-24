@@ -36,6 +36,8 @@ import {
 } from "./api/types";
 import { canLeaveEditor, hasDirtyEditor } from "./composables/editorGuard";
 import MotionPresence from "./components/MotionPresence.vue";
+import ConfirmDialog from "./components/ConfirmDialog.vue";
+import { confirmation } from "./composables/confirmation";
 import { setMotionEnabled, installControlMotion } from "./composables/motion";
 import DayTimeline from "./components/DayTimeline.vue";
 import TaskList from "./components/TaskList.vue";
@@ -187,7 +189,6 @@ watch(
         s.date === previousToday &&
         !editor.value &&
         !dragging.value &&
-        !document.querySelector<HTMLInputElement>("[data-new-child]")?.value &&
         !document.querySelector<HTMLInputElement>(
           '[aria-label="新待办标题"]',
         ) &&
@@ -490,8 +491,24 @@ async function dropDate(e: DragEvent, date: string | null) {
   if (moved) editor.value = null;
   dragging.value = false;
 }
-async function rootDrop(target: Task, e: DragEvent) {
-  const source = s.taskMap.get(e.dataTransfer?.getData("text/plain") || "");
+async function rootDrop(
+  target: Task,
+  e: DragEvent,
+  placement?: "before" | "after" | "inside",
+  draggedId?: string,
+) {
+  const sourceID = draggedId || e.dataTransfer?.getData("text/plain") || "";
+  const bounds = (
+    e.currentTarget as HTMLElement | null
+  )?.getBoundingClientRect();
+  const after =
+    placement === "after" ||
+    (!placement &&
+      bounds &&
+      !e.altKey &&
+      e.clientY > bounds.top + bounds.height * 0.75);
+  if (!(await canLeaveEditor())) return;
+  const source = s.taskMap.get(sourceID);
   if (!source || source.id === target.id) return;
   if (source.date !== target.date) {
     await s.move(source, target.date);
@@ -503,13 +520,7 @@ async function rootDrop(target: Task, e: DragEvent) {
       )
       .sort((a, b) => a.order - b.order),
     ids = peers.filter((t) => t.id !== source.id).map((t) => t.id);
-  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-  ids.splice(
-    ids.indexOf(target.id) +
-      (!e.altKey && e.clientY > rect.top + rect.height * 0.75 ? 1 : 0),
-    0,
-    source.id,
-  );
+  ids.splice(ids.indexOf(target.id) + (after ? 1 : 0), 0, source.id);
   await s.run(() => api("Reorder", ids, s.snapshot.revision));
   dragging.value = false;
 }
@@ -1234,6 +1245,11 @@ onUnmounted(() => {
       </div></MotionPresence
     >
   </main>
+  <ConfirmDialog
+    v-if="confirmation"
+    :key="confirmation.id"
+    :request="confirmation"
+  />
   <div v-if="s.maintenance" class="maintenance-mask" role="status">
     正在处理数据，请稍候…
   </div>

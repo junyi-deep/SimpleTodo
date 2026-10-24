@@ -301,12 +301,6 @@ async function cancel() {
                 </button></small
               ><small v-else>完全退出应用期间不保证准时提醒</small></label
             >
-            <p class="muted small">
-              系统时区：{{
-                s.boot?.timezone ||
-                Intl.DateTimeFormat().resolvedOptions().timeZone
-              }}
-            </p>
             <p
               v-if="
                 task.originalDate && task.remindAt && task.remindAt < Date.now()

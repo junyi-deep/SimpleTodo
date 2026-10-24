@@ -6,7 +6,6 @@ import { computed, ref, nextTick, onMounted, onUnmounted, watch } from "vue";
 import {
   ChevronRight,
   GripVertical,
-  CornerDownRight,
   Repeat2,
   Bell,
   CalendarDays,
@@ -31,19 +30,18 @@ const props = defineProps<{
 const emit = defineEmits<{
   edit: [Task | null];
   drag: [Task];
-  drop: [Task, DragEvent];
+  drop: [Task, DragEvent, "before" | "after" | "inside", string];
 }>();
 const s = useTodo(),
   expanded = ref(new Set<string>()),
   adding = ref<string | null>(null),
-  draft = ref(""),
+  childDraft = ref<{ afterId: string; depth: number } | null>(null),
   sibling = ref<Task>(),
   placement = ref<Task | null>(null),
   reminding = ref(false),
   dropHint = ref<string | null>(null),
   draggedId = ref<string | null>(null),
   rowFocus = ref(props.root.id),
-  composing = ref(false),
   deletePending = ref<string | null>(null);
 let deleteTimer: ReturnType<typeof setTimeout>;
 watch(placement, () => {
@@ -100,6 +98,10 @@ async function titleClick(t: Task) {
   if (s.titleEditing === t.id || !(await canLeaveEditor())) return;
   s.activeTask = t.id;
   s.titleEditing = t.id;
+}
+async function showPlacement(t: Task) {
+  if (!(await canLeaveEditor())) return;
+  placement.value = s.taskMap.get(t.id) || t;
 }
 function resetDelete() {
   clearTimeout(deleteTimer);
@@ -162,41 +164,16 @@ async function add(t: Task) {
     return;
   }
   expanded.value = new Set([...expanded.value, ...ancestors]);
+  const row = rows.value.find((r) => r.task.id === t.id)!;
+  let afterId = t.id;
+  for (const next of rows.value.slice(rows.value.indexOf(row) + 1)) {
+    if (next.depth <= row.depth) break;
+    afterId = next.task.id;
+  }
+  childDraft.value = { afterId, depth: row.depth + 1 };
   adding.value = t.id;
-  draft.value = "";
+  sibling.value = undefined;
   await nextTick();
-  document
-    .querySelector<HTMLInputElement>(`[data-new-child="${t.id}"]`)
-    ?.focus();
-}
-async function saveChild(parent: Task, event: KeyboardEvent) {
-  if (event.isComposing || composing.value) return;
-  if (event.key === "Escape") {
-    event.preventDefault();
-    event.stopPropagation();
-    adding.value = null;
-    await nextTick();
-    document.querySelector<HTMLElement>(`[data-node="${parent.id}"]`)?.focus();
-    return;
-  }
-  if (
-    event.key !== "Enter" &&
-    !(event.key === "Tab" && s.boot?.settings.tabEntry === "true")
-  )
-    return;
-  event.preventDefault();
-  if (!draft.value.trim()) {
-    adding.value = null;
-    return;
-  }
-  const result = await s.create(draft.value, parent);
-  if (result) {
-    draft.value = "";
-    await nextTick();
-    document
-      .querySelector<HTMLInputElement>(`[data-new-child="${parent.id}"]`)
-      ?.focus();
-  }
 }
 async function indent(t: Task, out = false) {
   if (!t.parentId) return;
@@ -290,7 +267,7 @@ async function keydown(e: KeyboardEvent, t: Task) {
   }
 }
 function startDrag(e: DragEvent, t: Task) {
-  if (!e.dataTransfer || s.saving || props.editing) {
+  if (!e.dataTransfer || s.saving || props.editing || t.status !== "pending") {
     e.preventDefault();
     return;
   }
@@ -319,12 +296,14 @@ function dropPosition(e: DragEvent) {
 }
 async function dropNode(e: DragEvent, t: Task) {
   e.preventDefault();
-  dropHint.value = null;
-  const source = s.taskMap.get(e.dataTransfer?.getData("text/plain") || "");
-  if (!source || source.id === t.id) return;
   const mode = dropPosition(e);
+  const sourceID = e.dataTransfer?.getData("text/plain") || "";
+  if (!(await canLeaveEditor())) return;
+  dropHint.value = null;
+  const source = s.taskMap.get(sourceID);
+  if (!source || source.id === t.id || source.status !== "pending") return;
   if (mode !== "inside" && !source.parentId && !t.parentId) {
-    emit("drop", t, e);
+    emit("drop", t, e, mode, source.id);
     return;
   }
   if (mode !== "inside" && source.parentId && source.rootId === t.rootId) {
@@ -429,10 +408,13 @@ async function dropNode(e: DragEvent, t: Task) {
         >
           <span
             class="drag-handle"
-            :draggable="!s.saving && s.sortMode === 'manual'"
+            :draggable="
+              !s.saving && s.sortMode === 'manual' && t.status === 'pending'
+            "
             @dragstart="startDrag($event, t)"
             @pointerdown="
               !s.saving &&
+              t.status === 'pending' &&
               !editing &&
               s.sortMode === 'manual' &&
               startTaskDrag($event, t.id)
@@ -498,12 +480,14 @@ async function dropNode(e: DragEvent, t: Task) {
           <span v-if="children(t.id).length" class="task-progress"
             >{{ progress(t.id).done }}/{{ progress(t.id).total }}</span
           >
-          <Repeat2
+          <span
             v-if="t.seriesId"
             class="task-indicator"
-            :size="12"
-            title="重复任务"
-          />
+            role="img"
+            aria-label="重复任务：按设定周期生成"
+            title="重复任务：按设定周期生成，可在任务设置中修改规则"
+            ><Repeat2 :size="12"
+          /></span>
           <div
             class="task-actions"
             :class="{ 'confirming-delete': deletePending === t.id }"
@@ -531,7 +515,7 @@ async function dropNode(e: DragEvent, t: Task) {
               class="icon-button action-date"
               :aria-label="t.parentId ? '移动到其他父任务' : '调整计划日期'"
               :title="t.parentId ? '移动到其他父任务' : '调整计划日期'"
-              @click.stop="placement = t"
+              @click.stop="showPlacement(t)"
             >
               <CalendarDays :size="14" />
             </button>
@@ -573,26 +557,15 @@ async function dropNode(e: DragEvent, t: Task) {
           @close="emit('edit', null)"
         />
         <div
-          v-if="adding === t.id"
-          class="child-entry"
-          :style="{ paddingLeft: `${Math.min(depth + 1, 5) * 22 + 31}px` }"
+          v-if="adding && childDraft?.afterId === t.id"
+          class="draft-task-row sibling-task-row"
+          :style="{ paddingLeft: `${childDraft.depth * 22 + 31}px` }"
         >
-          <CornerDownRight :size="14" /><input
-            v-model="draft"
-            v-sparks
-            :data-new-child="t.id"
-            placeholder="添加子任务，Enter 连续录入"
-            maxlength="500"
-            @compositionstart="composing = true"
-            @compositionend="composing = false"
-            @keydown="saveChild(t, $event)"
-          /><button
-            class="icon-button"
-            @click="adding = null"
-            aria-label="取消新增"
-          >
-            ×
-          </button>
+          <span class="draft-check" /><InlineTitle
+            :key="adding!"
+            :parent-task="index.get(adding!)"
+            @done="adding = null"
+          />
         </div>
       </div>
     </TransitionGroup>

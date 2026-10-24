@@ -59,7 +59,7 @@ test("截图问题：稳定父子缩进、数字图标对齐、搜索铺满和�
   );
   await first.focus();
   await page.keyboard.press("Shift+Enter");
-  const child = page.getByPlaceholder("添加子任务，Enter 连续录入");
+  const child = page.getByLabel("新待办标题", { exact: true });
   await child.fill("补充新的事项");
   await expect(child).toHaveCSS("outline-style", "none");
   await expect(child).toHaveCSS("border-top-width", "0px");
@@ -153,6 +153,6 @@ test("单击编辑后 Shift+Enter 保存并直接添加子任务", async ({
   await page.getByRole("button", { name: t.title, exact: true }).click();
   await page.getByLabel("编辑任务标题", { exact: true }).press("Shift+Enter");
   await expect(
-    page.getByPlaceholder("添加子任务，Enter 连续录入"),
+    page.getByLabel("新待办标题", { exact: true }),
   ).toBeFocused();
 });

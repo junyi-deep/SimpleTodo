@@ -52,14 +52,6 @@ export function Complete(c: todo$0.Command): $CancellablePromise<todo$0.Task[] |
     return $Call.ByID(3663239682, c);
 }
 
-/**
- * Confirm uses a native panel: WKWebView's browser confirm() is unavailable.
- * No affirmative default: Escape cancels without mutating application data.
- */
-export function Confirm(key: string, message: string): $CancellablePromise<boolean> {
-    return $Call.ByID(4067712975, key, message);
-}
-
 export function CopyTasks(q: todo$0.Query, ids: string[] | null): $CancellablePromise<string> {
     return $Call.ByID(359872726, q, ids);
 }
@@ -214,6 +206,13 @@ export function SaveUpdateProxy(c: releases$0.ProxyConfig): $CancellablePromise<
 
 export function SeriesImpact(c: todo$0.Command): $CancellablePromise<todo$0.SeriesImpact> {
     return $Call.ByID(1250276674, c);
+}
+
+/**
+ * Component confirmations own their UI; this only prevents edge-hide while open.
+ */
+export function SetConfirmationBusy(key: string, busy: boolean): $CancellablePromise<void> {
+    return $Call.ByID(1914704203, key, busy);
 }
 
 export function SetEdgeBusy(busy: boolean): $CancellablePromise<void> {

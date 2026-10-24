@@ -193,8 +193,8 @@ test("抽屉详情保留冲突草稿，取消离开不会关闭编辑", async ({
     exact: true,
   });
   await details.getByLabel("任务标题", { exact: true }).fill("保留我的草稿");
-  page.once("dialog", (d) => d.dismiss());
   await page.getByRole("button", { name: "关闭日期任务", exact: true }).click();
+  await page.locator(".component-confirmation").getByRole("button", { name: "取消", exact: true }).click();
   await expect(details).toBeVisible();
   await expect(details.getByLabel("任务标题", { exact: true })).toHaveValue(
     "保留我的草稿",

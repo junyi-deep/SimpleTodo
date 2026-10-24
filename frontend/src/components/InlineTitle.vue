@@ -8,6 +8,7 @@ const props = defineProps<{
   task?: Task;
   date?: string | null;
   afterTask?: Task;
+  parentTask?: Task;
 }>();
 const emit = defineEmits<{ done: []; paste: [string] }>();
 const s = useTodo(),
@@ -19,6 +20,7 @@ const composing = ref(false);
 let focusAfter = false,
   savedID = props.task?.id,
   closed = false,
+  continueAfterSave = true,
   pending: Promise<boolean> | undefined;
 function finish() {
   if (closed) return;
@@ -33,8 +35,10 @@ function finish() {
     });
 }
 function cancel() {
+  continueAfterSave = false;
+  focusAfter = true;
   if (!pending) {
-    focusAfter = true;
+    savedID ||= props.afterTask?.id || props.parentTask?.id;
     finish();
   }
 }
@@ -64,9 +68,10 @@ async function commit(): Promise<boolean> {
         )
       : await s.create(
           title,
-          props.afterTask?.parentId
-            ? s.taskMap.get(props.afterTask.parentId)
-            : undefined,
+          props.parentTask ||
+            (props.afterTask?.parentId
+              ? s.taskMap.get(props.afterTask.parentId)
+              : undefined),
           props.afterTask
             ? s.taskMap.get(props.afterTask.rootId)?.date
             : props.date,
@@ -102,12 +107,15 @@ function key(e: KeyboardEvent) {
     e.preventDefault();
     e.stopPropagation();
     cancel();
-  } else if (e.key === "Enter") {
+  } else if (
+    e.key === "Enter" ||
+    (e.key === "Tab" && s.boot?.settings.tabEntry === "true")
+  ) {
     focusAfter = false;
     e.preventDefault();
     e.stopPropagation();
     void commit().then(async (ok) => {
-      if (ok && savedID) {
+      if (ok && savedID && continueAfterSave) {
         await nextTick();
         document.dispatchEvent(
           new CustomEvent(e.shiftKey ? "todo:add-child" : "todo:new-sibling", {
@@ -120,7 +128,12 @@ function key(e: KeyboardEvent) {
 }
 function paste(e: ClipboardEvent) {
   const text = e.clipboardData?.getData("text/plain") || "";
-  if (!base && text.trim().split(/\r?\n/).length > 1) {
+  if (
+    !base &&
+    !props.parentTask &&
+    !props.afterTask?.parentId &&
+    text.trim().split(/\r?\n/).length > 1
+  ) {
     e.preventDefault();
     finish();
     emit("paste", text);

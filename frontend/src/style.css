@@ -2113,3 +2113,22 @@ dialog[inert]:not(.motion-closing)::backdrop {
 @media(max-width:760px) {.calendar-selection-hint {font-size:0;}}
 
 .repeat-composer input:focus-visible {outline:1px solid var(--muted);outline-offset:1px;}
+
+/* Keep focus visible through tone and thin field borders, without an outer black ring. */
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible,[data-node]:focus-visible {outline:none;outline-offset:0;}
+input:focus-visible,textarea:focus-visible {border-color:var(--muted);box-shadow:none;}
+button:focus-visible {background-color:var(--secondary);}
+.button.primary:focus-visible {box-shadow:inset 0 0 0 1px var(--surface);}
+.repeat-composer input:focus-visible {outline:none;}
+.component-confirmation {width:min(360px,calc(100vw - 32px));margin:auto;padding:20px 18px 0;border:0;border-radius:10px;background:var(--surface);color:var(--text);box-shadow:0 14px 46px #0003;}
+.component-confirmation::backdrop {background:#0004;}
+.component-confirmation h2 {font-size:15px;font-weight:600;margin:0 0 10px;}
+.component-confirmation p {font-size:13px;line-height:1.7;margin:0 0 18px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:50vh;overflow:auto;}
+.component-confirmation .dialog-footer {padding:12px 0;}
+
+.compact-app .task-row.done .drag-handle {visibility:hidden;pointer-events:none;cursor:default;}
+
+dialog:focus,dialog:focus-visible {outline:none;}
+/* Keyboard focus stays inside the control and preserves checked/selected colors. */
+button:focus-visible {box-shadow:inset 0 0 0 1px var(--muted);}
+.button.primary:focus-visible,.weekday-picker button.active:focus-visible,.repeat-weekdays button.active:focus-visible,.task-check.checked:focus-visible {box-shadow:inset 0 0 0 1px var(--surface);}

@@ -8,13 +8,13 @@ test("列表内连续录入、多级快捷键和完成汇总", async ({ page }) 
   await add(page, title);
   await row(page, title).focus();
   await page.keyboard.press("Shift+Enter");
-  let input = page.getByPlaceholder("添加子任务，Enter 连续录入");
+  let input = page.getByLabel("新待办标题", { exact: true });
   await input.fill(child);
   await input.press("Enter");
   await input.press("Escape");
   await row(page, child).focus();
   await page.keyboard.press("Shift+Enter");
-  input = page.getByPlaceholder("添加子任务，Enter 连续录入");
+  input = page.getByLabel("新待办标题", { exact: true });
   await input.fill(leaf);
   await input.press("Enter");
   await input.press("Escape");
@@ -173,8 +173,8 @@ test("专注计时和设置备份仍可使用", async ({ page }) => {
   await expect(
     page.getByRole("button", { name: "继续", exact: true }),
   ).toBeVisible();
-  page.once("dialog", (d) => d.accept());
   await page.getByRole("button", { name: "结束", exact: true }).click();
+  await page.locator(".component-confirmation").getByRole("button", { name: "确认", exact: true }).click();
   await tools(page, "设置");
   await page.getByRole("button", { name: "本地数据", exact: true }).click();
   await page.getByRole("button", { name: "立即备份", exact: true }).click();

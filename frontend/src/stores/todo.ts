@@ -111,8 +111,7 @@ export const useTodo = defineStore("todo", () => {
     ) {
       timezoneSync = true;
       try {
-        const count = await api<number>("SetTimezone", zone);
-        if (count) inform(`系统时区已变更，重新安排 ${count} 条未来重复提醒`);
+        await api<number>("SetTimezone", zone);
         boot.value = await api<Boot>("Boot");
       } finally {
         timezoneSync = false;

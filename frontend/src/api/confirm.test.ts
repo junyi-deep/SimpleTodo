@@ -1,65 +1,53 @@
 import { beforeEach, expect, it, vi } from "vitest";
-const { call } = vi.hoisted(() => ({ call: vi.fn() }));
-vi.mock("@wailsio/runtime", () => ({ Call: { ByName: call } }));
 beforeEach(() => {
   vi.resetModules();
   vi.clearAllMocks();
-});
-it("桌面确认等待原生结果并绑定主窗口", async () => {
   vi.stubGlobal("location", { search: "" });
-  let answer!: (value: boolean) => void;
-  call.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)));
+});
+it("确认由组件状态驱动，重复请求不会复用批准", async () => {
   const { confirmAction } = await import("./index");
-  let completed = false;
-  const pending = confirmAction("恢复备份？").then((ok) => {
-    completed = true;
+  const { confirmation, resolveConfirmation } =
+    await import("../composables/confirmation");
+  let done = false;
+  const result = confirmAction("恢复备份？").then((ok) => {
+    done = true;
     return ok;
   });
-  await vi.waitFor(() =>
-    expect(call).toHaveBeenCalledWith(
-      "main.TodoService.Confirm",
-      "main",
-      "恢复备份？",
-    ),
-  );
-  expect(completed).toBe(false);
-  expect(await confirmAction("另一项删除？")).toBe(false);
-  expect(call).toHaveBeenCalledTimes(1);
-  answer(true);
-  expect(await pending).toBe(true);
+  expect(done).toBe(false);
+  expect(confirmation.value?.message).toBe("恢复备份？");
+  expect(await confirmAction("删除任务？")).toBe(false);
+  resolveConfirmation(confirmation.value!.id, true);
+  expect(await result).toBe(true);
+  expect(confirmation.value).toBeNull();
 });
-it("浮窗取消通过原生结果返回 false", async () => {
-  vi.stubGlobal("location", { search: "?window=mini" });
-  call.mockResolvedValueOnce(false);
-  const { confirmAction } = await import("./index");
-  expect(await confirmAction("删除分支？")).toBe(false);
-  expect(call).toHaveBeenCalledWith(
-    "main.TodoService.Confirm",
-    "mini",
-    "删除分支？",
-  );
+it("取消安全返回 false，旧组件卸载不会取消新的问题", async () => {
+  const { requestConfirmation, confirmation, resolveConfirmation } =
+    await import("../composables/confirmation");
+  const a = requestConfirmation("问题一");
+  const first = confirmation.value!.id;
+  resolveConfirmation(first, false);
+  expect(await a).toBe(false);
+  const b = requestConfirmation("问题二");
+  resolveConfirmation(first, false);
+  expect(confirmation.value?.message).toBe("问题二");
+  resolveConfirmation(confirmation.value!.id, true);
+  expect(await b).toBe(true);
 });
-it("开发预览使用浏览器确认且不调用桌面服务", async () => {
-  vi.stubGlobal("location", { search: "?preview=1&window=overview" });
-  const confirm = vi.fn().mockReturnValueOnce(false).mockReturnValueOnce(true);
-  vi.stubGlobal("window", { confirm });
+it("浏览器预览也使用同一组件，不调用浏览器确认或桌面 API", async () => {
+  vi.stubGlobal("location", { search: "?preview=1" });
+  const native = vi.fn();
+  vi.stubGlobal("window", { confirm: native });
   const { confirmAction } = await import("./index");
-  expect(await confirmAction("取消恢复？")).toBe(false);
-  expect(await confirmAction("确认恢复？")).toBe(true);
-  expect(call).not.toHaveBeenCalled();
+  const { confirmation, resolveConfirmation } =
+    await import("../composables/confirmation");
+  const result = confirmAction("放弃修改？");
+  resolveConfirmation(confirmation.value!.id, false);
+  expect(await result).toBe(false);
+  expect(native).not.toHaveBeenCalled();
 });
-it("桥接失败安全取消、显示原因并允许再次确认", async () => {
-  vi.stubGlobal("location", { search: "?window=main" });
-  const dispatchEvent = vi.fn();
-  vi.stubGlobal("window", { dispatchEvent });
-  call
-    .mockRejectedValueOnce(new Error("窗口不可用"))
-    .mockResolvedValueOnce(true);
-  const { confirmAction } = await import("./index");
-  expect(await confirmAction("恢复备份？")).toBe(false);
-  expect(dispatchEvent).toHaveBeenCalledTimes(1);
-  const event = dispatchEvent.mock.calls[0][0] as CustomEvent;
-  expect(event.type).toBe("todo:confirm-error");
-  expect(event.detail).toContain("窗口不可用");
-  expect(await confirmAction("重新恢复？")).toBe(true);
+it("空问题不打开弹窗", async () => {
+  const { requestConfirmation, confirmation } =
+    await import("../composables/confirmation");
+  expect(await requestConfirmation("  ")).toBe(false);
+  expect(confirmation.value).toBeNull();
 });

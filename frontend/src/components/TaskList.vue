@@ -17,7 +17,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   edit: [Task | null];
   drag: [Task];
-  drop: [Task, DragEvent];
+  drop: [Task, DragEvent, "before" | "after" | "inside", string];
   paste: [string];
 }>();
 const s = useTodo(),
@@ -82,7 +82,7 @@ onUnmounted(() => {
             :editing="editing"
             @edit="emit('edit', $event)"
             @drag="emit('drag', $event)"
-            @drop="(t, e) => emit('drop', t, e)"
+            @drop="(t, e, mode, id) => emit('drop', t, e, mode, id)"
           />
         </div>
         <div v-if="sibling?.id === t.id" class="draft-task-row">

@@ -25,10 +25,10 @@ test("行内编辑仍固定版本并支持冲突后显式重试", async ({ page,
   await editor
     .getByRole("button", { name: "查看最新版本", exact: true })
     .click();
-  page.once("dialog", (d) => d.accept());
   await editor
     .getByRole("button", { name: "基于最新版本重试", exact: true })
     .click();
+  await page.locator(".component-confirmation").getByRole("button", { name: "确认", exact: true }).click();
   await expect(
     page.getByRole("button", { name: t.title + "草稿", exact: true }),
   ).toBeVisible();
@@ -76,7 +76,7 @@ test("Esc 取消子任务输入并恢复父任务焦点", async ({ page }) => {
   const r = row(page, t);
   await r.focus();
   await r.press("Shift+Enter");
-  const input = page.getByPlaceholder("添加子任务，Enter 连续录入");
+  const input = page.getByLabel("新待办标题", { exact: true });
   await input.fill("不保存");
   await input.press("Escape");
   await expect(input).toHaveCount(0);
@@ -129,12 +129,12 @@ test("详细设置弹窗未保存时 Esc 取消保护草稿", async ({ page, req
   await row(page, t.title).getByLabel("任务设置").click();
   const editor = page.locator(".task-settings-dialog");
   await editor.getByLabel("任务标题").fill(t.title + "未保存");
-  page.once("dialog", (d) => d.dismiss());
   await page.keyboard.press("Escape");
+  await page.locator(".component-confirmation").getByRole("button", { name: "取消", exact: true }).click();
   await expect(editor).toBeVisible();
   await expect(editor.getByLabel("任务标题")).toHaveValue(t.title + "未保存");
-  page.once("dialog", (d) => d.accept());
   await editor.getByRole("button", { name: "取消", exact: true }).click();
+  await page.locator(".component-confirmation").getByRole("button", { name: "确认", exact: true }).click();
   await expect(editor).toHaveCount(0);
   expect((await call(request, "FindTask", t.id)).title).toBe(t.title);
 });
