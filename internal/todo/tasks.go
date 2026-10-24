@@ -447,20 +447,18 @@ func (e *Engine) ReorderRoots(ids []string, revision string) error {
 	if r != revision {
 		return fail("CONFLICT", "列表已变化，请刷新")
 	}
-	var group string
+	seen := make(map[string]bool, len(ids))
 	for i, id := range ids {
-		var date *string
+		if seen[id] {
+			return fail("VALIDATION_ERROR", "任务 ID 不能重复")
+		}
+		seen[id] = true
 		var parent *string
-		if err = tx.QueryRow("SELECT planned_date,parent_id FROM tasks WHERE id=?", id).Scan(&date, &parent); err != nil {
+		if err = tx.QueryRow("SELECT parent_id FROM tasks WHERE id=?", id).Scan(&parent); err != nil {
 			return err
 		}
 		if parent != nil {
 			return fail("VALIDATION_ERROR", "仅支持根任务重排")
-		}
-		if i == 0 {
-			group = val(date)
-		} else if val(date) != group {
-			return fail("VALIDATION_ERROR", "只能在同一日期内排序")
 		}
 		if _, err = tx.Exec("UPDATE tasks SET sort_order=?,version=version+1,updated_at=? WHERE id=?", i, e.now().UnixMilli(), id); err != nil {
 			return err

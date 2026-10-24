@@ -9,6 +9,9 @@ import {
   Download,
   Search,
   CheckCheck,
+  ListFilter,
+  ListChecks,
+  Check,
   Trash2,
   Copy,
   ClipboardPaste,
@@ -58,6 +61,8 @@ const s = useTodo(),
   transfer = ref<"import" | "export" | "batch" | null>(null),
   batchAction = ref("complete"),
   batch = ref(false),
+  filters = ref(false),
+  previewOpacity = ref<number | null>(null),
   search = ref(""),
   menu = ref(false),
   notices = ref(false),
@@ -303,6 +308,7 @@ async function navigate(next: string) {
   settingsOpen.value = false;
   transfer.value = null;
   menu.value = false;
+  filters.value = false;
   editor.value = null;
   drawer.value = false;
   repeatDays.value = null;
@@ -464,6 +470,7 @@ async function outside(e: PointerEvent) {
   const el = e.target as HTMLElement;
   if (!el.closest(".calendar-repeat-menu")) calendarMenu.value = null;
   if (!el.closest(".tools")) menu.value = false;
+  if (!el.closest(".list-filters")) filters.value = false;
   if (
     drawer.value &&
     !el.closest(
@@ -510,18 +517,7 @@ async function rootDrop(
   if (!(await canLeaveEditor())) return;
   const source = s.taskMap.get(sourceID);
   if (!source || source.id === target.id) return;
-  if (source.date !== target.date) {
-    await s.move(source, target.date);
-    return;
-  }
-  const peers = s.snapshot.tasks
-      .filter(
-        (t) => !t.parentId && t.date === source.date && t.status !== "skipped",
-      )
-      .sort((a, b) => a.order - b.order),
-    ids = peers.filter((t) => t.id !== source.id).map((t) => t.id);
-  ids.splice(ids.indexOf(target.id) + (after ? 1 : 0), 0, source.id);
-  await s.run(() => api("Reorder", ids, s.snapshot.revision));
+  await s.reorderRoot(source, target, !!after);
   dragging.value = false;
 }
 async function importLines(text: string) {
@@ -569,7 +565,7 @@ async function pin() {
       "WindowConfig",
       "main",
       windowState.value?.mode === "top" ? "normal" : "top",
-      1,
+      windowState.value?.opacity ?? 1,
       false,
     ),
   );
@@ -652,6 +648,8 @@ async function keyboard(e: KeyboardEvent) {
       transfer.value = null;
     } else if (settingsOpen.value) {
       settingsOpen.value = false;
+    } else if (filters.value) {
+      filters.value = false;
     } else if (calendarMenu.value) {
       calendarMenu.value = null;
     } else if (menu.value) {
@@ -698,7 +696,7 @@ onMounted(async () => {
       try {
         const root = await api<Task>("FindTask", data.sourceId);
         if (!(await navigate("tasks"))) return;
-        s.hideCompleted = false;
+
         listView.value = root.date ? "day" : "inbox";
         s.view = listView.value;
         activeDay.value = root.date || s.boot?.today || s.date;
@@ -749,6 +747,7 @@ onUnmounted(() => {
       'calendar-view': panel === 'calendar',
       'on-mac': s.boot?.capabilities.platform === 'darwin',
     }"
+    :style="{ '--window-alpha': previewOpacity ?? windowState?.opacity ?? 1 }"
     :inert="s.maintenance || undefined"
     @dragend="dragging = false"
   >
@@ -865,6 +864,7 @@ onUnmounted(() => {
       <button class="button primary" @click="recover">选择完整备份恢复</button>
     </section>
     <SettingsDialog
+      @window-opacity="previewOpacity = $event"
       v-else-if="settingsOpen"
       :initial-tab="settingsTab"
       @close="settingsOpen = false"
@@ -962,14 +962,66 @@ onUnmounted(() => {
             placeholder="搜索任务"
             aria-label="搜索当前视图"
         /></label>
+        <div class="list-filters">
+          <button
+            class="icon-button"
+            aria-label="过滤显示"
+            title="过滤显示"
+            :aria-expanded="filters"
+            aria-controls="task-filters"
+            @click="filters = !filters"
+          >
+            <ListFilter :size="16" />
+          </button>
+          <div
+            v-if="filters"
+            id="task-filters"
+            v-motion:popover
+            class="filter-popover"
+            role="group"
+            aria-label="任务显示过滤"
+            @keydown.esc.stop="filters = false"
+          >
+            <label
+              ><input
+                type="checkbox"
+                :checked="!s.hideCompleted"
+                :disabled="s.saving"
+                @change="
+                  s.setFilter(
+                    'Completed',
+                    ($event.target as HTMLInputElement).checked,
+                  )
+                "
+              />显示已完成的任务</label
+            >
+            <label
+              ><input
+                type="checkbox"
+                :checked="s.showRecurring"
+                :disabled="s.saving"
+                @change="
+                  s.setFilter(
+                    'Recurring',
+                    ($event.target as HTMLInputElement).checked,
+                  )
+                "
+              />显示周期任务</label
+            >
+          </div>
+        </div>
         <button
-          class="text-button"
+          class="icon-button"
+          :class="{ active: batch }"
+          :aria-label="batch ? '完成选择' : '选择'"
+          :title="batch ? '完成选择' : '选择'"
+          :aria-pressed="batch"
           @click="
             batch = !batch;
             s.selected = [];
           "
         >
-          {{ batch ? "完成选择" : "选择" }}
+          <Check v-if="batch" :size="16" /><ListChecks v-else :size="16" />
         </button>
         <template v-if="batch"
           ><button

@@ -158,7 +158,7 @@ test("改期弹窗内设置重复，日期和规则一起保存且可跨周生�
   expect(r.until).toBeNull();
   await page.reload();
   await expect(
-    page.getByRole("img", { name: "重复任务：按设定周期生成", exact: true }),
+    page.locator(".task-repeat").filter({ hasText: "每 2 天 · 持续重复" }),
   ).toBeVisible();
 });
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import CustomSelect from "./CustomSelect.vue";
 import { restoreDialogFocus } from "../composables/dialogFocus";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import {
   X,
   Settings2,
@@ -20,7 +20,7 @@ import { type Backup } from "../api/types";
 import { useTodo } from "../stores/todo";
 const props = defineProps<{ initialTab?: string }>();
 const s = useTodo(),
-  emit = defineEmits<{ close: [] }>(),
+  emit = defineEmits<{ close: []; "window-opacity": [number | null] }>(),
   dialog = ref<HTMLElement>(),
   tab = ref(props.initialTab || "general"),
   backups = ref<Backup[]>([]),
@@ -53,6 +53,7 @@ onMounted(async () => {
       s.boot?.settings["shortcut" + key[0].toUpperCase() + key.slice(1)] || "";
   readWindow();
 });
+onUnmounted(() => emit("window-opacity", null));
 function readWindow() {
   const w = s.boot?.windows.find((w) => w.key === windowKey.value);
   windowMode.value = w?.mode || (windowKey.value === "mini" ? "top" : "normal");
@@ -337,6 +338,8 @@ async function migrate() {
               ><span>背景不透明度 {{ Math.round(opacity * 100) }}%</span
               ><input
                 v-model.number="opacity"
+                @input="emit('window-opacity', opacity)"
+                aria-label="背景不透明度"
                 type="range"
                 min="0.4"
                 max="1"

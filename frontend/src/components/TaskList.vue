@@ -5,6 +5,7 @@ import { Plus, CornerDownLeft } from "lucide-vue-next";
 import InlineTitle from "./InlineTitle.vue";
 import { canLeaveEditor } from "../composables/editorGuard";
 import TaskTree from "./TaskTree.vue";
+import { api } from "../api";
 import { useTodo } from "../stores/todo";
 import type { Task } from "../api/types";
 const props = defineProps<{
@@ -40,6 +41,29 @@ async function start() {
     await nextTick();
   }
 }
+async function dropEnd(event: DragEvent) {
+  if (
+    event.target !== event.currentTarget &&
+    !(event.target as HTMLElement).closest(
+      ".list-end-drop,.add-task-button,.compact-empty",
+    )
+  )
+    return;
+  event.preventDefault();
+  const id = event.dataTransfer?.getData("text/plain") || "";
+  if (!(await canLeaveEditor())) return;
+  const source = s.taskMap.get(id);
+  if (!source || source.status !== "pending") return;
+  if (source.parentId)
+    await s.run(() =>
+      api("Reparent", {
+        ...s.command(source),
+        parentId: source.parentId,
+        beforeId: "",
+      }),
+    );
+  else await s.reorderRoot(source);
+}
 function requestAdd() {
   void start();
 }
@@ -53,7 +77,13 @@ onUnmounted(() => {
 });
 </script>
 <template>
-  <section v-motion:timeline="date" class="task-list" :aria-busy="s.loading">
+  <section
+    v-motion:timeline="date"
+    class="task-list"
+    :aria-busy="s.loading"
+    @dragover.prevent
+    @drop="dropEnd"
+  >
     <TransitionGroup
       :css="false"
       @enter="(el, done) => reveal(el, 'row', done)"
@@ -78,6 +108,7 @@ onUnmounted(() => {
           />
           <TaskTree
             :root="t"
+            :peers="roots"
             :details-on-click="detailsOnClick"
             :editing="editing"
             @edit="emit('edit', $event)"
@@ -95,6 +126,7 @@ onUnmounted(() => {
         </div>
       </div>
     </TransitionGroup>
+    <div class="list-end-drop" aria-hidden="true" />
     <div v-if="adding" v-motion:row class="draft-task-row">
       <span class="draft-check" /><InlineTitle
         :date="date"

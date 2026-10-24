@@ -164,7 +164,7 @@ async function save() {
           </button>
         </header>
         <div class="dialog-body">
-          <p class="muted small">{{ task.title }}</p>
+          <p class="muted small placement-task-title">{{ task.title }}</p>
           <label v-if="task.parentId" class="field"
             ><span>新的父任务</span
             ><CustomSelect v-model="parent">

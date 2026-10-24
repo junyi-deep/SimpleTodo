@@ -1,12 +1,17 @@
 <script setup lang="ts">
-import { startTaskDrag, cancelTaskDrag } from "../composables/taskDrag";
+import {
+  startTaskDrag,
+  cancelTaskDrag,
+  taskDropPlacement,
+} from "../composables/taskDrag";
 onUnmounted(cancelTaskDrag);
 import { reveal, leave, cancelMotion } from "../composables/motion";
 import { computed, ref, nextTick, onMounted, onUnmounted, watch } from "vue";
 import {
   ChevronRight,
   GripVertical,
-  Repeat2,
+  ArrowUp,
+  ArrowDown,
   Bell,
   CalendarDays,
   Trash2,
@@ -23,6 +28,7 @@ import { type Task } from "../api/types";
 import { useTodo } from "../stores/todo";
 const props = defineProps<{
   root: Task;
+  peers?: Task[];
   compact?: boolean;
   editing?: string;
   detailsOnClick?: boolean;
@@ -84,6 +90,35 @@ const rows = computed(() => {
   walk(props.root, 0);
   return out;
 });
+function movablePeers(t: Task) {
+  return (t.parentId ? children(t.parentId) : props.peers || s.roots).filter(
+    (t) => t.status === "pending",
+  );
+}
+function canShift(t: Task, direction: number) {
+  if (t.status !== "pending" || s.sortMode !== "manual") return false;
+  const peers = movablePeers(t),
+    at = peers.findIndex((n) => n.id === t.id);
+  return at >= 0 && !!peers[at + direction];
+}
+async function shift(t: Task, direction: number) {
+  if (!(await canLeaveEditor()) || !canShift(t, direction)) return;
+  t = s.taskMap.get(t.id) || t;
+  const peers = movablePeers(t),
+    target = peers[peers.findIndex((n) => n.id === t.id) + direction];
+  if (!target) return;
+  if (!t.parentId) await s.reorderRoot(t, target, direction > 0);
+  else {
+    const all = children(t.parentId).filter((n) => n.id !== t.id);
+    const beforeId =
+      direction < 0
+        ? target.id
+        : all[all.findIndex((n) => n.id === target.id) + 1]?.id || "";
+    await s.run(() =>
+      api("Reparent", { ...s.command(t), parentId: t.parentId, beforeId }),
+    );
+  }
+}
 function toggle(id: string) {
   const next = new Set(expanded.value);
   if (next.has(id)) next.delete(id);
@@ -286,6 +321,7 @@ function startDrag(e: DragEvent, t: Task) {
   emit("drag", t);
 }
 function dropPosition(e: DragEvent) {
+  if (taskDropPlacement(e)) return taskDropPlacement(e)!;
   const r = (e.currentTarget as HTMLElement).getBoundingClientRect();
   const y = e.clientY - r.top;
   return e.altKey || y < r.height * 0.25
@@ -379,6 +415,7 @@ async function dropNode(e: DragEvent, t: Task) {
           :aria-label="`${t.title}，第 ${depth + 1} 级任务`"
           :tabindex="rowFocus === t.id ? 0 : -1"
           :data-node="t.id"
+          :data-parent="t.parentId || undefined"
           @dragenter.prevent="dropHint = t.id"
           @dragleave="
             if (
@@ -476,22 +513,41 @@ async function dropNode(e: DragEvent, t: Task) {
                 })
               }}</small
             >
+            <small
+              v-if="t.seriesId"
+              class="task-repeat"
+              :title="s.repeatSummary(t)"
+              >{{ s.repeatSummary(t) }}</small
+            >
           </div>
           <span v-if="children(t.id).length" class="task-progress"
             >{{ progress(t.id).done }}/{{ progress(t.id).total }}</span
           >
-          <span
-            v-if="t.seriesId"
-            class="task-indicator"
-            role="img"
-            aria-label="重复任务：按设定周期生成"
-            title="重复任务：按设定周期生成，可在任务设置中修改规则"
-            ><Repeat2 :size="12"
-          /></span>
+
           <div
             class="task-actions"
             :class="{ 'confirming-delete': deletePending === t.id }"
           >
+            <button
+              v-if="canShift(t, -1)"
+              class="icon-button action-order"
+              aria-label="上移任务"
+              title="上移任务"
+              :disabled="s.saving"
+              @click.stop="shift(t, -1)"
+            >
+              <ArrowUp :size="14" />
+            </button>
+            <button
+              v-if="canShift(t, 1)"
+              class="icon-button action-order"
+              aria-label="下移任务"
+              title="下移任务"
+              :disabled="s.saving"
+              @click.stop="shift(t, 1)"
+            >
+              <ArrowDown :size="14" />
+            </button>
             <button
               v-if="!t.parentId"
               class="icon-button reminder-trigger action-reminder"

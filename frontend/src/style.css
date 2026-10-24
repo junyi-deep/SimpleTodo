@@ -2132,3 +2132,22 @@ dialog:focus,dialog:focus-visible {outline:none;}
 /* Keyboard focus stays inside the control and preserves checked/selected colors. */
 button:focus-visible {box-shadow:inset 0 0 0 1px var(--muted);}
 .button.primary:focus-visible,.weekday-picker button.active:focus-visible,.repeat-weekdays button.active:focus-visible,.task-check.checked:focus-visible {box-shadow:inset 0 0 0 1px var(--surface);}
+/* List feedback: stable metadata, compact actions, and a physical sorting gap. */
+.compact-app {background:color-mix(in srgb,var(--surface) calc(var(--window-alpha)*100%),transparent);}
+.placement-dialog form,.placement-dialog .dialog-body {min-width:0;max-width:100%;}
+.placement-task-title {white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;margin:0 0 12px;}
+.placement-dialog {overflow-x:hidden;}
+.task-repeat {display:block;font-size:10px;line-height:16px;color:var(--muted);white-space:normal;overflow-wrap:anywhere;}
+.compact-app .task-row:hover .task-actions,.compact-app .task-actions:focus-within,.compact-app .task-actions.confirming-delete {max-width:138px;}
+.task-actions .action-order {color:var(--muted);}
+.pointer-drag-preview .task-actions {display:none!important;}
+.pointer-drag-preview .task-copy {min-width:0;overflow:hidden;}
+.task-sort-gap {box-sizing:border-box;min-height:0;flex-shrink:0;position:relative;pointer-events:auto;overflow:hidden;}
+.task-sort-gap::after {content:"";position:absolute;inset:4px 3px 4px var(--gap-indent,24px);border-radius:5px;background:color-mix(in srgb,var(--muted) 9%,transparent);border:1px dashed var(--border);}
+.list-end-drop {height:0;flex-shrink:0;}
+.list-filters {position:relative;display:flex;}
+.filter-popover {position:absolute;right:0;top:calc(100% + 7px);width:190px;padding:6px;background:var(--surface);color:var(--text);border-radius:7px;box-shadow:0 8px 28px #0002;z-index:30;}
+.filter-popover label {display:flex;align-items:center;gap:8px;padding:8px 6px;font-size:12px;white-space:nowrap;cursor:pointer;border-radius:4px;}
+.filter-popover label:hover {background:var(--secondary);}
+.filter-popover input {width:15px;height:15px;margin:0;accent-color:var(--accent);}
+.compact-app>.embedded-pane {background:transparent;}

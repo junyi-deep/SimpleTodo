@@ -67,7 +67,7 @@ test("搜索位于最左，统计固定底部，选择右侧仅有三种批量�
       .boundingBox())!.x,
   );
   await toolbar.getByRole("button", { name: "选择", exact: true }).click();
-  await expect(toolbar.getByRole("button")).toHaveCount(4);
+  await expect(toolbar.getByRole("button")).toHaveCount(5);
   await expect(toolbar.getByLabel("批量完成")).toBeDisabled();
   await page.locator(".root-select").first().check();
   await expect(toolbar.getByLabel("批量完成")).toBeEnabled();

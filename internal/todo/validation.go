@@ -145,7 +145,7 @@ func validateExchange(d Transfer) error {
 			if !contains([]string{"today", "pending"}, v) {
 				return fail("VALIDATION_ERROR", "浮窗视图无效")
 			}
-		case "autoPostpone", "completedBottom", "tabEntry", "sound", "miniPending", "edgeHide", "onboarding", "animation", "notificationPrompted":
+		case "dayShowCompleted", "inboxShowCompleted", "dayShowRecurring", "inboxShowRecurring", "autoPostpone", "completedBottom", "tabEntry", "sound", "miniPending", "edgeHide", "onboarding", "animation", "notificationPrompted":
 			if v != "true" && v != "false" {
 				return fail("VALIDATION_ERROR", "开关值无效")
 			}

@@ -1,4 +1,8 @@
 import { runMotion } from "./motion";
+type Placement = "before" | "after" | "inside";
+export function taskDropPlacement(event: DragEvent): Placement | undefined {
+  return (event as DragEvent & { todoPlacement?: Placement }).todoPlacement;
+}
 let cancelCurrent: (() => void) | undefined;
 export function cancelTaskDrag() {
   cancelCurrent?.();
@@ -17,6 +21,10 @@ export function startTaskDrag(event: PointerEvent, id: string) {
     alt = event.altKey,
     ghost: HTMLElement | undefined,
     target: HTMLElement | null = null,
+    gap: HTMLElement | undefined,
+    gapAnchor: HTMLElement | undefined,
+    placement: Placement | undefined,
+    gapPlacement: Placement | undefined,
     frame = 0,
     started = false,
     edgeDirection = 0,
@@ -25,36 +33,128 @@ export function startTaskDrag(event: PointerEvent, id: string) {
     ending = false;
   event.preventDefault();
   handle.setPointerCapture(event.pointerId);
+  function clearGap() {
+    gap?.remove();
+    gap = undefined;
+    gapAnchor = undefined;
+    gapPlacement = undefined;
+  }
+  function placeGap(anchor: HTMLElement, mode: Placement) {
+    if (gapAnchor === anchor && gapPlacement === mode) return;
+    clearGap();
+    gapAnchor = anchor;
+    gapPlacement = mode;
+    gap = document.createElement("div");
+    gap.className = "task-sort-gap";
+    gap.setAttribute("aria-hidden", "true");
+    gap.style.height = bounds.height + "px";
+    gap.style.setProperty("--gap-indent", getComputedStyle(source).paddingLeft);
+    if (mode === "after") anchor.after(gap);
+    else anchor.before(gap);
+    runMotion(gap, { height: [0, bounds.height] }, 0.18);
+  }
+  function branchEnd(row: HTMLElement) {
+    const depth = Number(row.style.getPropertyValue("--depth"));
+    let end = row.parentElement!;
+    for (
+      let next = end.nextElementSibling;
+      next;
+      next = next.nextElementSibling
+    ) {
+      const child = next.querySelector<HTMLElement>(".task-row");
+      if (!child) continue;
+      if (Number(child.style.getPropertyValue("--depth")) <= depth) break;
+      end = next as HTMLElement;
+    }
+    return end;
+  }
+  function sortingGap(row: HTMLElement, mode: Placement) {
+    if (row.classList.contains("root")) {
+      if (source.classList.contains("root"))
+        return { anchor: row.closest<HTMLElement>(".root-entry")!, mode };
+      // Child-to-root edge drops insert within that root's children, never before its header.
+      if (
+        mode === "before" &&
+        source.closest(".task-tree") === row.closest(".task-tree")
+      ) {
+        let next = row.parentElement!.nextElementSibling;
+        while (next) {
+          const child = next.querySelector<HTMLElement>(".task-row");
+          if (
+            child &&
+            child.dataset.node !== id &&
+            Number(child.style.getPropertyValue("--depth")) === 1
+          )
+            return { anchor: next as HTMLElement, mode: "before" as Placement };
+          next = next.nextElementSibling;
+        }
+      }
+      return { anchor: branchEnd(row), mode: "after" as Placement };
+    }
+    return {
+      anchor: mode === "after" ? branchEnd(row) : row.parentElement!,
+      mode,
+    };
+  }
   function clearTarget() {
     target?.removeAttribute("data-drop-placement");
     target?.removeAttribute("data-calendar-drop");
+    target?.removeAttribute("data-tail-drop");
     target = null;
+    placement = undefined;
+    clearGap();
   }
   function draw() {
     if (!started) return;
     ghost!.style.transform = `translate3d(${x - origin.x + bounds.left}px,${y - origin.y + bounds.top}px,0) scale(1.015)`;
-    const hit =
-      document
-        .elementFromPoint(x, y)
-        ?.closest<HTMLElement>(
-          ".task-row,.week-date,.calendar-day,.view-switch",
+    const under = document.elementFromPoint(x, y);
+    const hit = under?.closest(".task-sort-gap")
+      ? target
+      : under?.closest<HTMLElement>(
+          ".task-row,.week-date,.calendar-day,.view-switch,.task-list",
         ) || null;
     if (target !== hit) {
       clearTarget();
       target = hit;
     }
-    if (target === source) {
-      clearTarget();
-    }
+    if (target === source) clearTarget();
     if (target?.classList.contains("task-row")) {
-      const r = target.getBoundingClientRect(),
-        fraction = (y - r.top) / r.height;
-      target.dataset.dropPlacement =
+      // Measure the row before its own gap so the growing gap cannot change the intended drop.
+      const r = target.getBoundingClientRect();
+      const offset =
+        gapPlacement === "before" && gapAnchor?.contains(target)
+          ? gap?.getBoundingClientRect().height || 0
+          : 0;
+      const fraction = (y - (r.top - offset)) / r.height;
+      placement =
         alt || fraction < 0.25
           ? "before"
           : fraction > 0.75
             ? "after"
             : "inside";
+      target.dataset.dropPlacement = placement;
+      if (placement === "inside") clearGap();
+      else {
+        const drop = sortingGap(target, placement);
+        if (drop.anchor) placeGap(drop.anchor, drop.mode);
+      }
+    } else if (
+      target?.classList.contains("task-list") &&
+      source.classList.contains("task-row")
+    ) {
+      const parent = source.dataset.parent
+        ? source
+            .closest(".task-tree")
+            ?.querySelector<HTMLElement>(
+              `[data-node="${source.dataset.parent}"]`,
+            )
+        : undefined;
+      if (parent) placeGap(branchEnd(parent), "after");
+      else {
+        const anchor = target.querySelector<HTMLElement>(".list-end-drop");
+        if (anchor) placeGap(anchor, "before");
+      }
+      target.setAttribute("data-tail-drop", "");
     }
     if (target?.matches(".calendar-day,.week-date"))
       target.setAttribute("data-calendar-drop", "");
@@ -144,6 +244,7 @@ export function startTaskDrag(event: PointerEvent, id: string) {
     source.removeAttribute("data-pointer-source");
     document.documentElement.classList.remove("task-dragging");
     const destination = target;
+    const chosenPlacement = placement;
     clearTarget();
     cancelCurrent = undefined;
     if (started) {
@@ -164,16 +265,16 @@ export function startTaskDrag(event: PointerEvent, id: string) {
     if (commit && started && destination) {
       const data = new DataTransfer();
       data.setData("text/plain", id);
-      destination.dispatchEvent(
-        new DragEvent("drop", {
-          bubbles: true,
-          cancelable: true,
-          dataTransfer: data,
-          clientX: x,
-          clientY: y,
-          altKey: alt,
-        }),
-      );
+      const drop = new DragEvent("drop", {
+        bubbles: true,
+        cancelable: true,
+        dataTransfer: data,
+        clientX: x,
+        clientY: y,
+        altKey: alt,
+      });
+      Object.defineProperty(drop, "todoPlacement", { value: chosenPlacement });
+      destination.dispatchEvent(drop);
     }
     const preview = ghost;
     if (preview) {

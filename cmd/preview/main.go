@@ -40,7 +40,25 @@ func main() {
 	go e.Run(ctx)
 	var proxyMu sync.Mutex
 	proxyPath := filepath.Join(*dir, "update-proxy.json")
-	methods := map[string]any{"UpdateProxy": func() (releases.ProxyConfig, error) {
+	methods := map[string]any{"WindowConfig": func(key, mode string, opacity float64, collapsed bool) error {
+		if key != "main" || (mode != "normal" && mode != "top" && mode != "desktop") || opacity < .4 || opacity > 1 {
+			return fmt.Errorf("无效窗口设置")
+		}
+		state := todo.WindowState{Key: key, Mode: mode, Opacity: opacity, Collapsed: collapsed, Width: 480, Height: 720}
+		states, err := e.Windows()
+		if err != nil {
+			return err
+		}
+		for _, w := range states {
+			if w.Key == key {
+				state.X = w.X
+				state.Y = w.Y
+				state.Width = w.Width
+				state.Height = w.Height
+			}
+		}
+		return e.SaveWindow(state)
+	}, "UpdateProxy": func() (releases.ProxyConfig, error) {
 		proxyMu.Lock()
 		defer proxyMu.Unlock()
 		c, err := releases.ReadProxy(proxyPath)

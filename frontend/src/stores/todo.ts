@@ -7,6 +7,7 @@ import {
   type Snapshot,
   type Boot,
   type Query,
+  type Rule,
 } from "../api/types";
 
 export const useTodo = defineStore("todo", () => {
@@ -31,8 +32,21 @@ export const useTodo = defineStore("todo", () => {
     selected = ref<string[]>([]),
     activeTask = ref(""),
     titleEditing = ref(""),
-    hideCompleted = ref(false),
+    rules = ref<Rule[]>([]),
     sortMode = ref("manual");
+  const filterView = computed(() => (view.value === "inbox" ? "inbox" : "day"));
+  const hideCompleted = computed(
+    () =>
+      (boot.value?.settings[filterView.value + "ShowCompleted"] ??
+        (filterView.value === "day" ? "true" : "false")) !== "true",
+  );
+  const showRecurring = computed(
+    () => boot.value?.settings[filterView.value + "ShowRecurring"] !== "false",
+  );
+  async function setFilter(kind: "Completed" | "Recurring", checked: boolean) {
+    await setting(filterView.value + "Show" + kind, String(checked));
+    selected.value = [];
+  }
   const query = computed<Query>(() => ({
     view: view.value === "inbox" ? "all" : view.value,
     date: date.value,
@@ -45,6 +59,7 @@ export const useTodo = defineStore("todo", () => {
     );
     if (hideCompleted.value)
       list = list.filter((t) => t.status !== "completed");
+    if (!showRecurring.value) list = list.filter((t) => !t.seriesId);
     return list.sort((a, b) => {
       if (view.value === "pending" && a.date !== b.date)
         return a.date === null
@@ -88,6 +103,13 @@ export const useTodo = defineStore("todo", () => {
     try {
       const result = await api<Snapshot>("Query", query.value);
       if (current === request) {
+        if (
+          result.tasks.some(
+            (t) => t.ruleId && !rules.value.some((r) => r.id === t.ruleId),
+          )
+        )
+          rules.value = await api<Rule[]>("Rules");
+        if (current !== request) return;
         snapshot.value = result;
         const ids = new Set(result.tasks.map((t) => t.id));
         selected.value = selected.value.filter((id) => ids.has(id));
@@ -101,6 +123,7 @@ export const useTodo = defineStore("todo", () => {
   let timezoneSync = false;
   async function metadata() {
     boot.value = await api<Boot>("Boot");
+    rules.value = boot.value.startupError ? [] : await api<Rule[]>("Rules");
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (
       !boot.value.startupError &&
@@ -213,6 +236,54 @@ export const useTodo = defineStore("todo", () => {
       return;
     return run(() => api<Task[]>("Move", { ...command(t), date }));
   }
+  async function reorderRoot(source: Task, target?: Task, after = false) {
+    if (
+      source.status !== "pending" ||
+      source.parentId ||
+      sortMode.value !== "manual"
+    )
+      return;
+    const peers = snapshot.value.tasks
+      .filter((t) => !t.parentId && t.status !== "skipped")
+      .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+    const ids = peers.filter((t) => t.id !== source.id).map((t) => t.id);
+    if (target && !ids.includes(target.id)) return;
+    const lastPending = [...peers]
+      .reverse()
+      .find(
+        (t) =>
+          t.id !== source.id &&
+          t.status === "pending" &&
+          roots.value.some((r) => r.id === t.id),
+      );
+    const at = target
+      ? ids.indexOf(target.id) + (after ? 1 : 0)
+      : lastPending
+        ? ids.indexOf(lastPending.id) + 1
+        : ids.length;
+    ids.splice(at, 0, source.id);
+    return run(() => api("Reorder", ids, snapshot.value.revision));
+  }
+  function repeatSummary(t: Task) {
+    const r = rules.value.find((r) => r.id === t.ruleId);
+    if (!r) return "重复任务";
+    const unit =
+      r.frequency === "daily" ? "天" : r.frequency === "weekly" ? "周" : "月";
+    let text =
+      r.interval === 1
+        ? { daily: "每天", weekly: "每周", monthly: "每月" }[r.frequency] ||
+          "重复"
+        : `每 ${r.interval} ${unit}`;
+    if (r.frequency === "weekly")
+      text +=
+        " " +
+        [...r.weekdays]
+          .sort((a, b) => ((a + 6) % 7) - ((b + 6) % 7))
+          .map((n) => "周" + "日一二三四五六"[n])
+          .join("、");
+    if (r.frequency === "monthly") text += ` ${r.monthDay} 日`;
+    return text + (r.until ? ` · 至 ${r.until}` : " · 持续重复");
+  }
   async function remove(t: Task) {
     return run(() => api("Delete", command(t)));
   }
@@ -267,6 +338,10 @@ export const useTodo = defineStore("todo", () => {
     activeTask,
     titleEditing,
     hideCompleted,
+    showRecurring,
+    setFilter,
+    reorderRoot,
+    repeatSummary,
     sortMode,
     query,
     roots,

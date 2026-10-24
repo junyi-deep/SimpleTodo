@@ -15,6 +15,9 @@ func TestChecklistWindowDefaultsAndWindowsTitlebar(t *testing.T) {
 		if opts.MinimiseButtonState != application.ButtonHidden || opts.CloseButtonState != application.ButtonHidden || opts.MaximiseButtonState != application.ButtonHidden {
 			t.Fatal("native buttons must be hidden")
 		}
+		if opts.BackgroundType != application.BackgroundTypeTransparent || opts.BackgroundColour.Alpha != 0 || opts.Mac.Backdrop != application.MacBackdropTransparent {
+			t.Fatal("window must allow a CSS background alpha without fading text")
+		}
 		if opts.Frameless != (platform == "windows") {
 			t.Fatalf("incorrect native titlebar on %s", platform)
 		}
