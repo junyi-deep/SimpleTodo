@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { unique, call, root, row, add, tools, select } from "./helpers";
+test.beforeEach(async ({ request }) => {
+  await call(request, "Settings", { expandDepth: "1" });
+});
 test("列表内连续录入、多级快捷键和完成汇总", async ({ page }) => {
   await page.goto("/?preview=1");
   const title = unique("准备发布"),

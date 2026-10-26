@@ -10,6 +10,7 @@ import {
   Search,
   CheckCheck,
   ListFilter,
+  Eye,
   ListChecks,
   Check,
   Trash2,
@@ -62,6 +63,7 @@ const s = useTodo(),
   batchAction = ref("complete"),
   batch = ref(false),
   filters = ref(false),
+  depthMenu = ref(false),
   previewOpacity = ref<number | null>(null),
   search = ref(""),
   menu = ref(false),
@@ -309,6 +311,7 @@ async function navigate(next: string) {
   transfer.value = null;
   menu.value = false;
   filters.value = false;
+  depthMenu.value = false;
   editor.value = null;
   drawer.value = false;
   repeatDays.value = null;
@@ -471,6 +474,7 @@ async function outside(e: PointerEvent) {
   if (!el.closest(".calendar-repeat-menu")) calendarMenu.value = null;
   if (!el.closest(".tools")) menu.value = false;
   if (!el.closest(".list-filters")) filters.value = false;
+  if (!el.closest(".depth-control")) depthMenu.value = false;
   if (
     drawer.value &&
     !el.closest(
@@ -648,6 +652,8 @@ async function keyboard(e: KeyboardEvent) {
       transfer.value = null;
     } else if (settingsOpen.value) {
       settingsOpen.value = false;
+    } else if (depthMenu.value) {
+      depthMenu.value = false;
     } else if (filters.value) {
       filters.value = false;
     } else if (calendarMenu.value) {
@@ -1008,6 +1014,48 @@ onUnmounted(() => {
                 "
               />显示周期任务</label
             >
+          </div>
+        </div>
+        <div class="depth-control">
+          <button
+            class="icon-button"
+            aria-label="展开层级"
+            title="展开层级"
+            :aria-expanded="depthMenu"
+            @click="depthMenu = !depthMenu"
+          >
+            <Eye :size="16" />
+          </button>
+          <div
+            v-if="depthMenu"
+            v-motion:popover
+            class="filter-popover depth-popover"
+            role="group"
+            aria-label="任务展开层级"
+            @keydown.esc.stop="depthMenu = false"
+          >
+            <label for="task-depth">显示到第 {{ s.expandDepth }} 层</label>
+            <input
+              id="task-depth"
+              aria-label="显示层级"
+              type="range"
+              min="1"
+              max="5"
+              step="1"
+              :value="s.expandDepth"
+              :disabled="s.saving"
+              @input="
+                s.depthPreview = Number(
+                  ($event.target as HTMLInputElement).value,
+                )
+              "
+              @change="
+                s.setExpandDepth(
+                  Number(($event.target as HTMLInputElement).value),
+                )
+              "
+            />
+            <div class="depth-scale"><span>1 层</span><span>5 层</span></div>
           </div>
         </div>
         <button

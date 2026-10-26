@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { unique, call, root, row, add, select } from "./helpers";
+test.beforeEach(async ({ request }) => {
+  await call(request, "Settings", { expandDepth: "1" });
+});
 
 test("行内编辑仍固定版本并支持冲突后显式重试", async ({ page, request }) => {
   const t = await root(request, unique("冲突草稿"));

@@ -104,6 +104,10 @@ export function ImportHolidays(): $CancellablePromise<void> {
     return $Call.ByID(3092921409);
 }
 
+export function InstallUpdate(): $CancellablePromise<void> {
+    return $Call.ByID(973615585);
+}
+
 export function Migrate(): $CancellablePromise<void> {
     return $Call.ByID(1785158142);
 }
@@ -146,6 +150,10 @@ export function PreviewImport(content: string, format: string, date: string | nu
 
 export function PreviewPaste(content: string, target: string): $CancellablePromise<todo$0.Preview> {
     return $Call.ByID(4287791226, content, target);
+}
+
+export function Promote(c: todo$0.Command, revision: string): $CancellablePromise<todo$0.Task[] | null> {
+    return $Call.ByID(612408699, c, revision);
 }
 
 export function Query(q: todo$0.Query): $CancellablePromise<todo$0.Snapshot> {

@@ -82,7 +82,7 @@ func main() {
 			}
 		}
 		return out, err
-	}, "Complete": e.Complete, "Delete": e.Delete, "Move": e.Move, "Reparent": e.Reparent, "Nest": e.Nest, "Reorder": e.ReorderRoots, "Repeat": func(r todo.RepeatRequest) error {
+	}, "Complete": e.Complete, "Delete": e.Delete, "Move": e.Move, "Reparent": e.Reparent, "Nest": e.Nest, "Promote": e.Promote, "Reorder": e.ReorderRoots, "Repeat": func(r todo.RepeatRequest) error {
 		if err := e.Repeat(r); err != nil {
 			return err
 		}

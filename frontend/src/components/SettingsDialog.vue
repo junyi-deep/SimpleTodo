@@ -15,7 +15,7 @@ import {
   Bell,
   ExternalLink,
 } from "lucide-vue-next";
-import { api, confirmAction } from "../api";
+import { api, confirmAction, listen } from "../api";
 import { type Backup } from "../api/types";
 import { useTodo } from "../stores/todo";
 const props = defineProps<{ initialTab?: string }>();
@@ -82,7 +82,35 @@ const proxy = ref<ProxyConfig>({
 const proxyLoaded = ref(false),
   proxySaving = ref(false),
   downloading = ref(false),
-  downloadPath = ref("");
+  downloadPath = ref(""),
+  updateProgress = ref("");
+let stopUpdate: (() => void) | undefined;
+onMounted(async () => {
+  stopUpdate = await listen(
+    "todo:update-progress",
+    (value) => (updateProgress.value = String(value)),
+  );
+});
+onUnmounted(() => stopUpdate?.());
+async function installUpdate() {
+  if (!(await saveProxy())) return;
+  if (
+    !(await confirmAction(
+      "升级将自动下载、校验并替换应用，然后重启。进行中的专注与提醒会短暂停止，任务数据保留。继续？",
+    ))
+  )
+    return;
+  downloading.value = true;
+  updateProgress.value = "正在下载安装包…";
+  try {
+    await api("InstallUpdate");
+    updateProgress.value = "正在安装，即将重启…";
+  } catch (e) {
+    s.error = String(e);
+    updateProgress.value = "";
+    downloading.value = false;
+  }
+}
 async function loadProxy() {
   const result = await s.run(() => api<ProxyConfig>("UpdateProxy"));
   if (result) proxy.value = result;
@@ -245,7 +273,7 @@ async function migrate() {
               ></span
             ><input
               type="checkbox"
-              :checked="s.boot?.settings.autoPostpone === 'true'"
+              :checked="s.boot?.settings.autoPostpone !== 'false'"
               @change="s.setting('autoPostpone', checkbox($event))" /></label
           ><label class="setting-row"
             ><span>完成项置底<small>在每个同级列表中保留完整子树</small></span
@@ -545,11 +573,32 @@ async function migrate() {
               v-if="latestRelease?.available"
               class="button primary"
               :disabled="downloading || checking"
+              @click="installUpdate"
+            >
+              {{ downloading ? "升级中…" : "升级并重启" }}
+            </button>
+            <button
+              v-if="latestRelease?.available"
+              class="button"
+              :disabled="downloading || checking"
               @click="downloadUpdate"
             >
-              {{ downloading ? "下载中…" : "下载 " + latestRelease.version }}
+              {{ downloading ? "下载中…" : "仅下载安装包" }}
             </button>
           </div>
+          <p
+            v-for="warning in s.boot?.warnings.filter((w) =>
+              w.startsWith('上次自动升级'),
+            )"
+            :key="warning"
+            class="inline-error"
+            role="alert"
+          >
+            {{ warning }}
+          </p>
+          <p v-if="updateProgress" class="muted small" role="status">
+            {{ updateProgress }}
+          </p>
           <p v-if="downloadPath" class="muted small path-output" role="status">
             已保存到 {{ downloadPath }}
           </p>

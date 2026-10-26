@@ -1,5 +1,6 @@
+import { type TaskProjection } from "../composables/taskDrag";
 import { defineStore } from "pinia";
-import { ref, computed, onScopeDispose } from "vue";
+import { ref, computed, onScopeDispose, nextTick } from "vue";
 import { api, listen, confirmAction } from "../api";
 import {
   dayString,
@@ -33,7 +34,18 @@ export const useTodo = defineStore("todo", () => {
     activeTask = ref(""),
     titleEditing = ref(""),
     rules = ref<Rule[]>([]),
-    sortMode = ref("manual");
+    sortMode = ref("manual"),
+    depthPreview = ref<number | null>(null);
+  const expandDepth = computed(
+    () => depthPreview.value ?? Number(boot.value?.settings.expandDepth || 2),
+  );
+  async function setExpandDepth(value: number) {
+    try {
+      await setting("expandDepth", String(value));
+    } finally {
+      depthPreview.value = null;
+    }
+  }
   const filterView = computed(() => (view.value === "inbox" ? "inbox" : "day"));
   const hideCompleted = computed(
     () =>
@@ -120,9 +132,14 @@ export const useTodo = defineStore("todo", () => {
       if (current === request) loading.value = false;
     }
   }
-  let timezoneSync = false;
+  let timezoneSync = false,
+    lastInstallWarning = "";
   async function metadata() {
     boot.value = await api<Boot>("Boot");
+    const warning =
+      boot.value.warnings?.find((w) => w.startsWith("上次自动升级")) || "";
+    if (warning && warning !== lastInstallWarning) inform(warning);
+    lastInstallWarning = warning;
     rules.value = boot.value.startupError ? [] : await api<Rule[]>("Rules");
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (
@@ -236,6 +253,72 @@ export const useTodo = defineStore("todo", () => {
       return;
     return run(() => api<Task[]>("Move", { ...command(t), date }));
   }
+  async function dropProjected(id: string, projection: TaskProjection) {
+    const source = taskMap.value.get(id);
+    if (!source || source.status !== "pending") return;
+    const parentId = projection.parentId;
+    const allPeers = snapshot.value.tasks
+      .filter((t) =>
+        parentId
+          ? t.parentId === parentId
+          : !t.parentId && t.status !== "skipped",
+      )
+      .filter((t) => t.id !== id)
+      .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+    const completedBottom = boot.value?.settings.completedBottom === "true";
+    const peers = completedBottom
+      ? allPeers.filter((t) => t.status !== "completed")
+      : allPeers;
+    const target = peers.findIndex((t) => t.id === projection.targetId);
+    if (
+      projection.targetId &&
+      target < 0 &&
+      !allPeers.some((t) => t.id === projection.targetId)
+    ) {
+      error.value = "目标任务已变化，请重新拖动";
+      return;
+    }
+    const beforeId =
+      projection.targetId && target >= 0
+        ? projection.after
+          ? peers[target + 1]?.id || ""
+          : projection.targetId
+        : "";
+    if (parentId) {
+      if (
+        !source.parentId &&
+        (source.remindAt || source.seriesId || source.description) &&
+        !(await confirmAction(
+          "作为子任务后将继承目标任务的日期与提醒。原描述会追加到目标根任务的描述；重复任务仅移动当前实例。继续？",
+        ))
+      )
+        return;
+      const out = await run(() =>
+        api(
+          "Nest",
+          { ...command(source), parentId, beforeId },
+          snapshot.value.revision,
+        ),
+      );
+      if (out) {
+        await nextTick();
+        document.dispatchEvent(
+          new CustomEvent("todo:reveal-task", { detail: parentId }),
+        );
+      }
+      return out;
+    }
+    if (source.parentId)
+      return run(() =>
+        api(
+          "Promote",
+          { ...command(source), beforeId },
+          snapshot.value.revision,
+        ),
+      );
+    const before = beforeId ? taskMap.value.get(beforeId) : undefined;
+    return reorderRoot(source, before, false);
+  }
   async function reorderRoot(source: Task, target?: Task, after = false) {
     if (
       source.status !== "pending" ||
@@ -343,6 +426,10 @@ export const useTodo = defineStore("todo", () => {
     reorderRoot,
     repeatSummary,
     sortMode,
+    expandDepth,
+    depthPreview,
+    setExpandDepth,
+    dropProjected,
     query,
     roots,
     taskMap,

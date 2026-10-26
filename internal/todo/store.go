@@ -37,7 +37,7 @@ type Engine struct {
 	lastDay  string
 }
 
-var defaults = map[string]string{"dayShowCompleted": "true", "inboxShowCompleted": "false", "dayShowRecurring": "true", "inboxShowRecurring": "true", "theme": "system", "autoPostpone": "true", "completedBottom": "true", "titleClick": "edit", "tabEntry": "false", "sound": "true", "focusMinutes": "25", "emoji": "☺", "miniView": "today", "miniPending": "true", "edgeHide": "false", "releaseURL": "", "shortcutMain": "", "shortcutMini": "", "shortcutQuick": "", "onboarding": "false", "animation": "true", "notificationPrompted": "false", "autostartConfigured": "false"}
+var defaults = map[string]string{"expandDepth": "2", "dayShowCompleted": "true", "inboxShowCompleted": "false", "dayShowRecurring": "true", "inboxShowRecurring": "true", "theme": "system", "autoPostpone": "true", "completedBottom": "true", "titleClick": "edit", "tabEntry": "false", "sound": "true", "focusMinutes": "25", "emoji": "☺", "miniView": "today", "miniPending": "true", "edgeHide": "false", "releaseURL": "", "shortcutMain": "", "shortcutMini": "", "shortcutQuick": "", "onboarding": "false", "animation": "true", "notificationPrompted": "false", "autostartConfigured": "false"}
 
 func Open(dir string) (*Engine, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -237,6 +237,11 @@ func (e *Engine) SaveSettings(m map[string]string) error {
 			return fail("VALIDATION_ERROR", "未知设置项")
 		}
 		switch k {
+		case "expandDepth":
+			n, er := strconv.Atoi(v)
+			if er != nil || n < 1 || n > 5 {
+				return fail("VALIDATION_ERROR", "展开层级为 1—5 层")
+			}
 		case "theme":
 			if !contains([]string{"system", "light", "dark"}, v) {
 				return fail("VALIDATION_ERROR", "无效主题")

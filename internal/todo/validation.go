@@ -133,6 +133,11 @@ func validateExchange(d Transfer) error {
 			}
 		}
 		switch k {
+		case "expandDepth":
+			n, er := strconv.Atoi(v)
+			if er != nil || n < 1 || n > 5 {
+				return fail("VALIDATION_ERROR", "展开层级为 1—5 层")
+			}
 		case "theme":
 			if !contains([]string{"system", "light", "dark"}, v) {
 				return fail("VALIDATION_ERROR", "无效主题")

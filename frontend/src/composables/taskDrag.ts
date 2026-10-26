@@ -1,4 +1,16 @@
 import { runMotion } from "./motion";
+export interface TaskProjection {
+  parentId: string | null;
+  targetId?: string;
+  after: boolean;
+  depth: number;
+}
+export function taskDropProjection(
+  event: DragEvent,
+): TaskProjection | undefined {
+  return (event as DragEvent & { todoProjection?: TaskProjection })
+    .todoProjection;
+}
 type Placement = "before" | "after" | "inside";
 export function taskDropPlacement(event: DragEvent): Placement | undefined {
   return (event as DragEvent & { todoPlacement?: Placement }).todoPlacement;
@@ -22,9 +34,8 @@ export function startTaskDrag(event: PointerEvent, id: string) {
     ghost: HTMLElement | undefined,
     target: HTMLElement | null = null,
     gap: HTMLElement | undefined,
-    gapAnchor: HTMLElement | undefined,
+    projection: TaskProjection | undefined,
     placement: Placement | undefined,
-    gapPlacement: Placement | undefined,
     frame = 0,
     started = false,
     edgeDirection = 0,
@@ -36,65 +47,136 @@ export function startTaskDrag(event: PointerEvent, id: string) {
   function clearGap() {
     gap?.remove();
     gap = undefined;
-    gapAnchor = undefined;
-    gapPlacement = undefined;
   }
-  function placeGap(anchor: HTMLElement, mode: Placement) {
-    if (gapAnchor === anchor && gapPlacement === mode) return;
-    clearGap();
-    gapAnchor = anchor;
-    gapPlacement = mode;
-    gap = document.createElement("div");
-    gap.className = "task-sort-gap";
-    gap.setAttribute("aria-hidden", "true");
-    gap.style.height = bounds.height + "px";
-    gap.style.setProperty("--gap-indent", getComputedStyle(source).paddingLeft);
-    if (mode === "after") anchor.after(gap);
-    else anchor.before(gap);
-    runMotion(gap, { height: [0, bounds.height] }, 0.18);
-  }
-  function branchEnd(row: HTMLElement) {
-    const depth = Number(row.style.getPropertyValue("--depth"));
-    let end = row.parentElement!;
-    for (
-      let next = end.nextElementSibling;
-      next;
-      next = next.nextElementSibling
-    ) {
-      const child = next.querySelector<HTMLElement>(".task-row");
-      if (!child) continue;
-      if (Number(child.style.getPropertyValue("--depth")) <= depth) break;
-      end = next as HTMLElement;
+  function projectList(list: HTMLElement) {
+    const all = Array.from(list.querySelectorAll<HTMLElement>("[data-node]"));
+    const sourceAt = all.indexOf(source),
+      sourceDepth = Number(source.style.getPropertyValue("--depth"));
+    const excluded = new Set<HTMLElement>([source]);
+    for (const row of all.slice(sourceAt + 1)) {
+      if (Number(row.style.getPropertyValue("--depth")) <= sourceDepth) break;
+      excluded.add(row);
     }
-    return end;
-  }
-  function sortingGap(row: HTMLElement, mode: Placement) {
-    if (row.classList.contains("root")) {
-      if (source.classList.contains("root"))
-        return { anchor: row.closest<HTMLElement>(".root-entry")!, mode };
-      // Child-to-root edge drops insert within that root's children, never before its header.
-      if (
-        mode === "before" &&
-        source.closest(".task-tree") === row.closest(".task-tree")
-      ) {
-        let next = row.parentElement!.nextElementSibling;
-        while (next) {
-          const child = next.querySelector<HTMLElement>(".task-row");
-          if (
-            child &&
-            child.dataset.node !== id &&
-            Number(child.style.getPropertyValue("--depth")) === 1
-          )
-            return { anchor: next as HTMLElement, mode: "before" as Placement };
-          next = next.nextElementSibling;
+    const rows = all.filter((row) => !excluded.has(row));
+    if (!rows.length) {
+      projection = undefined;
+      clearGap();
+      return;
+    }
+    let row =
+      rows.find((row) => y < row.getBoundingClientRect().bottom) ||
+      rows.at(-1)!;
+    const rect = row.getBoundingClientRect();
+    const first = rows[0],
+      last = rows.at(-1)!;
+    const atStart = y <= first.getBoundingClientRect().top + 5;
+    const atEnd = y >= last.getBoundingClientRect().bottom - 5;
+    let after = y > rect.top + rect.height / 2;
+    let depth = Math.max(
+      0,
+      Math.min(
+        Math.max(0, 5 - Number(source.dataset.height || 1)),
+        sourceDepth + Math.trunc((x - origin.x) / 22),
+      ),
+    );
+    if (alt)
+      depth = Math.min(depth, Number(row.style.getPropertyValue("--depth")));
+    if (atStart || atEnd) {
+      depth = 0;
+      row = atStart
+        ? first
+        : rows
+            .filter((r) => Number(r.style.getPropertyValue("--depth")) === 0)
+            .at(-1) || last;
+      after = atEnd;
+    }
+    const rowDepth = Number(row.style.getPropertyValue("--depth"));
+    depth = Math.min(depth, rowDepth + 1);
+    let anchor = row,
+      lineY = 0;
+    if (depth > rowDepth) {
+      projection = { parentId: row.dataset.node!, after: true, depth };
+      for (const next of rows.slice(rows.indexOf(row) + 1)) {
+        if (Number(next.style.getPropertyValue("--depth")) <= rowDepth) break;
+        anchor = next;
+      }
+      lineY = anchor.getBoundingClientRect().bottom;
+    } else {
+      while (Number(anchor.style.getPropertyValue("--depth")) > depth) {
+        const parent = rows.find(
+          (r) => r.dataset.node === anchor.dataset.parent,
+        );
+        if (!parent) break;
+        anchor = parent;
+      }
+      projection = {
+        parentId: anchor.dataset.parent || null,
+        targetId: anchor.dataset.node,
+        after,
+        depth,
+      };
+      if (after) {
+        const anchorDepth = Number(anchor.style.getPropertyValue("--depth"));
+        for (const next of rows.slice(rows.indexOf(anchor) + 1)) {
+          if (Number(next.style.getPropertyValue("--depth")) <= anchorDepth)
+            break;
+          anchor = next;
         }
       }
-      return { anchor: branchEnd(row), mode: "after" as Placement };
+      lineY = after
+        ? anchor.getBoundingClientRect().bottom
+        : anchor.getBoundingClientRect().top;
     }
-    return {
-      anchor: mode === "after" ? branchEnd(row) : row.parentElement!,
-      mode,
-    };
+    if (list.hasAttribute("data-completed-bottom") && projection.targetId) {
+      const projectedRow = rows.find(
+        (r) => r.dataset.node === projection!.targetId,
+      );
+      if (projectedRow?.dataset.status === "completed") {
+        const peers = rows.filter(
+          (r) => (r.dataset.parent || null) === projection!.parentId,
+        );
+        const pending = peers.filter((r) => r.dataset.status !== "completed");
+        const lastPending = pending.at(-1);
+        if (lastPending) {
+          projection.targetId = lastPending.dataset.node;
+          projection.after = true;
+          after = true;
+          anchor = lastPending;
+          const d = Number(anchor.style.getPropertyValue("--depth"));
+          for (const next of rows.slice(rows.indexOf(anchor) + 1)) {
+            if (Number(next.style.getPropertyValue("--depth")) <= d) break;
+            anchor = next;
+          }
+          lineY = anchor.getBoundingClientRect().bottom;
+        } else if (peers[0]) {
+          anchor = peers[0];
+          projection.targetId = anchor.dataset.node;
+          projection.after = false;
+          after = false;
+          lineY = anchor.getBoundingClientRect().top;
+        }
+      }
+    }
+    if (!gap) {
+      gap = document.createElement("div");
+      gap.className = "task-drop-line";
+      gap.setAttribute("aria-hidden", "true");
+      document.body.append(gap);
+    }
+    const base =
+      rows.find((r) => Number(r.style.getPropertyValue("--depth")) === 0) ||
+      first;
+    const left = base.getBoundingClientRect().left + 31 + depth * 22;
+    Object.assign(gap.style, {
+      left: left + "px",
+      top: lineY + "px",
+      width:
+        Math.max(30, list.getBoundingClientRect().right - left - 12) + "px",
+    });
+    gap.dataset.depth = String(depth + 1);
+    gap.dataset.anchor = anchor.dataset.node;
+    gap.dataset.parent = projection.parentId || "";
+    gap.dataset.position = after ? "after" : "before";
   }
   function clearTarget() {
     target?.removeAttribute("data-drop-placement");
@@ -102,60 +184,25 @@ export function startTaskDrag(event: PointerEvent, id: string) {
     target?.removeAttribute("data-tail-drop");
     target = null;
     placement = undefined;
+    projection = undefined;
     clearGap();
   }
   function draw() {
     if (!started) return;
     ghost!.style.transform = `translate3d(${x - origin.x + bounds.left}px,${y - origin.y + bounds.top}px,0) scale(1.015)`;
     const under = document.elementFromPoint(x, y);
-    const hit = under?.closest(".task-sort-gap")
-      ? target
-      : under?.closest<HTMLElement>(
-          ".task-row,.week-date,.calendar-day,.view-switch,.task-list",
-        ) || null;
+    const list = source.classList.contains("task-row")
+      ? under?.closest<HTMLElement>(".task-list")
+      : null;
+    const hit =
+      list ||
+      under?.closest<HTMLElement>(".week-date,.calendar-day,.view-switch") ||
+      null;
     if (target !== hit) {
       clearTarget();
       target = hit;
     }
-    if (target === source) clearTarget();
-    if (target?.classList.contains("task-row")) {
-      // Measure the row before its own gap so the growing gap cannot change the intended drop.
-      const r = target.getBoundingClientRect();
-      const offset =
-        gapPlacement === "before" && gapAnchor?.contains(target)
-          ? gap?.getBoundingClientRect().height || 0
-          : 0;
-      const fraction = (y - (r.top - offset)) / r.height;
-      placement =
-        alt || fraction < 0.25
-          ? "before"
-          : fraction > 0.75
-            ? "after"
-            : "inside";
-      target.dataset.dropPlacement = placement;
-      if (placement === "inside") clearGap();
-      else {
-        const drop = sortingGap(target, placement);
-        if (drop.anchor) placeGap(drop.anchor, drop.mode);
-      }
-    } else if (
-      target?.classList.contains("task-list") &&
-      source.classList.contains("task-row")
-    ) {
-      const parent = source.dataset.parent
-        ? source
-            .closest(".task-tree")
-            ?.querySelector<HTMLElement>(
-              `[data-node="${source.dataset.parent}"]`,
-            )
-        : undefined;
-      if (parent) placeGap(branchEnd(parent), "after");
-      else {
-        const anchor = target.querySelector<HTMLElement>(".list-end-drop");
-        if (anchor) placeGap(anchor, "before");
-      }
-      target.setAttribute("data-tail-drop", "");
-    }
+    if (list) projectList(list);
     if (target?.matches(".calendar-day,.week-date"))
       target.setAttribute("data-calendar-drop", "");
     // Dwell at either horizontal edge to page without dropping the pointer preview.
@@ -245,6 +292,7 @@ export function startTaskDrag(event: PointerEvent, id: string) {
     document.documentElement.classList.remove("task-dragging");
     const destination = target;
     const chosenPlacement = placement;
+    const chosenProjection = projection;
     clearTarget();
     cancelCurrent = undefined;
     if (started) {
@@ -274,6 +322,9 @@ export function startTaskDrag(event: PointerEvent, id: string) {
         altKey: alt,
       });
       Object.defineProperty(drop, "todoPlacement", { value: chosenPlacement });
+      Object.defineProperty(drop, "todoProjection", {
+        value: chosenProjection,
+      });
       destination.dispatchEvent(drop);
     }
     const preview = ghost;

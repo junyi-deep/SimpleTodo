@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { call, root } from "./helpers";
 test.beforeEach(async ({ request }) => {
+  await call(request, "Settings", { expandDepth: "1" });
+});
+test.beforeEach(async ({ request }) => {
   const p = await call(
     request,
     "PreviewImport",
@@ -51,7 +54,7 @@ test("截图问题：稳定父子缩进、数字图标对齐、搜索铺满和�
   ).toBeLessThan(1);
   const toolbar = (await page.locator(".list-toolbar").boundingBox())!,
     search = (await page.getByLabel("搜索当前视图").boundingBox())!;
-  expect(search.width).toBeGreaterThan(toolbar.width - 110);
+  expect(search.width).toBeGreaterThan(toolbar.width - 145);
   await page.getByLabel("搜索当前视图").focus();
   await expect(page.getByLabel("搜索当前视图")).toHaveCSS(
     "outline-style",

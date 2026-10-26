@@ -80,9 +80,18 @@ func (s *TodoService) Boot() (map[string]any, error) {
 	if err != nil {
 		return nil, err
 	}
+	warnings := append([]string{}, s.warnings...)
+	if cache, er := os.UserCacheDir(); er == nil {
+		if b, er := os.ReadFile(filepath.Join(cache, "SimpleTodoUpdates", "update-result.json")); er == nil {
+			var result releases.InstallResult
+			if json.Unmarshal(b, &result) == nil && result.Error != "" {
+				warnings = append(warnings, "上次自动升级未完成："+result.Error)
+			}
+		}
+	}
 	allowed, _ := s.ns.CheckNotificationAuthorization()
 	auto, _ := s.app.Autostart.IsEnabled()
-	return map[string]any{"settings": settings, "version": todo.Version, "dataDir": s.core().DataDir(), "today": time.Now().In(mustLocation(s.core().Timezone())).Format("2006-01-02"), "timezone": s.core().Timezone(), "focus": f, "countdowns": cs, "windows": ws, "notices": ns, "warnings": s.warnings, "autostart": auto, "notificationAllowed": allowed, "capabilities": map[string]any{"desktopMode": desktop.Supported(), "edgeHide": desktop.Supported(), "platform": runtime.GOOS}}, nil
+	return map[string]any{"settings": settings, "version": todo.Version, "dataDir": s.core().DataDir(), "today": time.Now().In(mustLocation(s.core().Timezone())).Format("2006-01-02"), "timezone": s.core().Timezone(), "focus": f, "countdowns": cs, "windows": ws, "notices": ns, "warnings": warnings, "autostart": auto, "notificationAllowed": allowed, "capabilities": map[string]any{"desktopMode": desktop.Supported(), "edgeHide": desktop.Supported(), "platform": runtime.GOOS}}, nil
 }
 func (s *TodoService) Query(q todo.Query) (todo.Snapshot, error) {
 	if s.core() == nil {
@@ -131,6 +140,12 @@ func (s *TodoService) Reparent(c todo.Command) ([]todo.Task, error) {
 		return nil, fmt.Errorf("MAINTENANCE: 正在维护数据，请稍后重试")
 	}
 	return s.core().Reparent(c)
+}
+func (s *TodoService) Promote(c todo.Command, revision string) ([]todo.Task, error) {
+	if err := s.ready(); err != nil {
+		return nil, err
+	}
+	return s.core().Promote(c, revision)
 }
 func (s *TodoService) Nest(c todo.Command, revision string) ([]todo.Task, error) {
 	if err := s.ready(); err != nil {
@@ -383,6 +398,81 @@ func (s *TodoService) CheckUpdate() (releases.Info, error) {
 	defer client.CloseIdleConnections()
 	return releases.Latest(s.ctx, client, releases.Endpoint, todo.Version, runtime.GOOS, runtime.GOARCH)
 }
+func (s *TodoService) InstallUpdate() error {
+	if err := s.ready(); err != nil {
+		return err
+	}
+	if !s.downloading.CompareAndSwap(false, true) {
+		return fmt.Errorf("升级正在进行")
+	}
+	defer s.downloading.Store(false)
+	executable, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	target, err := releases.InstallTarget(executable, runtime.GOOS)
+	if err != nil {
+		return err
+	}
+	if rel, er := filepath.Rel(target, s.core().Dir); er == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("数据目录位于应用内部，请先迁移到应用外部再升级")
+	}
+	info, err := s.CheckUpdate()
+	if err != nil {
+		return err
+	}
+	if !info.Available {
+		return fmt.Errorf("当前已是最新版本")
+	}
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		return err
+	}
+	cache = filepath.Join(cache, "SimpleTodoUpdates")
+	if err = os.MkdirAll(cache, 0700); err != nil {
+		return err
+	}
+	archive, err := os.CreateTemp(cache, "release-*.zip")
+	if err != nil {
+		return err
+	}
+	path := archive.Name()
+	archive.Close()
+	defer os.Remove(path)
+	s.proxyMu.Lock()
+	proxy, err := releases.ReadProxy(s.proxyPath())
+	s.proxyMu.Unlock()
+	if err != nil {
+		return err
+	}
+	client, err := releases.NewClient(proxy, 10*time.Minute)
+	if err != nil {
+		return err
+	}
+	defer client.CloseIdleConnections()
+	s.app.Event.Emit("todo:update-progress", "正在下载安装包…")
+	if err = releases.Download(s.ctx, client, info.DownloadURL, path); err != nil {
+		return err
+	}
+	s.app.Event.Emit("todo:update-progress", "正在校验并准备安装…")
+	plan, err := releases.PrepareInstall(path, target, runtime.GOOS, info.Version, info.Digest, filepath.Join(cache, "update-result.json"))
+	if err != nil {
+		return err
+	}
+	if _, err = s.core().CreateBackup(); err != nil {
+		os.RemoveAll(plan.Stage)
+		return fmt.Errorf("升级前备份失败：%w", err)
+	}
+	_ = os.Remove(plan.Result)
+	if err = releases.LaunchInstaller(plan, executable); err != nil {
+		os.RemoveAll(plan.Stage)
+		return fmt.Errorf("无法启动安装助手：%w", err)
+	}
+	s.app.Event.Emit("todo:update-progress", "正在安装，即将重启…")
+	time.AfterFunc(400*time.Millisecond, func() { s.Quit() })
+	return nil
+}
+
 func (s *TodoService) DownloadUpdate() (string, error) {
 	if !s.downloading.CompareAndSwap(false, true) {
 		return "", fmt.Errorf("安装包正在下载")

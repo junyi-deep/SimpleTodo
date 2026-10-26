@@ -13,6 +13,7 @@ import (
 const Endpoint = "https://api.github.com/repos/junyi-deep/SimpleTodo/releases/latest"
 
 type Info struct {
+	Digest      string `json:"digest"`
 	Version     string `json:"version"`
 	Available   bool   `json:"available"`
 	DownloadURL string `json:"downloadURL"`
@@ -40,8 +41,9 @@ func Latest(ctx context.Context, client *http.Client, endpoint, current, platfor
 		Draft      bool   `json:"draft"`
 		Prerelease bool   `json:"prerelease"`
 		Assets     []struct {
-			Name string `json:"name"`
-			URL  string `json:"browser_download_url"`
+			Digest string `json:"digest"`
+			Name   string `json:"name"`
+			URL    string `json:"browser_download_url"`
 		} `json:"assets"`
 	}
 	if err = json.NewDecoder(io.LimitReader(res.Body, 2<<20)).Decode(&release); err != nil {
@@ -64,6 +66,7 @@ func Latest(ctx context.Context, client *http.Client, endpoint, current, platfor
 	for _, a := range release.Assets {
 		if a.Name == name && strings.HasPrefix(a.URL, "https://github.com/junyi-deep/SimpleTodo/releases/download/") {
 			out.DownloadURL = a.URL
+			out.Digest = a.Digest
 		}
 	}
 	if out.DownloadURL == "" {

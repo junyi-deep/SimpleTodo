@@ -2,6 +2,7 @@
 import {
   startTaskDrag,
   cancelTaskDrag,
+  taskDropProjection,
   taskDropPlacement,
 } from "../composables/taskDrag";
 onUnmounted(cancelTaskDrag);
@@ -90,6 +91,34 @@ const rows = computed(() => {
   walk(props.root, 0);
   return out;
 });
+let seenNodes = new Set<string>();
+function defaultExpansion() {
+  const next = new Set(expanded.value);
+  for (const t of nodes.value) {
+    if (seenNodes.has(t.id)) continue;
+    seenNodes.add(t.id);
+    let depth = 0,
+      cur = t;
+    while (cur.parentId && depth < 200) {
+      depth++;
+      const p = index.value.get(cur.parentId);
+      if (!p) break;
+      cur = p;
+    }
+    if (depth < s.expandDepth - 1) next.add(t.id);
+  }
+  expanded.value = next;
+}
+watch(
+  () => s.expandDepth,
+  () => {
+    seenNodes = new Set();
+    expanded.value = new Set();
+    defaultExpansion();
+  },
+  { immediate: true },
+);
+watch(nodes, defaultExpansion, { immediate: true });
 function movablePeers(t: Task) {
   return (t.parentId ? children(t.parentId) : props.peers || s.roots).filter(
     (t) => t.status === "pending",
@@ -118,6 +147,15 @@ async function shift(t: Task, direction: number) {
       api("Reparent", { ...s.command(t), parentId: t.parentId, beforeId }),
     );
   }
+}
+function subtreeHeight(id: string): number {
+  const visit = (key: string, seen = new Set<string>()): number => {
+    if (seen.has(key)) return 5;
+    seen.add(key);
+    const cs = children(key);
+    return 1 + Math.max(0, ...cs.map((c) => visit(c.id, new Set(seen))));
+  };
+  return visit(id);
 }
 function toggle(id: string) {
   const next = new Set(expanded.value);
@@ -160,6 +198,17 @@ async function del(t: Task) {
   if (latest) await s.remove(latest);
   resetDelete();
 }
+function revealRequested(e: Event) {
+  let t = index.value.get((e as CustomEvent).detail);
+  if (!t) return;
+  const next = new Set(expanded.value);
+  let count = 0;
+  while (t && count++ < 200) {
+    next.add(t.id);
+    t = t.parentId ? index.value.get(t.parentId) : undefined;
+  }
+  expanded.value = next;
+}
 function addRequested(e: Event) {
   const detail = (e as CustomEvent).detail;
   if (detail.rootId === props.root.id) {
@@ -178,12 +227,14 @@ async function siblingRequested(e: Event) {
 onMounted(() => {
   document.addEventListener("pointerdown", outside);
   document.addEventListener("todo:add-child", addRequested);
+  document.addEventListener("todo:reveal-task", revealRequested);
   document.addEventListener("todo:new-sibling", siblingRequested);
 });
 onUnmounted(() => {
   resetDelete();
   document.removeEventListener("pointerdown", outside);
   document.removeEventListener("todo:add-child", addRequested);
+  document.removeEventListener("todo:reveal-task", revealRequested);
   document.removeEventListener("todo:new-sibling", siblingRequested);
 });
 async function add(t: Task) {
@@ -302,6 +353,10 @@ async function keydown(e: KeyboardEvent, t: Task) {
   }
 }
 function startDrag(e: DragEvent, t: Task) {
+  if (e.isTrusted) {
+    e.preventDefault();
+    return;
+  }
   if (!e.dataTransfer || s.saving || props.editing || t.status !== "pending") {
     e.preventDefault();
     return;
@@ -332,6 +387,12 @@ function dropPosition(e: DragEvent) {
 }
 async function dropNode(e: DragEvent, t: Task) {
   e.preventDefault();
+  const projected = taskDropProjection(e);
+  if (projected) {
+    const id = e.dataTransfer?.getData("text/plain") || "";
+    if (await canLeaveEditor()) await s.dropProjected(id, projected);
+    return;
+  }
   const mode = dropPosition(e);
   const sourceID = e.dataTransfer?.getData("text/plain") || "";
   if (!(await canLeaveEditor())) return;
@@ -416,6 +477,8 @@ async function dropNode(e: DragEvent, t: Task) {
           :tabindex="rowFocus === t.id ? 0 : -1"
           :data-node="t.id"
           :data-parent="t.parentId || undefined"
+          :data-status="t.status"
+          :data-height="subtreeHeight(t.id)"
           @dragenter.prevent="dropHint = t.id"
           @dragleave="
             if (
@@ -445,7 +508,8 @@ async function dropNode(e: DragEvent, t: Task) {
         >
           <span
             class="drag-handle"
-            :draggable="
+            :draggable="false"
+            :data-drag-enabled="
               !s.saving && s.sortMode === 'manual' && t.status === 'pending'
             "
             @dragstart="startDrag($event, t)"

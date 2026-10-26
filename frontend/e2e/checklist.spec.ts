@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { root, row, add, call, unique, select, tools } from "./helpers";
+test.beforeEach(async ({ request }) => {
+  await call(request, "Settings", { expandDepth: "1" });
+});
 test("单击在原条目编辑，单独图标打开详细设置", async ({ page, request }) => {
   const t = await root(
     request,
@@ -67,7 +70,7 @@ test("搜索位于最左，统计固定底部，选择右侧仅有三种批量�
       .boundingBox())!.x,
   );
   await toolbar.getByRole("button", { name: "选择", exact: true }).click();
-  await expect(toolbar.getByRole("button")).toHaveCount(5);
+  await expect(toolbar.getByRole("button")).toHaveCount(6);
   await expect(toolbar.getByLabel("批量完成")).toBeDisabled();
   await page.locator(".root-select").first().check();
   await expect(toolbar.getByLabel("批量完成")).toBeEnabled();
@@ -90,7 +93,7 @@ test("拖动到任务中央作为子任务，整个分支持久化", async ({ pa
   await source.hover();
   const box = (await r.boundingBox())!;
   await expect(source.locator(".drag-handle")).toHaveAttribute(
-    "draggable",
+    "data-drag-enabled",
     "true",
   );
   const grip = (await source.locator(".drag-handle").boundingBox())!;
@@ -165,7 +168,7 @@ test("关于直接读取 GitHub 最新发布并提供对应下载，无自定义
   ).toHaveCount(0);
   await page.getByRole("button", { name: "检查更新", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "下载 9.0.0", exact: true }),
+    page.getByRole("button", { name: "仅下载安装包", exact: true }),
   ).toBeVisible();
 });
 test("Windows 标题栏包含视图和窗口操作且可在窄窗口使用", async ({ page }) => {

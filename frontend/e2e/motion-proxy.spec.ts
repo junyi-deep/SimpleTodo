@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { tools, select, root, row, call, unique } from "./helpers";
+test.beforeEach(async ({ request }) => {
+  await call(request, "Settings", { expandDepth: "1" });
+});
 
 test("标题栏顺序、关于文案及代理设置持久化", async ({ page, request }) => {
   await call(request, "SaveUpdateProxy", {

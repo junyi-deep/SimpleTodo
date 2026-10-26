@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { root, row, call, unique } from "./helpers";
+test.beforeEach(async ({ request }) => {
+  await call(request, "Settings", { expandDepth: "1" });
+});
 
 test.beforeEach(async ({ request }) => {
   const empty = await call(
@@ -149,9 +152,9 @@ test("真实指针拖动可取消，边缘排序保持同级并持久化", async
   await dragStart();
   const target = (await row(page, a.title).boundingBox())!;
   await page.mouse.move(target.x + 100, target.y + 2, { steps: 12 });
-  await expect(row(page, a.title)).toHaveAttribute(
-    "data-drop-placement",
-    "before",
+  await expect(page.locator(".task-drop-line")).toHaveAttribute(
+    "data-depth",
+    "1",
   );
   await page.mouse.up();
   await expect
@@ -225,10 +228,12 @@ test("跨根拖到子任务边缘插入同级", async ({ page, request }) => {
   const target = (await row(page, last.title).boundingBox())!;
   await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
   await page.mouse.down();
-  await page.mouse.move(target.x + 100, target.y + 2, { steps: 15 });
-  await expect(row(page, last.title)).toHaveAttribute(
-    "data-drop-placement",
-    "before",
+  await page.mouse.move(grip.x + grip.width / 2 + 24, target.y + 2, {
+    steps: 15,
+  });
+  await expect(page.locator(".task-drop-line")).toHaveAttribute(
+    "data-depth",
+    "2",
   );
   await page.mouse.up();
   await expect

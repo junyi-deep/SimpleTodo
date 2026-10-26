@@ -5,6 +5,7 @@ import { Plus, CornerDownLeft } from "lucide-vue-next";
 import InlineTitle from "./InlineTitle.vue";
 import { canLeaveEditor } from "../composables/editorGuard";
 import TaskTree from "./TaskTree.vue";
+import { taskDropProjection } from "../composables/taskDrag";
 import { api } from "../api";
 import { useTodo } from "../stores/todo";
 import type { Task } from "../api/types";
@@ -42,6 +43,13 @@ async function start() {
   }
 }
 async function dropEnd(event: DragEvent) {
+  const projected = taskDropProjection(event);
+  if (projected) {
+    event.preventDefault();
+    const id = event.dataTransfer?.getData("text/plain") || "";
+    if (await canLeaveEditor()) await s.dropProjected(id, projected);
+    return;
+  }
   if (
     event.target !== event.currentTarget &&
     !(event.target as HTMLElement).closest(
@@ -81,6 +89,9 @@ onUnmounted(() => {
     v-motion:timeline="date"
     class="task-list"
     :aria-busy="s.loading"
+    :data-completed-bottom="
+      s.boot?.settings.completedBottom === 'true' ? '' : undefined
+    "
     @dragover.prevent
     @drop="dropEnd"
   >

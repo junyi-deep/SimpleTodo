@@ -2142,8 +2142,6 @@ button:focus-visible {box-shadow:inset 0 0 0 1px var(--muted);}
 .task-actions .action-order {color:var(--muted);}
 .pointer-drag-preview .task-actions {display:none!important;}
 .pointer-drag-preview .task-copy {min-width:0;overflow:hidden;}
-.task-sort-gap {box-sizing:border-box;min-height:0;flex-shrink:0;position:relative;pointer-events:auto;overflow:hidden;}
-.task-sort-gap::after {content:"";position:absolute;inset:4px 3px 4px var(--gap-indent,24px);border-radius:5px;background:color-mix(in srgb,var(--muted) 9%,transparent);border:1px dashed var(--border);}
 .list-end-drop {height:0;flex-shrink:0;}
 .list-filters {position:relative;display:flex;}
 .filter-popover {position:absolute;right:0;top:calc(100% + 7px);width:190px;padding:6px;background:var(--surface);color:var(--text);border-radius:7px;box-shadow:0 8px 28px #0002;z-index:30;}
@@ -2151,3 +2149,12 @@ button:focus-visible {box-shadow:inset 0 0 0 1px var(--muted);}
 .filter-popover label:hover {background:var(--secondary);}
 .filter-popover input {width:15px;height:15px;margin:0;accent-color:var(--accent);}
 .compact-app>.embedded-pane {background:transparent;}
+/* Tree projection uses a level-aware insertion line rather than a second task-sized gap. */
+.task-drop-line {position:fixed;z-index:9999;height:2px;border-radius:2px;background:#3876be;pointer-events:none;box-shadow:0 1px 4px #0001;transition:left 120ms cubic-bezier(.16,1,.3,1),width 120ms cubic-bezier(.16,1,.3,1);}
+.task-drop-line::before {content:"";position:absolute;left:-3px;top:-2px;width:6px;height:6px;border:1.5px solid #3876be;background:var(--surface);border-radius:50%;}
+.depth-control {position:relative;display:flex;}
+.depth-popover {width:180px;padding:12px;}
+.depth-popover label {padding:0 0 10px;}
+.depth-popover input[type="range"] {width:100%;margin:0;accent-color:var(--accent);}
+.depth-scale {display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:7px;}
+.drag-handle { -webkit-user-drag:none;user-select:none;touch-action:none; }

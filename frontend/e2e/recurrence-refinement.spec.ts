@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { call, root, select } from "./helpers";
+test.beforeEach(async ({ request }) => {
+  await call(request, "Settings", { expandDepth: "1" });
+});
 const shift = (day: string, n: number) => {
   const d = new Date(day + "T12:00:00");
   d.setDate(d.getDate() + n);

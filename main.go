@@ -1,6 +1,7 @@
 package main
 
 import (
+	"changeme/internal/releases"
 	"changeme/internal/todo"
 	"context"
 	"embed"
@@ -26,6 +27,13 @@ var trayIcon []byte
 var templateTrayIcon []byte
 
 func main() {
+	if len(os.Args) == 3 && os.Args[1] == "--apply-update" {
+		if err := releases.RunInstaller(os.Args[2]); err != nil {
+			log.Print(err)
+		}
+		return
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	ns := notifications.New()

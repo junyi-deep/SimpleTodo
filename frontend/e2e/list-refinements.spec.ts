@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { call, root, row, select } from "./helpers";
+test.beforeEach(async ({ request }) => {
+  await call(request, "Settings", { expandDepth: "1" });
+});
 const defaults = {
   dayShowCompleted: "true",
   inboxShowCompleted: "false",
@@ -122,7 +125,7 @@ test("上下移按同级位置显示，跨日期收集箱排序不改变日期",
       .map((t: any) => t.id),
   ).toEqual([b.id, c.id, a.id]);
 });
-test("拖动有真实间隙，拖到空白区排到末尾，取消拖动移除间隙", async ({
+test("拖动有层级线条，拖到空白区排到末尾，取消拖动清理线条", async ({
   page,
   request,
 }) => {
@@ -138,14 +141,15 @@ test("拖动有真实间隙，拖到空白区排到末尾，取消拖动移除�
   await page.mouse.move(h.x + 5, h.y + 5);
   await page.mouse.down();
   await page.mouse.move(before.x + 25, before.y + 2, { steps: 10 });
-  await expect(page.locator(".task-sort-gap")).toBeVisible();
-  await expect
-    .poll(async () => (await target.boundingBox())!.y - before.y)
-    .toBeGreaterThan(20);
+  await expect(page.locator(".task-drop-line")).toBeVisible();
+  await expect(page.locator(".task-drop-line")).toHaveAttribute(
+    "data-depth",
+    "1",
+  );
   await page.screenshot({ path: "../.impeccable/review/list-drag-gap.png" });
   await page.keyboard.press("Escape");
   await page.mouse.up();
-  await expect(page.locator(".task-sort-gap")).toHaveCount(0);
+  await expect(page.locator(".task-drop-line")).toHaveCount(0);
   await row(page, a.title).hover();
   const h2 = (await handle.boundingBox())!,
     list = (await page.locator(".task-list").boundingBox())!;
@@ -154,7 +158,10 @@ test("拖动有真实间隙，拖到空白区排到末尾，取消拖动移除�
   await page.mouse.move(list.x + list.width / 2, list.y + list.height - 35, {
     steps: 12,
   });
-  await expect(page.locator("[data-tail-drop]")).toBeVisible();
+  await expect(page.locator(".task-drop-line")).toHaveAttribute(
+    "data-depth",
+    "1",
+  );
   await page.mouse.up();
   await expect
     .poll(async () => {
@@ -165,7 +172,7 @@ test("拖动有真实间隙，拖到空白区排到末尾，取消拖动移除�
         .map((t: any) => t.id);
     })
     .toEqual([b.id, c.id, a.id]);
-  await expect(page.locator(".task-sort-gap")).toHaveCount(0);
+  await expect(page.locator(".task-drop-line")).toHaveCount(0);
 });
 test("长标题改期不横向溢出，重复信息在标题下显示，透明度即时预览并保存", async ({
   page,
@@ -266,15 +273,9 @@ test("展开子分支与根行下缘的排序占位在完整后代之后，落�
     await page.mouse.move(a.x + 5, a.y + 5);
     await page.mouse.down();
     await page.mouse.move(b.x + 28, b.y + b.height - 2, { steps: 10 });
-    const gap = page.locator(".task-sort-gap");
+    const gap = page.locator(".task-drop-line");
     await expect(gap).toBeVisible();
-    expect(
-      await gap.evaluate(
-        (el) =>
-          el.previousElementSibling?.querySelector<HTMLElement>("[data-node]")
-            ?.dataset.node,
-      ),
-    ).toBe(leaf.id);
+    expect(await gap.getAttribute("data-anchor")).toBe(leaf.id);
     await page.screenshot({
       path: `../.impeccable/review/list-gap-${target.id === parent.id ? "root" : "branch"}.png`,
     });
@@ -292,10 +293,7 @@ test("展开子分支与根行下缘的排序占位在完整后代之后，落�
   }
 });
 
-test("子任务拖到空白时只排到当前父任务末尾，间隙不会跑到其它根任务后", async ({
-  page,
-  request,
-}) => {
+test("子任务拖到最底部提升为一级主任务", async ({ page, request }) => {
   const parent = await root(request, "尾部落点父任务");
   const a = (
     await call(request, "Create", {
@@ -331,23 +329,12 @@ test("子任务拖到空白时只排到当前父任务末尾，间隙不会跑�
   await page.mouse.move(list.x + list.width / 2, list.y + list.height - 35, {
     steps: 12,
   });
-  const gap = page.locator(".task-sort-gap");
+  const gap = page.locator(".task-drop-line");
   await expect(gap).toBeVisible();
-  expect(
-    await gap.evaluate(
-      (el) =>
-        el.previousElementSibling?.querySelector<HTMLElement>("[data-node]")
-          ?.dataset.node,
-    ),
-  ).toBe(b.id);
+  await expect(gap).toHaveAttribute("data-depth", "1");
   await page.mouse.up();
   await expect(gap).toHaveCount(0);
   await expect
-    .poll(async () =>
-      (await call(request, "ReadTree", parent.id))
-        .filter((n: any) => n.parentId === parent.id)
-        .sort((a: any, b: any) => a.order - b.order)
-        .map((n: any) => n.id),
-    )
-    .toEqual([b.id, a.id]);
+    .poll(async () => (await call(request, "FindTask", a.id)).parentId)
+    .toBeNull();
 });

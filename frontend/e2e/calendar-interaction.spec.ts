@@ -1,5 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { call, root, row, select } from "./helpers";
+test.beforeEach(async ({ request }) => {
+  await call(request, "Settings", { expandDepth: "1" });
+});
 const nextDay = (day: string, n = 1) => {
   const d = new Date(day + "T12:00:00Z");
   d.setUTCDate(d.getUTCDate() + n);

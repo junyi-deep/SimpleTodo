@@ -1,6 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { call, root, row, select } from "./helpers";
 test.beforeEach(async ({ request }) => {
+  await call(request, "Settings", { expandDepth: "1" });
+});
+test.beforeEach(async ({ request }) => {
   const p = await call(
     request,
     "PreviewImport",
@@ -77,7 +80,7 @@ test("完成任务不能拖动，未完成任务仍可预览和排序", async ({
   await expect(done).toHaveCSS("pointer-events", "none");
   const src = page.locator(`[data-node="${a.id}"] .drag-handle`),
     dst = page.locator(`[data-node="${b.id}"]`);
-  await expect(src).toHaveAttribute("draggable", "true");
+  await expect(src).toHaveAttribute("data-drag-enabled", "true");
   const x = (await src.boundingBox())!,
     y = (await dst.boundingBox())!;
   await page.mouse.move(x.x + 5, x.y + 5);
