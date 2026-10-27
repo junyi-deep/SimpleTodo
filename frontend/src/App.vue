@@ -326,12 +326,13 @@ async function navigate(next: string) {
     s.date = activeDay.value;
     await s.load();
   }
-  await s.run(() => api("SetView", next));
+  await s.run(() => api("SetView", next === "tasks" ? listView.value : next));
   return true;
 }
 async function toggleList() {
   if (!(await canLeaveEditor())) return;
   listView.value = listView.value === "day" ? "inbox" : "day";
+  await s.run(() => api("SetView", listView.value));
   s.view = listView.value;
   search.value = "";
   s.selected = [];
@@ -383,6 +384,7 @@ async function today() {
   else {
     s.date = activeDay.value;
     listView.value = "day";
+    await s.run(() => api("SetView", "day"));
     s.view = "day";
     await s.load();
   }
@@ -704,6 +706,7 @@ onMounted(async () => {
         if (!(await navigate("tasks"))) return;
 
         listView.value = root.date ? "day" : "inbox";
+        await s.run(() => api("SetView", listView.value));
         s.view = listView.value;
         activeDay.value = root.date || s.boot?.today || s.date;
         s.date = activeDay.value;

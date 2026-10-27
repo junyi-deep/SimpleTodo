@@ -893,7 +893,7 @@ func (e *Engine) SaveWindowBounds(bounds WindowState) error {
 func (e *Engine) Windows() ([]WindowState, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	rows, err := e.db.Query("SELECT state_json FROM window_states")
+	rows, err := e.db.Query("SELECT state_json FROM window_states WHERE window_key NOT LIKE 'view:%'")
 	if err != nil {
 		return nil, err
 	}

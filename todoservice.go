@@ -27,7 +27,9 @@ type TodoService struct {
 	confirming         atomic.Int32
 	confirmationOwners map[string]bool
 	viewMode           string
-	listBounds         application.Rect
+	viewWindows        map[string]todo.ViewWindowState // accessed on the native UI thread
+	viewRestorePending bool
+	viewWindowReady    bool
 	edgeEditing        bool
 	edgeTicks          int
 	shortcutMu         sync.Mutex
@@ -577,55 +579,63 @@ func (s *TodoService) ShowWindow(key string) error {
 	return nil
 }
 
-// Every view uses the same native window. Only its dimensions change.
+// Views share one native window, but own their persisted geometry.
 func (s *TodoService) SetView(view string) error {
-	if view != "tasks" && view != "calendar" && view != "focus" {
+	if view != "tasks" && view != "day" && view != "inbox" && view != "calendar" && view != "focus" {
 		return fmt.Errorf("未知视图")
 	}
 	w := s.windows["main"]
 	if w == nil {
 		return fmt.Errorf("窗口尚未就绪")
 	}
-	s.mu.Lock()
-	old := s.viewMode
-	s.viewMode = view
-	if view == "calendar" && old != "calendar" {
-		s.listBounds = w.Bounds()
-	}
-	restore := s.listBounds
-	s.mu.Unlock()
-	application.InvokeSync(func() {
-		var area application.Rect
-		// ScreenManager exposes DIP work areas; GetScreen on macOS returns
-		// unnormalised native values on Retina displays in this Wails version.
-		if screen := s.app.Screen.ScreenNearestDipRect(w.Bounds()); screen != nil {
-			area = screen.WorkArea
-		}
-		minW, minH := 400, 440
-		if view == "calendar" {
-			minW, minH = 760, 500
-		}
-		if area.Width > 0 && area.Height > 0 {
-			minW, minH = min(minW, area.Width), min(minH, area.Height)
-		}
-		w.SetMinSize(minW, minH)
-		if view == "calendar" {
-			if !w.IsMaximised() {
-				bounds := w.Bounds()
-				bounds.Width, bounds.Height = 1080, 720
-				w.SetBounds(fitWindowBounds(bounds, area))
-			}
-		} else {
-			if old == "calendar" && !w.IsMaximised() {
-				if restore.Width < 400 {
-					restore = w.Bounds()
-					restore.Width, restore.Height = 480, 720
-				}
-				w.SetBounds(fitWindowBounds(restore, area))
+	return application.InvokeSyncWithError(func() error {
+		if view == "tasks" {
+			view = "day"
+			if s.viewMode == "inbox" {
+				view = "inbox"
 			}
 		}
+		if view == s.viewMode {
+			return nil
+		}
+		if !s.viewWindowReady {
+			s.viewMode = view
+			return nil
+		}
+		if err := s.rememberViewWindow(w); err != nil {
+			return err
+		}
+		s.viewMode = view
+		if w.IsFullscreen() {
+			// Apply the destination's normal bounds after the OS exits fullscreen.
+			s.viewRestorePending = true
+			return nil
+		}
+		s.applyViewWindow(w)
+		return s.rememberViewWindow(w)
 	})
-	return nil
+}
+
+// ScreenManager exposes normalised DIP work areas, including Retina displays.
+func (s *TodoService) applyViewWindow(w *application.WebviewWindow) {
+	target := restoredViewBounds(s.viewMode, s.viewWindows, w.Bounds(), application.Rect{})
+	var area application.Rect
+	if screen := s.app.Screen.ScreenNearestDipRect(target); screen != nil {
+		area = screen.WorkArea
+	}
+	minW, minH := viewMinimum(s.viewMode)
+	if area.Width > 0 && area.Height > 0 {
+		minW, minH = min(minW, area.Width), min(minH, area.Height)
+	}
+	s.viewRestorePending = false
+	if w.IsMaximised() {
+		w.UnMaximise()
+	}
+	w.SetMinSize(minW, minH)
+	w.SetBounds(fitWindowBounds(target, area))
+	if s.viewWindows[s.viewMode].Maximised {
+		w.Maximise()
+	}
 }
 func (s *TodoService) WindowAction(action string) error {
 	w := s.windows["main"]
@@ -638,6 +648,7 @@ func (s *TodoService) WindowAction(action string) error {
 	case "maximize":
 		w.ToggleMaximise()
 	case "close":
+		s.savePosition("main", w)
 		w.Hide()
 	default:
 		return fmt.Errorf("未知窗口操作")
@@ -828,14 +839,60 @@ func (s *TodoService) savePosition(key string, w *application.WebviewWindow) {
 		return
 	}
 	s.mu.Unlock()
-	b := w.Bounds()
-	_ = s.core().SaveWindowBounds(todo.WindowState{Key: key, X: b.X, Y: b.Y, Width: b.Width, Height: b.Height})
+	// Sample bounds and the owning view together on the UI thread. A delayed
+	// resize callback must never write the departing view's bounds into the next one.
+	err := application.InvokeSyncWithError(func() error {
+		if key == "main" && !s.viewWindowReady {
+			return nil
+		}
+		if w.IsMinimised() || w.IsFullscreen() {
+			return nil
+		}
+		if key == "main" {
+			if s.viewRestorePending {
+				s.applyViewWindow(w)
+			}
+			if err := s.rememberViewWindow(w); err != nil {
+				return err
+			}
+		}
+		if w.IsMaximised() {
+			return nil
+		}
+		b := w.Bounds()
+		return s.core().SaveWindowBounds(todo.WindowState{Key: key, X: b.X, Y: b.Y, Width: b.Width, Height: b.Height})
+	})
+	if err != nil {
+		s.app.Event.Emit("todo:error", "保存窗口位置失败："+err.Error())
+	}
 }
+
+// Only called on the native UI thread, including during view transitions.
+func (s *TodoService) rememberViewWindow(w *application.WebviewWindow) error {
+	if s.core() == nil || !s.viewWindowReady || s.viewMode == "" || w.IsMinimised() || w.IsFullscreen() {
+		return nil
+	}
+	if s.viewWindows == nil {
+		s.viewWindows = map[string]todo.ViewWindowState{}
+	}
+	state := capturedViewWindow(s.viewMode, s.viewWindows, w.Bounds(), w.IsMaximised())
+	if previous, ok := s.viewWindows[s.viewMode]; ok && previous == state {
+		return nil
+	}
+	if err := s.core().SaveViewWindow(state); err != nil {
+		return err
+	}
+	s.viewWindows[s.viewMode] = state
+	return nil
+}
+
 func (s *TodoService) setupWindows(background bool) {
 	states := []todo.WindowState{}
 	if s.core() != nil {
 		states, _ = s.core().Windows()
+		s.viewWindows, _ = s.core().ViewWindows()
 	}
+	s.viewMode = "day"
 	saved := map[string]todo.WindowState{}
 	for _, w := range states {
 		saved[w.Key] = w
@@ -860,12 +917,55 @@ func (s *TodoService) setupWindows(background bool) {
 			}
 			options.AlwaysOnTop = state.Mode == "top"
 		}
+		if state, ok := s.viewWindows["day"]; ok {
+			bounds := viewBounds(state)
+			var area application.Rect
+			if screen := s.app.Screen.ScreenNearestDipRect(bounds); screen != nil {
+				area = screen.WorkArea
+			}
+			bounds = restoredViewBounds("day", s.viewWindows, bounds, area)
+			options.Width, options.Height = bounds.Width, bounds.Height
+			options.X, options.Y = bounds.X, bounds.Y
+			options.InitialPosition = application.WindowXY
+			if area.Width > 0 && area.Height > 0 {
+				options.MinWidth, options.MinHeight = min(400, area.Width), min(440, area.Height)
+			}
+			if state.Maximised {
+				options.StartState = application.WindowStateMaximised
+			}
+		}
 		w := s.app.Window.NewWithOptions(options)
 		s.windows[key] = w
 		windowKey := key
+		w.OnWindowEvent(events.Common.WindowRuntimeReady, func(ev *application.WindowEvent) {
+			application.InvokeAsync(func() {
+				if s.viewWindows == nil {
+					s.viewWindows = map[string]todo.ViewWindowState{}
+				}
+				if _, ok := s.viewWindows["day"]; !ok {
+					// Migrate the original window geometry; new users keep the OS-centred position.
+					initial := w.Bounds()
+					initial.Width, initial.Height = options.Width, options.Height
+					s.viewWindows["day"] = capturedViewWindow("day", nil, initial, w.IsMaximised())
+					if s.core() != nil {
+						if err := s.core().SaveViewWindow(s.viewWindows["day"]); err != nil {
+							s.app.Event.Emit("todo:error", "保存窗口位置失败："+err.Error())
+						}
+					}
+				}
+				// Wails' initial native frame may be one DIP smaller on macOS.
+				// Restore before recording native events to prevent shrinkage on every restart.
+				s.applyViewWindow(w)
+				s.viewWindowReady = true
+				s.savePosition(windowKey, w)
+			})
+		})
 		w.RegisterHook(events.Common.WindowClosing, func(ev *application.WindowEvent) { ev.Cancel(); w.Hide(); go s.savePosition(windowKey, w) })
 		w.OnWindowEvent(events.Common.WindowDidMove, func(ev *application.WindowEvent) { go s.savePosition(windowKey, w) })
 		w.OnWindowEvent(events.Common.WindowDidResize, func(ev *application.WindowEvent) { go s.savePosition(windowKey, w) })
+		w.OnWindowEvent(events.Common.WindowUnFullscreen, func(ev *application.WindowEvent) { go s.savePosition(windowKey, w) })
+		w.OnWindowEvent(events.Common.WindowMaximise, func(ev *application.WindowEvent) { go s.savePosition(windowKey, w) })
+		w.OnWindowEvent(events.Common.WindowUnMaximise, func(ev *application.WindowEvent) { go s.savePosition(windowKey, w) })
 		if state, ok := saved[key]; ok && state.Mode == "desktop" {
 			w.OnWindowEvent(events.Common.WindowRuntimeReady, func(ev *application.WindowEvent) {
 				application.InvokeAsync(func() {
@@ -877,7 +977,13 @@ func (s *TodoService) setupWindows(background bool) {
 		}
 	}
 }
-func (s *TodoService) Quit()        { s.forceQuit.Store(true); s.app.Quit() }
+func (s *TodoService) Quit() {
+	if w := s.windows["main"]; w != nil {
+		s.savePosition("main", w)
+	}
+	s.forceQuit.Store(true)
+	s.app.Quit()
+}
 func (s *TodoService) requestQuit() { _ = s.ShowWindow("main"); s.app.Event.Emit("todo:quit-request") }
 
 func (s *TodoService) CopyTasks(q todo.Query, ids []string) (string, error) {
