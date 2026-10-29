@@ -56,9 +56,6 @@ func (e *Engine) Promote(c Command, revision string) ([]Task, error) {
 	if fmt.Sprint(root.Version) != c.ExpectedVersion {
 		return nil, fail("CONFLICT", "任务已变化，请刷新后重试")
 	}
-	if node.Status != "pending" {
-		return nil, fail("VALIDATION_ERROR", "仅未完成任务可以拖动")
-	}
 	branch := descendants(tree, node.ID)
 	previous := map[string]Task{}
 	for id, t := range tree {

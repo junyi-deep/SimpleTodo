@@ -413,7 +413,7 @@ async function migrate() {
             <dt>添加任意层级子任务</dt>
             <dd>Shift + Enter</dd>
             <dt>缩进 / 提升子树</dt>
-            <dd>⌘ / Ctrl + ] / [</dd>
+            <dd>⌘ / Ctrl + ] / [；Shift + Tab 提升一级</dd>
             <dt>编辑 / 切换完成</dt>
             <dd>Enter / Space</dd>
             <dt>展开 / 折叠 / 导航</dt>

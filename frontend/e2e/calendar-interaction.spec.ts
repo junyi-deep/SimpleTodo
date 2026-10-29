@@ -101,7 +101,11 @@ test("日历显示全部任务并内部滚动，蓝底白字，日期清单和�
   await page.getByRole("button", { name: first.date, exact: true }).click();
   const drawer = page.getByLabel("日期任务抽屉", { exact: true });
   await expect(drawer.locator("[data-node]")).toHaveCount(40);
-  await drawer.getByRole("button", { name: first.title, exact: true }).click();
+  await drawer.locator(`[data-node="${first.id}"]`).hover();
+  await drawer
+    .locator(`[data-node="${first.id}"]`)
+    .getByLabel("任务设置", { exact: true })
+    .click();
   const details = drawer.getByRole("region", {
     name: "任务详细设置",
     exact: true,
@@ -197,7 +201,10 @@ test("抽屉详情保留冲突草稿，取消离开不会关闭编辑", async ({
   });
   await details.getByLabel("任务标题", { exact: true }).fill("保留我的草稿");
   await page.getByRole("button", { name: "关闭日期任务", exact: true }).click();
-  await page.locator(".component-confirmation").getByRole("button", { name: "取消", exact: true }).click();
+  await page
+    .locator(".component-confirmation")
+    .getByRole("button", { name: "取消", exact: true })
+    .click();
   await expect(details).toBeVisible();
   await expect(details.getByLabel("任务标题", { exact: true })).toHaveValue(
     "保留我的草稿",

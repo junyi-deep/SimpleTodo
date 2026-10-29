@@ -14,7 +14,6 @@ const props = defineProps<{
   date: string | null;
   editing?: string;
   batch?: boolean;
-  detailsOnClick?: boolean;
 }>();
 const emit = defineEmits<{
   edit: [Task | null];
@@ -120,7 +119,6 @@ onUnmounted(() => {
           <TaskTree
             :root="t"
             :peers="roots"
-            :details-on-click="detailsOnClick"
             :editing="editing"
             @edit="emit('edit', $event)"
             @drag="emit('drag', $event)"

@@ -107,6 +107,23 @@ function key(e: KeyboardEvent) {
     e.preventDefault();
     e.stopPropagation();
     cancel();
+  } else if (e.key === "Tab" && e.shiftKey) {
+    if (!base?.parentId && !props.parentTask && !props.afterTask?.parentId)
+      return;
+    e.preventDefault();
+    e.stopPropagation();
+    focusAfter = false;
+    continueAfterSave = false;
+    void commit().then(async (ok) => {
+      if (ok && savedID) {
+        await nextTick();
+        document.dispatchEvent(
+          new CustomEvent("todo:outdent-task", {
+            detail: { id: savedID },
+          }),
+        );
+      }
+    });
   } else if (
     e.key === "Enter" ||
     (e.key === "Tab" && s.boot?.settings.tabEntry === "true")

@@ -1272,7 +1272,6 @@ onUnmounted(() => {
             />
             <TaskList
               v-else
-              details-on-click
               :roots="roots"
               :date="activeDay"
               @edit="chooseEditor"

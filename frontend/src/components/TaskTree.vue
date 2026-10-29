@@ -32,7 +32,6 @@ const props = defineProps<{
   peers?: Task[];
   compact?: boolean;
   editing?: string;
-  detailsOnClick?: boolean;
 }>();
 const emit = defineEmits<{
   edit: [Task | null];
@@ -164,10 +163,6 @@ function toggle(id: string) {
   expanded.value = next;
 }
 async function titleClick(t: Task) {
-  if (props.detailsOnClick) {
-    emit("edit", t);
-    return;
-  }
   if (s.titleEditing === t.id || !(await canLeaveEditor())) return;
   s.activeTask = t.id;
   s.titleEditing = t.id;
@@ -224,11 +219,27 @@ async function siblingRequested(e: Event) {
   await nextTick();
   sibling.value = t;
 }
+const siblingAnchor = computed(() => {
+  const at = rows.value.findIndex((r) => r.task.id === sibling.value?.id);
+  if (at < 0) return null;
+  const depth = rows.value[at].depth;
+  let last = rows.value[at].task.id;
+  for (const next of rows.value.slice(at + 1)) {
+    if (next.depth <= depth) break;
+    last = next.task.id;
+  }
+  return { afterId: last, depth };
+});
+async function outdentRequested(e: Event) {
+  const t = index.value.get((e as CustomEvent).detail.id);
+  if (t?.parentId) await indent(t, true);
+}
 onMounted(() => {
   document.addEventListener("pointerdown", outside);
   document.addEventListener("todo:add-child", addRequested);
   document.addEventListener("todo:reveal-task", revealRequested);
   document.addEventListener("todo:new-sibling", siblingRequested);
+  document.addEventListener("todo:outdent-task", outdentRequested);
 });
 onUnmounted(() => {
   resetDelete();
@@ -236,6 +247,7 @@ onUnmounted(() => {
   document.removeEventListener("todo:add-child", addRequested);
   document.removeEventListener("todo:reveal-task", revealRequested);
   document.removeEventListener("todo:new-sibling", siblingRequested);
+  document.removeEventListener("todo:outdent-task", outdentRequested);
 });
 async function add(t: Task) {
   const ancestors = [t.id];
@@ -262,13 +274,26 @@ async function add(t: Task) {
   await nextTick();
 }
 async function indent(t: Task, out = false) {
+  if (!(await canLeaveEditor())) return;
+  t = s.taskMap.get(t.id) || t;
   if (!t.parentId) return;
   let parent: string | undefined,
     before = "";
   if (out) {
     const p = index.value.get(t.parentId);
     if (!p?.parentId) {
-      s.inform("已是根任务的直属子任务");
+      const roots = s.snapshot.tasks
+        .filter((n) => !n.parentId && n.status !== "skipped")
+        .sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
+      const at = roots.findIndex((n) => n.id === t.rootId);
+      const moved = await s.run(() =>
+        api(
+          "Promote",
+          { ...s.command(t), beforeId: roots[at + 1]?.id || "" },
+          s.snapshot.revision,
+        ),
+      );
+      if (moved) await focusTask(t.id);
       return;
     }
     parent = p.parentId;
@@ -284,10 +309,16 @@ async function indent(t: Task, out = false) {
     }
     parent = peers[i - 1].id;
   }
-  await s.run(() =>
+  const moved = await s.run(() =>
     api("Reparent", { ...s.command(t), parentId: parent, beforeId: before }),
   );
   if (parent) expanded.value = new Set([...expanded.value, parent]);
+  if (moved) await focusTask(t.id);
+}
+async function focusTask(id: string) {
+  s.activeTask = id;
+  await nextTick();
+  document.querySelector<HTMLElement>(`[data-node="${id}"]`)?.focus();
 }
 async function keydown(e: KeyboardEvent, t: Task) {
   if (e.key === "Escape" && deletePending.value) {
@@ -314,6 +345,15 @@ async function keydown(e: KeyboardEvent, t: Task) {
         detail: { id: t.id, rootId: t.rootId },
       }),
     );
+  } else if (
+    e.key === "Tab" &&
+    e.shiftKey &&
+    t.parentId &&
+    e.target === e.currentTarget
+  ) {
+    e.preventDefault();
+    e.stopPropagation();
+    await indent(t, true);
   } else if (e.key === " ") {
     e.preventDefault();
     await s.complete(t);
@@ -660,13 +700,13 @@ async function dropNode(e: DragEvent, t: Task) {
           </div>
         </div>
         <div
-          v-if="sibling?.id === t.id"
+          v-if="sibling && siblingAnchor?.afterId === t.id"
           class="draft-task-row sibling-task-row"
-          :style="{ paddingLeft: `${depth * 22 + 31}px` }"
+          :style="{ paddingLeft: `${siblingAnchor.depth * 22 + 31}px` }"
         >
           <span class="draft-check" /><InlineTitle
-            :key="t.id"
-            :after-task="t"
+            :key="sibling.id"
+            :after-task="sibling"
             @done="sibling = undefined"
           />
         </div>
