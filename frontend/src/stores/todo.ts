@@ -35,13 +35,47 @@ export const useTodo = defineStore("todo", () => {
     titleEditing = ref(""),
     rules = ref<Rule[]>([]),
     sortMode = ref("manual"),
-    depthPreview = ref<number | null>(null);
+    depthPreview = ref<number | null>(null),
+    expansion = ref<Record<string, boolean>>({});
+  let expansionQueue = Promise.resolve();
+  function taskDepth(t: Task) {
+    let depth = 0;
+    while (t.parentId && depth < 200) {
+      depth++;
+      const p = taskMap.value.get(t.parentId);
+      if (!p) break;
+      t = p;
+    }
+    return depth;
+  }
+  function isExpanded(t: Task) {
+    return depthPreview.value !== null
+      ? taskDepth(t) < expandDepth.value - 1
+      : (expansion.value[t.id] ?? taskDepth(t) < expandDepth.value - 1);
+  }
+  function saveExpansion(patch: Record<string, boolean>) {
+    expansion.value = { ...expansion.value, ...patch };
+    expansionQueue = expansionQueue
+      .catch(() => {})
+      .then(() => api("SaveTaskExpansion", patch));
+    return expansionQueue.catch((e) => {
+      error.value = "展开状态未保存：" + message(e);
+    });
+  }
+  async function resetExpansion(depth = expandDepth.value) {
+    await saveExpansion(
+      Object.fromEntries(
+        snapshot.value.tasks.map((t) => [t.id, taskDepth(t) < depth - 1]),
+      ),
+    );
+  }
   const expandDepth = computed(
     () => depthPreview.value ?? Number(boot.value?.settings.expandDepth || 2),
   );
   async function setExpandDepth(value: number) {
     try {
       await setting("expandDepth", String(value));
+      await resetExpansion(value);
     } finally {
       depthPreview.value = null;
     }
@@ -382,6 +416,9 @@ export const useTodo = defineStore("todo", () => {
   async function init() {
     try {
       await metadata();
+      expansion.value = boot.value?.startupError
+        ? {}
+        : await api<Record<string, boolean>>("TaskExpansion");
       await load();
       subscriptions.push(
         await listen("todo:changed", () => {
@@ -429,6 +466,9 @@ export const useTodo = defineStore("todo", () => {
     expandDepth,
     depthPreview,
     setExpandDepth,
+    isExpanded,
+    saveExpansion,
+    resetExpansion,
     dropProjected,
     query,
     roots,

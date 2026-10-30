@@ -684,118 +684,6 @@ func (e *Engine) CommitImport(token string) error {
 	e.signal()
 	return nil
 }
-func (e *Engine) PreviewBatch(ids []string, action, revision string) (Preview, error) {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	if !contains([]string{"complete", "pending", "delete"}, action) {
-		return Preview{}, fail("VALIDATION_ERROR", "未知批量操作")
-	}
-	var rev string
-	if err := e.db.QueryRow("SELECT value FROM app_meta WHERE key='revision'").Scan(&rev); err != nil {
-		return Preview{}, err
-	}
-	if rev != revision {
-		return Preview{}, fail("CONFLICT", "列表已更新")
-	}
-	set := map[string]bool{}
-	tasks := []Task{}
-	for _, id := range ids {
-		if set[id] {
-			continue
-		}
-		set[id] = true
-		rows, err := e.db.Query("SELECT "+columns+" FROM tasks WHERE root_id=?", id)
-		if err != nil {
-			return Preview{}, err
-		}
-		ts, err := readTasks(rows)
-		if err != nil {
-			return Preview{}, err
-		}
-		if len(ts) == 0 {
-			return Preview{}, fail("NOT_FOUND", "所选根任务不存在，请重新选择")
-		}
-		m := map[string]Task{}
-		for _, t := range ts {
-			m[t.ID] = t
-		}
-		tasks = append(tasks, sortedTree(m)...)
-	}
-	if len(tasks) == 0 {
-		return Preview{}, fail("VALIDATION_ERROR", "请先选择任务")
-	}
-	token := ID()
-	e.previews[token] = pendingImport{Data: Transfer{Tasks: tasks, AppVersion: action}, Expires: e.now().Add(5 * time.Minute), Revision: rev}
-	return Preview{Token: token, Tasks: tasks, Roots: len(set), Nodes: len(tasks), Warnings: []string{"批量操作将影响所有层级子任务；重复任务仅影响本次"}}, nil
-}
-func (e *Engine) CommitBatch(token string) error {
-	e.mu.Lock()
-	defer e.mu.Unlock()
-	p, ok := e.previews[token]
-	if !ok || e.now().After(p.Expires) {
-		return fail("PREVIEW_EXPIRED", "请重新预览")
-	}
-	tx, err := e.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	var rev string
-	if err = tx.QueryRow("SELECT value FROM app_meta WHERE key='revision'").Scan(&rev); err != nil {
-		return err
-	}
-	if rev != p.Revision {
-		return fail("CONFLICT", "数据已经变化")
-	}
-	for _, t := range p.Data.Tasks {
-		if p.Data.AppVersion == "delete" {
-			if t.ParentID != nil {
-				continue
-			}
-			if t.SeriesID == nil {
-				if _, err = tx.Exec("DELETE FROM tasks WHERE id=?", t.ID); err != nil {
-					return err
-				}
-			} else {
-				t.Status = "skipped"
-				t.CompletedAt = nil
-				t.RemindAt = nil
-				t.Version++
-				if err = putTask(tx, t); err != nil {
-					return err
-				}
-				if _, err = tx.Exec("DELETE FROM tasks WHERE root_id=? AND parent_id IS NOT NULL", t.ID); err != nil {
-					return err
-				}
-			}
-			if _, err = tx.Exec("UPDATE notification_jobs SET state='cancelled' WHERE source_type='task' AND source_id=? AND state='pending'", t.ID); err != nil {
-				return err
-			}
-		} else {
-			t = setState(t, p.Data.AppVersion == "complete", e.now().UnixMilli())
-			t.Version++
-			if t.ParentID == nil && t.SeriesID != nil {
-				t.Exception = true
-			}
-			if err = putTask(tx, t); err != nil {
-				return err
-			}
-			if t.ParentID == nil {
-				if err = syncReminder(tx, t, e.now().UnixMilli()); err != nil {
-					return err
-				}
-			}
-		}
-	}
-	if err = revisionTx(tx); err != nil {
-		return err
-	}
-	if err = tx.Commit(); err == nil {
-		delete(e.previews, token)
-		e.signal()
-	}
-	return err
-}
 func (e *Engine) SaveHolidayData(content string) error {
 	if len(content) > 2*1024*1024 {
 		return fail("VALIDATION_ERROR", "节假日文件过大")
@@ -949,7 +837,7 @@ func checkBackup(path string) error {
 		return fail("IO_ERROR", "备份完整性校验失败")
 	}
 	var version int
-	if err = db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); err != nil || version != 1 {
+	if err = db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); err != nil || version < 1 || version > 2 {
 		return fail("SCHEMA_ERROR", "不支持的备份版本")
 	}
 	rows, err := db.Query("PRAGMA foreign_key_check")

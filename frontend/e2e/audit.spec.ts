@@ -39,7 +39,8 @@ test("行内编辑仍固定版本并支持冲突后显式重试", async ({ page,
 test("重复模板使用行内编辑器和自定义周期下拉", async ({ page, request }) => {
   const t = await root(request, unique("每天复盘"));
   await page.goto("/?preview=1");
-  await row(page, t.title).hover();
+  // Keyboard focus keeps actions visible while an accumulated list scrolls.
+  await row(page, t.title).getByLabel("任务设置").focus();
   await row(page, t.title).getByLabel("任务设置").click();
   const editor = page.locator(".task-settings-dialog");
   await select(page, "不重复", "每日");

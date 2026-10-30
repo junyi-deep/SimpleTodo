@@ -2158,3 +2158,26 @@ button:focus-visible {box-shadow:inset 0 0 0 1px var(--muted);}
 .depth-popover input[type="range"] {width:100%;margin:0;accent-color:var(--accent);}
 .depth-scale {display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-top:7px;}
 .drag-handle { -webkit-user-drag:none;user-select:none;touch-action:none; }
+
+/* The weekday label and its date column share the same centre. */
+.compact-app .month-weekdays {text-align:center;padding-inline:1px;}
+.compact-app .month-weekdays > span {padding-right:0;}
+.compact-app .task-row .task-select {appearance:none;box-sizing:border-box;flex:0 0 16px;width:16px;min-width:16px;height:15px;padding:0;margin:4px 2px 0 0;align-self:flex-start;border:1.25px solid color-mix(in srgb,var(--muted) 65%,transparent);border-radius:4px;background:var(--surface);display:grid;place-items:center;}
+.compact-app .task-select:checked {background:var(--accent);border-color:var(--accent);}
+.compact-app .task-select:checked::after {content:"";width:4px;height:8px;border:solid var(--surface);border-width:0 1.8px 1.8px 0;transform:translateY(-1px) rotate(45deg);}
+.timeline-days {position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));flex:1;min-width:0;overflow:hidden;}
+.timeline-days .week-date {min-width:0;touch-action:pan-y;user-select:none;}
+.timeline-date-label {display:flex;align-items:center;justify-content:center;gap:5px;white-space:nowrap;pointer-events:none;}
+.is-scrubbing,.is-scrubbing .week-date {cursor:ew-resize;}
+.local-calendar-settings {padding:0 0 18px;margin-bottom:18px;border-bottom:1px solid var(--border);}
+.local-calendar-settings p {line-height:1.6;}
+.local-calendar-choices {display:flex;flex-direction:column;gap:10px;margin:12px 0;}
+.local-calendar-choices label {display:flex;gap:8px;align-items:center;font-size:12px;}
+.local-calendar-choices small {margin-left:auto;}
+.local-calendar-event {font-variant-numeric:tabular-nums;}
+.local-day-events {padding:12px 16px;border-top:1px solid var(--border);max-height:40%;overflow:auto;flex-shrink:0;}
+.local-day-events h3 {font-size:12px;color:var(--muted);margin:0 0 8px;}
+.local-day-events button {display:flex;gap:10px;width:100%;text-align:left;padding:7px 0;font-size:12px;}
+.local-day-events span,.local-event-details h2 {overflow-wrap:anywhere;}
+.local-day-events small {color:var(--muted);white-space:nowrap;}
+.calendar-read-error {font-size:11px;color:var(--danger);margin:4px 14px;}

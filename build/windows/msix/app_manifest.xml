@@ -10,7 +10,7 @@
   <Identity 
     Name="com.junyi.simpletodo"
     Publisher="CN=My Company"
-    Version="0.1.8.0"
+    Version="0.1.9.0"
     ProcessorArchitecture="arm64" />
   
   <Properties>

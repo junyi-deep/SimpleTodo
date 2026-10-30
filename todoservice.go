@@ -21,6 +21,7 @@ import (
 
 type TodoService struct {
 	proxyMu            sync.Mutex
+	calendarMu         sync.Mutex
 	downloading        atomic.Bool
 	forceQuit          atomic.Bool
 	maintenance        atomic.Bool
@@ -106,6 +107,18 @@ func (s *TodoService) Create(c todo.Command) ([]todo.Task, error) {
 		return nil, fmt.Errorf("MAINTENANCE: 正在维护数据，请稍后重试")
 	}
 	return s.core().Create(c)
+}
+func (s *TodoService) TaskExpansion() (map[string]bool, error) {
+	if s.core() == nil {
+		return nil, fmt.Errorf("RECOVERY_REQUIRED: 请先恢复数据库")
+	}
+	return s.core().TaskExpansion()
+}
+func (s *TodoService) SaveTaskExpansion(states map[string]bool) error {
+	if s.core() == nil {
+		return fmt.Errorf("RECOVERY_REQUIRED: 请先恢复数据库")
+	}
+	return s.core().SaveTaskExpansion(states)
 }
 func (s *TodoService) Update(c todo.Command) ([]todo.Task, error) {
 	if s.maintenance.Load() {

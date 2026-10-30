@@ -36,8 +36,9 @@ const props = defineProps<{
 const previewNodes = computed(() => {
   const tasks = preview.value?.tasks || [];
   const children = new Map<string, Task[]>();
+  const ids = new Set(tasks.map((t) => t.id));
   for (const task of tasks) {
-    const key = task.parentId || "";
+    const key = task.parentId && ids.has(task.parentId) ? task.parentId : "";
     children.set(key, [...(children.get(key) || []), task]);
   }
   const ordered: Task[] = [];
@@ -61,7 +62,7 @@ const batchVerb = computed(() =>
 );
 const confirmLabel = computed(() =>
   props.mode === "batch" && preview.value
-    ? `${batchVerb.value} ${preview.value.roots} 个根任务及其后代`
+    ? `${batchVerb.value} ${preview.value.roots} 项任务及其后代`
     : "确认执行",
 );
 restoreDialogFocus();
@@ -247,7 +248,9 @@ async function copy() {
           <Check :size="20" />
           <div>
             <strong
-              >{{ preview.roots }} 个根任务 · {{ preview.nodes }} 个节点</strong
+              >{{ preview.roots }}
+              {{ mode === "batch" ? "个所选分支" : "个根任务" }} ·
+              {{ preview.nodes }} 个节点</strong
             >
             <p v-if="mode === 'batch'">
               本次将{{ batchVerb }}这些任务及其全部后代。{{

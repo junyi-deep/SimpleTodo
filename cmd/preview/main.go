@@ -87,7 +87,21 @@ func main() {
 			return err
 		}
 		return e.EnsureThrough(time.Now().AddDate(0, 0, 7).Format("2006-01-02"))
-	}, "Rules": e.Rules, "StopFollowing": e.StopFollowing, "Settings": e.SaveSettings, "Focus": e.FocusAction, "SaveCountdown": e.SaveCountdown, "ToggleCountdown": e.ToggleCountdown, "DeleteCountdown": e.DeleteCountdown, "DismissNotices": e.DismissNotices, "Holidays": e.Holidays, "PreviewImport": e.PreviewImport, "CommitImport": e.CommitImport, "PreviewBatch": e.PreviewBatch, "CommitBatch": e.CommitBatch, "PreviewPaste": e.PreviewPaste, "CopyTasks": e.CopyTasks, "Export": e.Export, "Backups": e.Backups, "Backup": e.CreateBackup, "Restore": e.Restore, "Permission": func() (bool, error) {
+	}, "LocalCalendarState": func(from, to string) (todo.LocalCalendarState, error) {
+		a, er := time.Parse("2006-01-02", from)
+		if er != nil {
+			return todo.LocalCalendarState{}, er
+		}
+		b, er := time.Parse("2006-01-02", to)
+		if er != nil {
+			return todo.LocalCalendarState{}, er
+		}
+		return e.LocalCalendarState(a.UnixMilli(), b.AddDate(0, 0, 1).UnixMilli())
+	}, "SyncLocalCalendar": func(from, to string) (todo.LocalCalendarState, error) {
+		a, _ := time.Parse("2006-01-02", from)
+		b, _ := time.Parse("2006-01-02", to)
+		return e.LocalCalendarState(a.UnixMilli(), b.AddDate(0, 0, 1).UnixMilli())
+	}, "LocalCalendarSources": func() ([]string, error) { return nil, fmt.Errorf("本机日历读取需要在桌面应用中使用") }, "TaskExpansion": e.TaskExpansion, "SaveTaskExpansion": e.SaveTaskExpansion, "Rules": e.Rules, "StopFollowing": e.StopFollowing, "Settings": e.SaveSettings, "Focus": e.FocusAction, "SaveCountdown": e.SaveCountdown, "ToggleCountdown": e.ToggleCountdown, "DeleteCountdown": e.DeleteCountdown, "DismissNotices": e.DismissNotices, "Holidays": e.Holidays, "PreviewImport": e.PreviewImport, "CommitImport": e.CommitImport, "PreviewBatch": e.PreviewBatch, "CommitBatch": e.CommitBatch, "PreviewPaste": e.PreviewPaste, "CopyTasks": e.CopyTasks, "Export": e.Export, "Backups": e.Backups, "Backup": e.CreateBackup, "Restore": e.Restore, "Permission": func() (bool, error) {
 		return false, fmt.Errorf("浏览器预览不申请系统通知权限，请运行桌面应用")
 	}, "Boot": func() (map[string]any, error) {
 		settings, err := e.Settings()

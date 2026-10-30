@@ -103,7 +103,7 @@ func (e *Engine) openDB() error {
 		}
 	} else {
 		var version int
-		if er := db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); er != nil || version != 1 {
+		if er := db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); er != nil || version < 1 || version > 2 {
 			db.Close()
 			return fail("SCHEMA_ERROR", "数据库版本不受当前版本支持，请保留原文件")
 		}
@@ -113,6 +113,50 @@ func (e *Engine) openDB() error {
 		if er := db.QueryRow("SELECT checksum FROM schema_migrations WHERE version=1").Scan(&checksum); er != nil || checksum != want {
 			db.Close()
 			return fail("SCHEMA_ERROR", "迁移校验不匹配，请保留数据库并使用匹配版本恢复")
+		}
+	}
+	var version int
+	if err = db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); err != nil {
+		db.Close()
+		return err
+	}
+	data, _ := migrations.ReadFile("migrations/002_interaction_calendar.sql")
+	checksum := fmt.Sprintf("%x", sha256.Sum256(data))
+	if version == 1 {
+		if n != 0 {
+			backupDir := filepath.Join(e.Dir, "backups")
+			if err = os.MkdirAll(backupDir, 0700); err != nil {
+				db.Close()
+				return err
+			}
+			path := filepath.Join(backupDir, "pre-schema-v2-"+e.now().UTC().Format("20060102T150405.000000000")+".db")
+			if _, err = db.Exec("VACUUM INTO ?", path); err != nil {
+				db.Close()
+				return fmt.Errorf("升级前备份失败：%w", err)
+			}
+		}
+		tx, er := db.Begin()
+		if er != nil {
+			db.Close()
+			return er
+		}
+		if _, er = tx.Exec(string(data)); er == nil {
+			_, er = tx.Exec("INSERT INTO schema_migrations VALUES(2,?,?)", checksum, e.now().UnixMilli())
+		}
+		if er != nil {
+			tx.Rollback()
+			db.Close()
+			return er
+		}
+		if er = tx.Commit(); er != nil {
+			db.Close()
+			return er
+		}
+	} else {
+		var actual string
+		if er := db.QueryRow("SELECT checksum FROM schema_migrations WHERE version=2").Scan(&actual); er != nil || actual != checksum {
+			db.Close()
+			return fail("SCHEMA_ERROR", "迁移校验不匹配，请保留数据库")
 		}
 	}
 	e.db = db

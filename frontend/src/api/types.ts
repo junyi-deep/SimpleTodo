@@ -23,6 +23,25 @@ export interface Task {
   createdAt: number;
   updatedAt: number;
 }
+export interface LocalCalendarSource {
+  id: string;
+  name: string;
+  source: string;
+}
+export interface LocalCalendarEvent {
+  id: string;
+  calendarId: string;
+  title: string;
+  location: string;
+  start: number;
+  end: number;
+  allDay: boolean;
+}
+export interface LocalCalendarState {
+  sources: string[];
+  lastSync: number;
+  events: LocalCalendarEvent[];
+}
 export interface Query {
   view: string;
   date: string;

@@ -32,6 +32,7 @@ const props = defineProps<{
   peers?: Task[];
   compact?: boolean;
   editing?: string;
+  batch?: boolean;
 }>();
 const emit = defineEmits<{
   edit: [Task | null];
@@ -39,9 +40,19 @@ const emit = defineEmits<{
   drop: [Task, DragEvent, "before" | "after" | "inside", string];
 }>();
 const s = useTodo(),
-  expanded = ref(new Set<string>()),
+  expanded = computed({
+    get: () =>
+      new Set(nodes.value.filter((t) => s.isExpanded(t)).map((t) => t.id)),
+    set: (next: Set<string>) => {
+      const patch = Object.fromEntries(
+        nodes.value
+          .filter((t) => expanded.value.has(t.id) !== next.has(t.id))
+          .map((t) => [t.id, next.has(t.id)]),
+      );
+      if (Object.keys(patch).length) void s.saveExpansion(patch);
+    },
+  }),
   adding = ref<string | null>(null),
-  childDraft = ref<{ afterId: string; depth: number } | null>(null),
   sibling = ref<Task>(),
   placement = ref<Task | null>(null),
   reminding = ref(false),
@@ -90,34 +101,24 @@ const rows = computed(() => {
   walk(props.root, 0);
   return out;
 });
-let seenNodes = new Set<string>();
-function defaultExpansion() {
-  const next = new Set(expanded.value);
-  for (const t of nodes.value) {
-    if (seenNodes.has(t.id)) continue;
-    seenNodes.add(t.id);
-    let depth = 0,
-      cur = t;
-    while (cur.parentId && depth < 200) {
-      depth++;
-      const p = index.value.get(cur.parentId);
-      if (!p) break;
-      cur = p;
-    }
-    if (depth < s.expandDepth - 1) next.add(t.id);
+const childDraft = ref<{ afterId: string; depth: number } | null>(null);
+function draftAnchor(id: string) {
+  const parent = rows.value.find((r) => r.task.id === id);
+  if (!parent) return null;
+  let last = parent.task.id;
+  for (const next of rows.value.slice(rows.value.indexOf(parent) + 1)) {
+    if (next.depth <= parent.depth) break;
+    if (
+      s.boot?.settings.completedBottom === "true" &&
+      next.depth === parent.depth + 1 &&
+      next.task.status === "completed"
+    )
+      break;
+    last = next.task.id;
   }
-  expanded.value = next;
+  return { afterId: last, depth: parent.depth + 1 };
 }
-watch(
-  () => s.expandDepth,
-  () => {
-    seenNodes = new Set();
-    expanded.value = new Set();
-    defaultExpansion();
-  },
-  { immediate: true },
-);
-watch(nodes, defaultExpansion, { immediate: true });
+
 function movablePeers(t: Task) {
   return (t.parentId ? children(t.parentId) : props.peers || s.roots).filter(
     (t) => t.status === "pending",
@@ -163,6 +164,12 @@ function toggle(id: string) {
   expanded.value = next;
 }
 async function titleClick(t: Task) {
+  if (props.batch) {
+    s.selected = s.selected.includes(t.id)
+      ? s.selected.filter((id) => id !== t.id)
+      : [...s.selected, t.id];
+    return;
+  }
   if (s.titleEditing === t.id || !(await canLeaveEditor())) return;
   s.activeTask = t.id;
   s.titleEditing = t.id;
@@ -262,13 +269,7 @@ async function add(t: Task) {
     return;
   }
   expanded.value = new Set([...expanded.value, ...ancestors]);
-  const row = rows.value.find((r) => r.task.id === t.id)!;
-  let afterId = t.id;
-  for (const next of rows.value.slice(rows.value.indexOf(row) + 1)) {
-    if (next.depth <= row.depth) break;
-    afterId = next.task.id;
-  }
-  childDraft.value = { afterId, depth: row.depth + 1 };
+  childDraft.value = draftAnchor(t.id);
   adding.value = t.id;
   sibling.value = undefined;
   await nextTick();
@@ -509,7 +510,7 @@ async function dropNode(e: DragEvent, t: Task) {
             root: !t.parentId,
             'is-dragging': draggedId === t.id,
             'drop-target': dropHint === t.id,
-            selected: s.activeTask === t.id,
+            selected: batch ? s.selected.includes(t.id) : s.activeTask === t.id,
           }"
           :style="{ '--depth': Math.min(depth, 5) }"
           role="group"
@@ -546,6 +547,19 @@ async function dropNode(e: DragEvent, t: Task) {
           @dragover.prevent="dropHint = t.id"
           @drop.stop="dropNode($event, t)"
         >
+          <input
+            v-if="batch"
+            type="checkbox"
+            class="task-select"
+            :class="{ 'root-select': !t.parentId }"
+            :aria-label="'选择 ' + t.title"
+            :checked="s.selected.includes(t.id)"
+            @change="
+              s.selected = s.selected.includes(t.id)
+                ? s.selected.filter((id) => id !== t.id)
+                : [...s.selected, t.id]
+            "
+          />
           <span
             class="drag-handle"
             :draggable="false"

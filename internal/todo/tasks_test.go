@@ -327,7 +327,7 @@ func TestBackupRestoreAndIndexes(t *testing.T) {
 		t.Fatal(err)
 	}
 	var indexes int
-	if err = e.db.QueryRow("SELECT count(*) FROM sqlite_schema WHERE type='index' AND sql IS NOT NULL").Scan(&indexes); err != nil || indexes != 13 {
+	if err = e.db.QueryRow("SELECT count(*) FROM sqlite_schema WHERE type='index' AND sql IS NOT NULL").Scan(&indexes); err != nil || indexes != 14 {
 		t.Fatal(indexes, err)
 	}
 }

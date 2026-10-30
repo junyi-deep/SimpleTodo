@@ -174,6 +174,7 @@ type Preview struct {
 	Replacing bool     `json:"replacing"`
 }
 type pendingImport struct {
+	BatchIDs []string
 	Data     Transfer
 	Expires  time.Time
 	Revision string

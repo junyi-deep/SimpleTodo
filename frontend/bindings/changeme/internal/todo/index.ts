@@ -8,6 +8,7 @@ export type {
     Countdown,
     Focus,
     Holiday,
+    LocalCalendarState,
     Preview,
     Query,
     RepeatRequest,

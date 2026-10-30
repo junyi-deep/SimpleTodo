@@ -27,12 +27,15 @@ import {
   Bell,
   AlertCircle,
   Repeat2,
+  RotateCcw,
 } from "lucide-vue-next";
 import { useTodo } from "./stores/todo";
 import { api, listen, confirmAction } from "./api";
 import {
   type Task,
   type Holiday,
+  type LocalCalendarState,
+  type LocalCalendarEvent,
   type Preview,
   dayString,
   parseDay,
@@ -52,6 +55,7 @@ import { startTaskDrag, cancelTaskDrag } from "./composables/taskDrag";
 import CustomSelect from "./components/CustomSelect.vue";
 import FocusPanel from "./components/FocusPanel.vue";
 import SettingsDialog from "./components/SettingsDialog.vue";
+import LocalEventDetails from "./components/LocalEventDetails.vue";
 import TransferDialog from "./components/TransferDialog.vue";
 const s = useTodo(),
   panel = ref("tasks"),
@@ -84,6 +88,72 @@ const s = useTodo(),
   pastedText = ref(""),
   pastedPreview = ref<Preview | null>(null);
 const stopListeners: (() => void)[] = [];
+const localCalendar = ref<LocalCalendarState>({
+    sources: [],
+    lastSync: 0,
+    events: [],
+  }),
+  localCalendarError = ref(""),
+  localEvent = ref<LocalCalendarEvent | null>(null),
+  localCalendarBusy = ref(false);
+let calendarReadRevision = 0,
+  lastCalendarAttempt = 0;
+function localEvents(day: string) {
+  const start = new Date(day + "T00:00:00").getTime(),
+    end = new Date(shiftDay(day, 1) + "T00:00:00").getTime();
+  return localCalendar.value.events.filter(
+    (e) => e.start < end && e.end > start,
+  );
+}
+function eventTime(e: LocalCalendarEvent) {
+  return e.allDay
+    ? "全天"
+    : new Date(e.start).toLocaleTimeString("zh-CN", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }) +
+        "–" +
+        new Date(e.end).toLocaleTimeString("zh-CN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+}
+async function refreshLocalCalendar() {
+  if (panel.value !== "calendar") return;
+  lastCalendarAttempt = Date.now();
+  const rev = ++calendarReadRevision;
+  const from = clamp(calendarDays.value[0]),
+    until = clamp(calendarDays.value.at(-1)!);
+  localCalendarBusy.value = true;
+  try {
+    const state = await api<LocalCalendarState>(
+      "SyncLocalCalendar",
+      from,
+      until,
+    );
+    if (rev === calendarReadRevision) {
+      localCalendar.value = state;
+      localCalendarError.value = "";
+    }
+  } catch (e) {
+    if (rev === calendarReadRevision) {
+      localCalendarError.value = e instanceof Error ? e.message : String(e);
+      try {
+        const cached = await api<LocalCalendarState>(
+          "LocalCalendarState",
+          from,
+          until,
+        );
+        if (rev === calendarReadRevision) localCalendar.value = cached;
+      } catch {}
+    }
+  } finally {
+    if (rev === calendarReadRevision) localCalendarBusy.value = false;
+  }
+}
+function calendarChanged() {
+  void refreshLocalCalendar();
+}
 let poll: ReturnType<typeof setInterval>,
   previousToday = s.date;
 const dateLabel = computed(() =>
@@ -232,6 +302,7 @@ async function loadCalendar() {
   s.date = clamp(calendarDays.value[0]);
   s.end = clamp(calendarDays.value.at(-1)!);
   await s.load();
+  void refreshLocalCalendar();
 }
 async function chooseEditor(task: Task | null) {
   if (task?.id === editor.value?.id) return;
@@ -649,8 +720,10 @@ async function keyboard(e: KeyboardEvent) {
   ) {
     e.preventDefault();
     await pasteSelection();
-  } else if (e.key === "Escape" && !editing) {
-    if (transfer.value) {
+  } else if (e.key === "Escape" && (!editing || batch.value)) {
+    if (localEvent.value) {
+      localEvent.value = null;
+    } else if (transfer.value) {
       transfer.value = null;
     } else if (settingsOpen.value) {
       settingsOpen.value = false;
@@ -662,6 +735,9 @@ async function keyboard(e: KeyboardEvent) {
       calendarMenu.value = null;
     } else if (menu.value) {
       menu.value = false;
+    } else if (batch.value) {
+      batch.value = false;
+      s.selected = [];
     } else if (drawer.value) {
       await closeDrawer();
     } else {
@@ -722,12 +798,20 @@ onMounted(async () => {
   );
   poll = setInterval(() => {
     void s.metadata().catch(() => {});
+    if (
+      panel.value === "calendar" &&
+      localCalendar.value.sources.length &&
+      !localCalendarBusy.value &&
+      Date.now() - lastCalendarAttempt > 300000
+    )
+      void refreshLocalCalendar();
     void s.load();
   }, 5000);
   document.addEventListener("keydown", keyboard);
   document.addEventListener("pointerdown", outside);
   document.addEventListener("pointerup", rangeStop);
   document.addEventListener("todo:calendar-step", dragCalendarStep);
+  document.addEventListener("todo:local-calendar-changed", calendarChanged);
   window.addEventListener("todo:confirm-error", confirmationFailed);
   matchMedia("(prefers-color-scheme: dark)").addEventListener(
     "change",
@@ -742,6 +826,7 @@ onUnmounted(() => {
   document.removeEventListener("pointerdown", outside);
   document.removeEventListener("pointerup", rangeStop);
   document.removeEventListener("todo:calendar-step", dragCalendarStep);
+  document.removeEventListener("todo:local-calendar-changed", calendarChanged);
   window.removeEventListener("todo:confirm-error", confirmationFailed);
   matchMedia("(prefers-color-scheme: dark)").removeEventListener(
     "change",
@@ -951,6 +1036,15 @@ onUnmounted(() => {
             ? `已选 ${selectedDays.length} 天 · 右键创建重复任务`
             : "拖选或 ⌘/Ctrl 点选日期"
         }}</span
+        ><button
+          v-if="localCalendar.sources.length"
+          class="icon-button"
+          :disabled="localCalendarBusy"
+          aria-label="刷新本机日程"
+          title="刷新本机日程"
+          @click="refreshLocalCalendar"
+        >
+          <RotateCcw :size="14" /></button
         ><CustomSelect
           :model-value="calendarMode"
           @update:model-value="changeCalendar('mode', $event)"
@@ -1025,7 +1119,10 @@ onUnmounted(() => {
             aria-label="展开层级"
             title="展开层级"
             :aria-expanded="depthMenu"
-            @click="depthMenu = !depthMenu"
+            @click="
+              depthMenu = !depthMenu;
+              if (depthMenu) s.resetExpansion();
+            "
           >
             <Eye :size="16" />
           </button>
@@ -1205,6 +1302,17 @@ onUnmounted(() => {
             </button>
             <CalendarTaskScroll :label="day + ' 任务'">
               <button
+                v-for="event in localEvents(day)"
+                :key="event.id"
+                class="calendar-task local-calendar-event"
+                :title="eventTime(event) + ' ' + event.title"
+                :aria-label="'查看本机日程：' + event.title"
+                @pointerdown.stop
+                @click.stop="localEvent = event"
+              >
+                {{ eventTime(event) }} {{ event.title }}
+              </button>
+              <button
                 v-for="t in calendarTasks(day)"
                 :key="t.id"
                 class="calendar-task"
@@ -1278,9 +1386,32 @@ onUnmounted(() => {
               @drag="dragging = true"
               @drop="rootDrop"
               @paste="importLines"
-            /></aside
-        ></MotionPresence>
+            />
+            <section
+              v-if="!editor && !repeatDays && localEvents(activeDay).length"
+              class="local-day-events"
+              aria-label="当天本机日程"
+            >
+              <h3>本机日程</h3>
+              <button
+                v-for="event in localEvents(activeDay)"
+                :key="event.id"
+                @click="localEvent = event"
+              >
+                <small>{{ eventTime(event) }}</small
+                ><span>{{ event.title }}</span>
+              </button>
+            </section>
+          </aside></MotionPresence
+        >
       </section>
+      <p
+        v-if="panel === 'calendar' && localCalendarError"
+        class="calendar-read-error"
+        role="alert"
+      >
+        {{ localCalendarError }}
+      </p>
       <section v-if="notices" v-motion:popover class="notice-panel">
         <header>
           <strong>错过的提醒</strong
@@ -1351,6 +1482,11 @@ onUnmounted(() => {
     v-if="confirmation"
     :key="confirmation.id"
     :request="confirmation"
+  />
+  <LocalEventDetails
+    v-if="localEvent"
+    :event="localEvent"
+    @close="localEvent = null"
   />
   <div v-if="s.maintenance" class="maintenance-mask" role="status">
     正在处理数据，请稍候…

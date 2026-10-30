@@ -259,12 +259,23 @@ test("展开子分支与根行下缘的排序占位在完整后代之后，落�
       beforeId: branch.id,
     });
     await page.goto("/?preview=1");
-    await row(page, parent.title)
-      .getByLabel("展开子任务", { exact: true })
-      .click();
-    await row(page, branch.title)
-      .getByLabel("展开子任务", { exact: true })
-      .click();
+    await expect(row(page, parent.title)).toBeVisible();
+    if (
+      await row(page, parent.title)
+        .getByLabel("展开子任务", { exact: true })
+        .count()
+    )
+      await row(page, parent.title)
+        .getByLabel("展开子任务", { exact: true })
+        .click();
+    if (
+      await row(page, branch.title)
+        .getByLabel("展开子任务", { exact: true })
+        .count()
+    )
+      await row(page, branch.title)
+        .getByLabel("展开子任务", { exact: true })
+        .click();
     const src = page.locator(`[data-node="${source.id}"] .drag-handle`),
       dst = page.locator(`[data-node="${target.id}"]`);
     await row(page, source.title).hover();

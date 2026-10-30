@@ -104,20 +104,9 @@ onUnmounted(() => {
     >
       <div v-for="t in roots" :key="t.id" class="root-entry">
         <div class="selectable-root">
-          <input
-            v-if="batch"
-            class="root-select"
-            type="checkbox"
-            :aria-label="'选择 ' + t.title"
-            :checked="s.selected.includes(t.id)"
-            @change="
-              s.selected = s.selected.includes(t.id)
-                ? s.selected.filter((x) => x !== t.id)
-                : [...s.selected, t.id]
-            "
-          />
           <TaskTree
             :root="t"
+            :batch="batch"
             :peers="roots"
             :editing="editing"
             @edit="emit('edit', $event)"

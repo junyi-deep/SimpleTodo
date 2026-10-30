@@ -16,6 +16,7 @@ test.beforeEach(async ({ request }) => {
     theme: "light",
     expandDepth: "5",
     completedBottom: "false",
+    autoPostpone: "false",
     dayShowCompleted: "true",
     tabEntry: "false",
   });

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import CustomSelect from "./CustomSelect.vue";
+import LocalCalendarSettings from "./LocalCalendarSettings.vue";
 import { restoreDialogFocus } from "../composables/dialogFocus";
 import { ref, onMounted, onUnmounted } from "vue";
 import {
@@ -428,6 +429,7 @@ async function migrate() {
         >
         <template v-if="tab === 'data'"
           ><h2>数据由你掌握</h2>
+          <LocalCalendarSettings />
           <p class="muted section-description">
             完整备份用于恢复全部规则与任务树。
           </p>

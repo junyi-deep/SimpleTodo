@@ -121,7 +121,9 @@ test("拖动到任务中央作为子任务，整个分支持久化", async ({ pa
     })
     .toBe(a.id);
   await page.reload();
-  await row(page, a.title).getByLabel("展开子任务").click();
+  await expect(row(page, a.title)).toBeVisible();
+  if (await row(page, a.title).getByLabel("展开子任务").count())
+    await row(page, a.title).getByLabel("展开子任务").click();
   await expect(row(page, b.title)).toBeVisible();
   await page.screenshot({
     path: "../.impeccable/review/checklist-real-drag-nested.png",

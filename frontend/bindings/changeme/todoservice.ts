@@ -7,6 +7,9 @@ import { Call as $Call, CancellablePromise as $CancellablePromise } from "@wails
 
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
+import * as localcalendar$0 from "./internal/localcalendar/models.js";
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore: Unused imports
 import * as releases$0 from "./internal/releases/models.js";
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore: Unused imports
@@ -50,6 +53,10 @@ export function CommitImport(token: string): $CancellablePromise<void> {
 
 export function Complete(c: todo$0.Command): $CancellablePromise<todo$0.Task[] | null> {
     return $Call.ByID(3663239682, c);
+}
+
+export function ConfigureLocalCalendar(ids: string[] | null, $from: string, to: string): $CancellablePromise<todo$0.LocalCalendarState> {
+    return $Call.ByID(3808432316, ids, $from, to);
 }
 
 export function CopyTasks(q: todo$0.Query, ids: string[] | null): $CancellablePromise<string> {
@@ -106,6 +113,14 @@ export function ImportHolidays(): $CancellablePromise<void> {
 
 export function InstallUpdate(): $CancellablePromise<void> {
     return $Call.ByID(973615585);
+}
+
+export function LocalCalendarSources(): $CancellablePromise<localcalendar$0.Calendar[] | null> {
+    return $Call.ByID(2877995776);
+}
+
+export function LocalCalendarState($from: string, to: string): $CancellablePromise<todo$0.LocalCalendarState> {
+    return $Call.ByID(1145663779, $from, to);
 }
 
 export function Migrate(): $CancellablePromise<void> {
@@ -208,6 +223,10 @@ export function SaveExport(format: string, q: todo$0.Query, inbox: boolean, ids:
     return $Call.ByID(256414574, format, q, inbox, ids);
 }
 
+export function SaveTaskExpansion(states: { [_ in string]?: boolean } | null): $CancellablePromise<void> {
+    return $Call.ByID(3967613370, states);
+}
+
 export function SaveUpdateProxy(c: releases$0.ProxyConfig): $CancellablePromise<void> {
     return $Call.ByID(2029527743, c);
 }
@@ -244,7 +263,7 @@ export function SetTimezone(name: string): $CancellablePromise<number> {
 }
 
 /**
- * Every view uses the same native window. Only its dimensions change.
+ * Views share one native window, but own their persisted geometry.
  */
 export function SetView(view: string): $CancellablePromise<void> {
     return $Call.ByID(1332064838, view);
@@ -264,6 +283,14 @@ export function ShowWindow(key: string): $CancellablePromise<void> {
 
 export function StopFollowing(c: todo$0.Command): $CancellablePromise<void> {
     return $Call.ByID(1693095448, c);
+}
+
+export function SyncLocalCalendar($from: string, to: string): $CancellablePromise<todo$0.LocalCalendarState> {
+    return $Call.ByID(891150587, $from, to);
+}
+
+export function TaskExpansion(): $CancellablePromise<{ [_ in string]?: boolean } | null> {
+    return $Call.ByID(3069241033);
 }
 
 export function ToggleCountdown(id: string, enabled: boolean): $CancellablePromise<void> {
