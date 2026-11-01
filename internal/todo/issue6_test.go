@@ -153,6 +153,11 @@ func TestSchemaOneMigratesWithProtectiveBackupAndPreservesTasks(t *testing.T) {
 	if err = db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&v); err != nil || v != 1 {
 		t.Fatal(v, err)
 	}
+	// Release the inspected backup before retention can remove it. Windows
+	// keeps open SQLite files locked, unlike Unix's unlink semantics.
+	if err = db.Close(); err != nil {
+		t.Fatal(err)
+	}
 	if err = e.SaveTaskExpansion(map[string]bool{r.ID: true}); err != nil {
 		t.Fatal(err)
 	}
