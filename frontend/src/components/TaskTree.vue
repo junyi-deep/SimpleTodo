@@ -17,15 +17,17 @@ import {
   CalendarDays,
   Trash2,
   Pencil,
+  Tag as TagIcon,
   Check,
 } from "lucide-vue-next";
+import TagPopover from "./TagPopover.vue";
 import InlineTitle from "./InlineTitle.vue";
 import { canLeaveEditor } from "../composables/editorGuard";
 import TaskEditor from "./TaskEditor.vue";
 import ReminderPopover from "./ReminderPopover.vue";
 import TaskPlacement from "./TaskPlacement.vue";
 import { api, confirmAction } from "../api";
-import { type Task } from "../api/types";
+import { type Task, dayString } from "../api/types";
 import { useTodo } from "../stores/todo";
 const props = defineProps<{
   root: Task;
@@ -56,6 +58,7 @@ const s = useTodo(),
   sibling = ref<Task>(),
   placement = ref<Task | null>(null),
   reminding = ref(false),
+  tagging = ref<string | null>(null),
   dropHint = ref<string | null>(null),
   draggedId = ref<string | null>(null),
   rowFocus = ref(props.root.id),
@@ -70,7 +73,17 @@ const nodes = computed(() =>
   index = computed(() => new Map(nodes.value.map((t) => [t.id, t])));
 const children = (id: string) =>
   nodes.value
-    .filter((t) => t.parentId === id)
+    .filter((t) => {
+      const day = props.root.date || s.date;
+      return (
+        t.parentId === id &&
+        (t.status === "completed" ||
+          (props.root.exception &&
+            props.root.date !== props.root.occurrenceDate) ||
+          ((!t.startAt || dayString(new Date(t.startAt)) <= day) &&
+            (!t.endAt || dayString(new Date(t.endAt)) >= day)))
+      );
+    })
     .sort((a, b) => {
       if (s.boot?.settings.completedBottom === "true" && a.status !== b.status)
         return a.status === "completed" ? 1 : -1;
@@ -89,13 +102,23 @@ const progress = (id: string) => {
   visit(id);
   return { done, total };
 };
+function matchesTag(t: Task): boolean {
+  return (
+    !s.filterTags.length ||
+    t.tagIds?.some((id) => s.filterTags.includes(id)) ||
+    children(t.id).some(matchesTag)
+  );
+}
 const rows = computed(() => {
   const out: { task: Task; depth: number }[] = [];
   const walk = (t: Task, depth: number) => {
     out.push({ task: t, depth });
     if (expanded.value.has(t.id))
       children(t.id)
-        .filter((c) => !s.hideCompleted || c.status !== "completed")
+        .filter(
+          (c) =>
+            (!s.hideCompleted || c.status !== "completed") && matchesTag(c),
+        )
         .forEach((c) => walk(c, depth + 1));
   };
   walk(props.root, 0);
@@ -465,9 +488,9 @@ async function dropNode(e: DragEvent, t: Task) {
   }
   if (
     !source.parentId &&
-    (source.remindAt || source.seriesId || source.description) &&
+    (source.remindAt || source.description) &&
     !(await confirmAction(
-      "作为子任务后将继承目标任务的日期与提醒。原描述会追加到目标根任务的描述；重复任务仅移动当前实例。继续？",
+      "作为子任务后将继承目标任务的日期与提醒。原描述会追加到目标根任务的描述；每天的任务仅移动当前实例。继续？",
     ))
   )
     return;
@@ -632,12 +655,33 @@ async function dropNode(e: DragEvent, t: Task) {
               }}</small
             >
             <small
-              v-if="t.seriesId"
-              class="task-repeat"
-              :title="s.repeatSummary(t)"
-              >{{ s.repeatSummary(t) }}</small
+              v-if="t.status === 'completed' && t.completedAt"
+              class="task-time"
+              >{{ new Date(t.createdAt).toLocaleString("zh-CN") }} ~
+              {{ new Date(t.completedAt).toLocaleString("zh-CN") }}</small
             >
+            <div
+              v-if="
+                t.tagIds?.length &&
+                (s.boot?.settings.showTags === 'true' ||
+                  s.activeTask === t.id ||
+                  tagging === t.id ||
+                  (batch && s.selected.includes(t.id)))
+              "
+              class="task-tags"
+            >
+              <small
+                v-for="tag in s.tags.filter((x) => t.tagIds.includes(x.id))"
+                :key="tag.id"
+                >{{ tag.name }}</small
+              >
+            </div>
           </div>
+          <TagPopover
+            v-if="tagging === t.id"
+            :task="t"
+            @close="tagging = null"
+          />
           <span v-if="children(t.id).length" class="task-progress"
             >{{ progress(t.id).done }}/{{ progress(t.id).total }}</span
           >
@@ -646,6 +690,18 @@ async function dropNode(e: DragEvent, t: Task) {
             class="task-actions"
             :class="{ 'confirming-delete': deletePending === t.id }"
           >
+            <button
+              class="icon-button action-tag"
+              :aria-label="'设置标签 ' + t.title"
+              :data-tag-trigger="t.id"
+              title="标签"
+              @click.stop="
+                s.activeTask = t.id;
+                tagging = tagging === t.id ? null : t.id;
+              "
+            >
+              <TagIcon :size="13" />
+            </button>
             <button
               v-if="canShift(t, -1)"
               class="icon-button action-order"
@@ -685,10 +741,9 @@ async function dropNode(e: DragEvent, t: Task) {
               <Pencil :size="14" />
             </button>
             <button
-              v-if="t.parentId || !t.seriesId"
               class="icon-button action-date"
-              :aria-label="t.parentId ? '移动到其他父任务' : '调整计划日期'"
-              :title="t.parentId ? '移动到其他父任务' : '调整计划日期'"
+              :aria-label="t.parentId ? '移动到其他父任务' : '调整任务时间'"
+              :title="t.parentId ? '移动到其他父任务' : '调整任务时间'"
               @click.stop="showPlacement(t)"
             >
               <CalendarDays :size="14" />

@@ -25,9 +25,7 @@ test("单击在原条目编辑，单独图标打开详细设置", async ({ page,
   expect((await call(request, "FindTask", t.id)).title).toBe("就地修改完成");
   await row(page, "就地修改完成").hover();
   await row(page, "就地修改完成").getByLabel("任务设置").click();
-  await expect(
-    page.getByRole("dialog", { name: "任务详细设置" }),
-  ).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "任务详情" })).toBeVisible();
   await page.screenshot({
     path: "../.impeccable/review/checklist-settings-modal.png",
     animations: "disabled",
@@ -130,26 +128,25 @@ test("拖动到任务中央作为子任务，整个分支持久化", async ({ pa
     animations: "disabled",
   });
 });
-test("提醒气泡可以创建每周重复及选择星期", async ({ page, request }) => {
-  const t = await root(request, unique("重复提醒"));
+test("提醒气泡保存时间并沿用任务范围，不再配置周期", async ({
+  page,
+  request,
+}) => {
+  const t = await root(request, unique("每日提醒"));
   await call(request, "Settings", { notificationPrompted: "true" });
   await page.goto("/?preview=1");
   await row(page, t.title).hover();
   await row(page, t.title).getByLabel("设置提醒", { exact: true }).click();
-  await select(page, "重复提醒", "每周");
-  await page.getByLabel("重复间隔", { exact: true }).fill("2");
-  await page.screenshot({
-    path: "../.impeccable/review/checklist-repeat-reminder.png",
-    animations: "disabled",
-  });
-  await page.getByRole("button", { name: "保存提醒", exact: true }).click();
-  await expect(page.locator(".reminder-popover")).toHaveCount(0);
+  const p = page.locator(".reminder-popover");
+  await expect(p.getByLabel("提醒时间", { exact: true })).toBeVisible();
+  await expect(p.getByRole("combobox")).toHaveCount(0);
+  await p.getByRole("button", { name: "保存提醒", exact: true }).click();
+  await expect(p).toHaveCount(0);
   const task = await call(request, "FindTask", t.id);
-  expect(task.seriesId).toBeTruthy();
-  const rules = await call(request, "Rules");
-  expect(rules.find((r: any) => r.id === task.ruleId).interval).toBe(2);
-  expect(rules.find((r: any) => r.id === task.ruleId).frequency).toBe("weekly");
+  expect(task.remindAt).toBeGreaterThan(Date.now());
+  expect(task.reminderTime).toMatch(/\d{2}:\d{2}/);
 });
+
 test("关于直接读取 GitHub 最新发布并提供对应下载，无自定义发布地址", async ({
   page,
 }) => {

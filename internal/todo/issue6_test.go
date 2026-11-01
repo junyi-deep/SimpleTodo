@@ -127,7 +127,7 @@ func TestSchemaOneMigratesWithProtectiveBackupAndPreservesTasks(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = db.Exec("DROP TABLE task_expansion;DROP TABLE local_calendar_events;DROP TABLE local_calendar_config;DELETE FROM schema_migrations WHERE version=2")
+	_, err = db.Exec("DROP TABLE notes;DROP TABLE tags;ALTER TABLE tasks DROP COLUMN tags_json;DROP INDEX idx_tasks_times;ALTER TABLE tasks DROP COLUMN ends_at;ALTER TABLE tasks DROP COLUMN starts_at;DELETE FROM schema_migrations WHERE version=3;DROP TABLE task_expansion;DROP TABLE local_calendar_events;DROP TABLE local_calendar_config;DELETE FROM schema_migrations WHERE version=2")
 	db.Close()
 	if err != nil {
 		t.Fatal(err)

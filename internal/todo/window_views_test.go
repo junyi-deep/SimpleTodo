@@ -13,7 +13,7 @@ func TestViewWindowsPersistIndependentlyAcrossRestart(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := map[string]ViewWindowState{}
-	for i, view := range []string{"day", "inbox", "calendar", "focus"} {
+	for i, view := range []string{"day", "inbox", "calendar", "focus", "settings", "review"} {
 		state := ViewWindowState{View: view, X: -1000 + i*100, Y: 20 + i*10, Width: 500 + i*100, Height: 600 + i*50, Maximised: view == "focus"}
 		want[view] = state
 		if err = e.SaveViewWindow(state); err != nil {

@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted, nextTick } from "vue";
 import {
   CalendarDays,
+  NotebookPen,
   ListTodo,
   Timer,
   Settings,
@@ -30,7 +31,7 @@ import {
   RotateCcw,
 } from "lucide-vue-next";
 import { useTodo } from "./stores/todo";
-import { api, listen, confirmAction } from "./api";
+import { api, listen, confirmAction, previewMode } from "./api";
 import {
   type Task,
   type Holiday,
@@ -56,6 +57,9 @@ import CustomSelect from "./components/CustomSelect.vue";
 import FocusPanel from "./components/FocusPanel.vue";
 import SettingsDialog from "./components/SettingsDialog.vue";
 import LocalEventDetails from "./components/LocalEventDetails.vue";
+import GanttView from "./components/GanttView.vue";
+import ReviewPanel from "./components/ReviewPanel.vue";
+import UpdatePrompt from "./components/UpdatePrompt.vue";
 import TransferDialog from "./components/TransferDialog.vue";
 const s = useTodo(),
   panel = ref("tasks"),
@@ -87,6 +91,7 @@ const s = useTodo(),
   calendarMenu = ref<{ x: number; y: number } | null>(null),
   pastedText = ref(""),
   pastedPreview = ref<Preview | null>(null);
+const updateInfo = ref<{ version: string; releaseURL: string } | null>(null);
 const stopListeners: (() => void)[] = [];
 const localCalendar = ref<LocalCalendarState>({
     sources: [],
@@ -181,10 +186,19 @@ const calendarDays = computed(() =>
 const year = computed(() => month.value.slice(0, 4)),
   monthNumber = computed(() => month.value.slice(5));
 const windowState = computed(() =>
-  s.boot?.windows.find((w) => w.key === "main"),
+  s.boot?.windows.find((w) => w.key === s.key),
 );
 const roots = computed(() =>
   s.roots.filter((t) => {
+    if (
+      s.filterTags.length &&
+      !s.snapshot.tasks.some(
+        (n) =>
+          n.rootId === t.id &&
+          n.tagIds?.some((id) => s.filterTags.includes(id)),
+      )
+    )
+      return false;
     const dateMatches =
       panel.value !== "calendar" || t.date === activeDay.value;
     const textMatches =
@@ -202,7 +216,13 @@ const completed = computed(
 );
 const calendarTasks = (day: string) =>
   s.snapshot.tasks.filter(
-    (t) => !t.parentId && t.date === day && t.status !== "skipped",
+    (t) =>
+      (!t.parentId || s.boot?.settings.calendarShowChildren === "true") &&
+      (t.date || s.taskMap.get(t.rootId)?.date) === day &&
+      (!t.parentId ||
+        ((!t.startAt || dayString(new Date(t.startAt)) <= day) &&
+          (!t.endAt || dayString(new Date(t.endAt)) >= day))) &&
+      t.status !== "skipped",
   );
 const isRange = (day: string) => selectedDays.value.includes(day);
 function fillRange() {
@@ -258,24 +278,30 @@ watch(
   },
   { immediate: true },
 );
+let pendingDay = "";
+function followNewDay() {
+  if (
+    !pendingDay ||
+    panel.value !== "tasks" ||
+    listView.value !== "day" ||
+    editor.value ||
+    dragging.value ||
+    hasDirtyEditor() ||
+    document.querySelector('[aria-label="新待办标题"]')
+  )
+    return;
+  s.date = pendingDay;
+  activeDay.value = pendingDay;
+  pendingDay = "";
+  void s.load();
+}
 watch(
   () => s.boot?.today,
   (v) => {
     if (v && v !== previousToday) {
-      if (
-        s.date === previousToday &&
-        !editor.value &&
-        !dragging.value &&
-        !document.querySelector<HTMLInputElement>(
-          '[aria-label="新待办标题"]',
-        ) &&
-        !hasDirtyEditor() &&
-        panel.value === "tasks"
-      ) {
-        s.date = v;
-        void s.load();
-      }
+      if (previousToday) pendingDay = v;
       previousToday = v;
+      followNewDay();
     }
   },
 );
@@ -317,6 +343,10 @@ async function closeDrawer() {
   editor.value = null;
 }
 async function openSettings(tab: string) {
+  if (!previewMode && s.key !== "settings") {
+    await api("ShowSettings", tab);
+    return;
+  }
   if (!(await canLeaveEditor())) return;
   editor.value = null;
   drawer.value = false;
@@ -377,6 +407,11 @@ async function openBatch(action: string) {
   transfer.value = "batch";
 }
 async function navigate(next: string) {
+  const owner = next === "tasks" ? "main" : next;
+  if (!previewMode && s.key !== owner) {
+    await api("ShowWindow", owner);
+    return true;
+  }
   if (!(await canLeaveEditor())) return false;
   settingsOpen.value = false;
   transfer.value = null;
@@ -493,7 +528,7 @@ async function pickDay(day: string, e?: MouseEvent) {
   selectRange();
 }
 function calendarNativeDrag(event: DragEvent, task: Task) {
-  if (task.seriesId || s.saving) {
+  if (task.parentId || task.status !== "pending" || s.saving) {
     event.preventDefault();
     return;
   }
@@ -502,7 +537,15 @@ function calendarNativeDrag(event: DragEvent, task: Task) {
 }
 async function openCalendarTask(task: Task) {
   if (!(await canLeaveEditor())) return;
-  activeDay.value = task.date || activeDay.value;
+  const tree = await api<Task[]>("ReadTree", task.rootId);
+  s.snapshot.tasks = [
+    ...s.snapshot.tasks.filter((t) => t.rootId !== task.rootId),
+    ...tree,
+  ];
+  activeDay.value =
+    task.date ||
+    tree.find((t) => t.id === task.rootId)?.date ||
+    activeDay.value;
   drawer.value = true;
   rangeAnchor.value = activeDay.value;
   rangeEnd.value = activeDay.value;
@@ -640,7 +683,7 @@ async function pin() {
   await s.run(() =>
     api(
       "WindowConfig",
-      "main",
+      s.key,
       windowState.value?.mode === "top" ? "normal" : "top",
       windowState.value?.opacity ?? 1,
       false,
@@ -649,18 +692,11 @@ async function pin() {
   await s.metadata();
 }
 async function quit() {
-  if (
-    document.querySelector<HTMLInputElement>(".inline-add input")?.value ||
-    editor.value
-  ) {
-    if (!(await confirmAction("有正在编辑的内容，确定退出？"))) return;
-  }
-  if (
-    (await api<boolean>("QuitStatus")) &&
-    !(await confirmAction("有专注或近期提醒，退出后将停止后台提醒。仍然退出？"))
-  )
+  if (!previewMode) {
+    await api("RequestQuit");
     return;
-  await api("Quit");
+  }
+  if (await canLeaveEditor()) await api("Quit");
 }
 async function recover() {
   const info = await s.run(() =>
@@ -690,6 +726,11 @@ async function keyboard(e: KeyboardEvent) {
     ),
     mod = e.metaKey || e.ctrlKey;
   if (mod && e.key.toLowerCase() === "n") {
+    if (!previewMode && s.key !== "main") {
+      e.preventDefault();
+      await api("ShowWindow", "quick");
+      return;
+    }
     e.preventDefault();
     if (!(await canLeaveEditor())) return;
     editor.value = null;
@@ -726,7 +767,9 @@ async function keyboard(e: KeyboardEvent) {
     } else if (transfer.value) {
       transfer.value = null;
     } else if (settingsOpen.value) {
-      settingsOpen.value = false;
+      if (s.key === "settings" && !previewMode)
+        await api("HideWindow", "settings");
+      else settingsOpen.value = false;
     } else if (depthMenu.value) {
       depthMenu.value = false;
     } else if (filters.value) {
@@ -749,13 +792,46 @@ async function keyboard(e: KeyboardEvent) {
 }
 onMounted(async () => {
   stopListeners.push(installControlMotion());
+  if (["calendar", "focus", "review"].includes(s.key)) panel.value = s.key;
+  if (s.key === "settings") {
+    settingsOpen.value = true;
+    if (!previewMode) {
+      settingsTab.value = await api<string>("InitialSettingsTab");
+      stopListeners.push(
+        await listen("todo:settings-tab", (tab) => (settingsTab.value = tab)),
+      );
+    }
+  }
   await s.init();
+  if (panel.value === "calendar") await loadCalendar();
+  if (s.key === "main") {
+    stopListeners.push(
+      await listen(
+        "todo:update-available",
+        (info) => (updateInfo.value = info),
+      ),
+    );
+    stopListeners.push(
+      await listen("todo:update-skipped", () => (updateInfo.value = null)),
+    );
+    try {
+      updateInfo.value = await api("AutomaticUpdate");
+    } catch {}
+  }
   previousToday = s.boot?.today || s.date;
   try {
     holidays.value = await api<Holiday[]>("Holidays");
   } catch (e) {
     s.error = String(e);
   }
+  stopListeners.push(
+    await listen("todo:quick-entry", async () => {
+      if (s.key === "main") {
+        await navigate("tasks");
+        document.dispatchEvent(new Event("todo:new-task"));
+      }
+    }),
+  );
   stopListeners.push(
     await listen("todo:navigate", async (value) => {
       if (value === "calendar" || value === "overview")
@@ -770,9 +846,29 @@ onMounted(async () => {
       }
     }),
   );
-  stopListeners.push(await listen("todo:quit-request", () => void quit()));
+  if (!previewMode) {
+    await api("RegisterWindow", s.key);
+    stopListeners.push(
+      await listen("todo:check-quit", async (data) => {
+        if (data.key !== s.key) return;
+        let allow = true;
+        if (hasDirtyEditor()) {
+          await api("ShowWindow", s.key);
+          allow = await canLeaveEditor();
+        }
+        if (allow && s.key === "main" && (await api<boolean>("QuitStatus"))) {
+          await api("ShowWindow", "main");
+          allow = await confirmAction(
+            "有专注或近期提醒，退出后将停止后台提醒。仍然退出？",
+          );
+        }
+        await api("RespondQuit", s.key, data.token, allow);
+      }),
+    );
+  }
   stopListeners.push(
     await listen("todo:notification", async (data) => {
+      if (s.key !== "main") return;
       if (data?.sourceType !== "task" || !data.sourceId) {
         await navigate("focus");
         return;
@@ -796,7 +892,9 @@ onMounted(async () => {
       }
     }),
   );
-  poll = setInterval(() => {
+  poll = setInterval(async () => {
+    if (!previewMode && !(await api<boolean>("WindowVisible", s.key))) return;
+    followNewDay();
     void s.metadata().catch(() => {});
     if (
       panel.value === "calendar" &&
@@ -835,6 +933,11 @@ onUnmounted(() => {
 });
 </script>
 <template>
+  <UpdatePrompt
+    v-if="updateInfo"
+    :info="updateInfo"
+    @close="updateInfo = null"
+  />
   <main
     class="app-shell compact-app"
     :class="{
@@ -851,34 +954,45 @@ onUnmounted(() => {
     >
       <strong class="brand">SimpleTodo</strong>
       <nav class="header-actions" aria-label="窗口与视图">
-        <button
-          class="icon-button"
-          :class="{ active: panel === 'tasks' && !settingsOpen }"
-          aria-label="任务列表"
-          title="任务列表"
-          @click="navigate('tasks')"
-        >
-          <ListTodo :size="16" />
-        </button>
-        <button
-          class="icon-button"
-          :class="{ active: panel === 'calendar' && !settingsOpen }"
-          aria-label="日历视图"
-          title="日历视图"
-          @click="navigate('calendar')"
-        >
-          <CalendarDays :size="16" />
-        </button>
-        <button
-          class="icon-button"
-          :class="{ active: panel === 'focus' && !settingsOpen }"
-          aria-label="专注与倒计时"
-          title="专注与倒计时"
-          @click="navigate('focus')"
-        >
-          <Timer :size="16" />
-        </button>
-        <span class="toolbar-divider" />
+        <div class="view-actions" role="group" aria-label="切换视图">
+          <button
+            class="icon-button"
+            :class="{ active: panel === 'tasks' && !settingsOpen }"
+            aria-label="任务列表"
+            title="任务列表"
+            @click="navigate('tasks')"
+          >
+            <ListTodo :size="16" />
+          </button>
+          <button
+            class="icon-button"
+            :class="{ active: panel === 'calendar' && !settingsOpen }"
+            aria-label="日历视图"
+            title="日历视图"
+            @click="navigate('calendar')"
+          >
+            <CalendarDays :size="16" />
+          </button>
+          <button
+            class="icon-button"
+            :class="{ active: panel === 'focus' && !settingsOpen }"
+            aria-label="专注与倒计时"
+            title="专注与倒计时"
+            @click="navigate('focus')"
+          >
+            <Timer :size="16" />
+          </button>
+          <button
+            class="icon-button"
+            :class="{ active: panel === 'review' }"
+            aria-label="复盘视图"
+            title="复盘"
+            @click="navigate('review')"
+          >
+            <NotebookPen :size="16" />
+          </button>
+        </div>
+        <span class="toolbar-divider" aria-hidden="true" />
         <button
           class="icon-button"
           :class="{ active: windowState?.mode === 'top' }"
@@ -961,7 +1075,11 @@ onUnmounted(() => {
       @window-opacity="previewOpacity = $event"
       v-else-if="settingsOpen"
       :initial-tab="settingsTab"
-      @close="settingsOpen = false"
+      @close="
+        s.key === 'settings'
+          ? api('HideWindow', 'settings')
+          : (settingsOpen = false)
+      "
     />
     <TransferDialog
       v-else-if="transfer"
@@ -976,6 +1094,7 @@ onUnmounted(() => {
       "
     />
     <FocusPanel v-else-if="panel === 'focus'" />
+    <ReviewPanel v-else-if="panel === 'review'" />
     <template v-else>
       <section v-if="panel === 'tasks'" class="planning-bar">
         <div class="list-heading">
@@ -1033,7 +1152,7 @@ onUnmounted(() => {
         </div>
         <span class="grow calendar-selection-hint">{{
           selectedDays.length > 1
-            ? `已选 ${selectedDays.length} 天 · 右键创建重复任务`
+            ? `已选 ${selectedDays.length} 天 · 右键创建范围任务`
             : "拖选或 ⌘/Ctrl 点选日期"
         }}</span
         ><button
@@ -1050,7 +1169,19 @@ onUnmounted(() => {
           @update:model-value="changeCalendar('mode', $event)"
           aria-label="日历范围"
           ><option value="month">月视图</option>
-          <option value="week">周视图</option></CustomSelect
+          <option value="week">周视图</option>
+          <option value="gantt">甘特图</option></CustomSelect
+        ><label class="check-label small"
+          ><input
+            type="checkbox"
+            :checked="s.boot?.settings.calendarShowChildren === 'true'"
+            @change="
+              s.setting(
+                'calendarShowChildren',
+                ($event.target as HTMLInputElement).checked ? 'true' : 'false',
+              )
+            "
+          />子任务</label
         ><button class="icon-button" aria-label="上一个周期" @click="step(-1)">
           <ChevronLeft :size="15" /></button
         ><button class="text-button" @click="today">今天</button
@@ -1098,19 +1229,28 @@ onUnmounted(() => {
                 "
               />显示已完成的任务</label
             >
-            <label
-              ><input
-                type="checkbox"
-                :checked="s.showRecurring"
-                :disabled="s.saving"
-                @change="
-                  s.setFilter(
-                    'Recurring',
-                    ($event.target as HTMLInputElement).checked,
-                  )
-                "
-              />显示周期任务</label
-            >
+            <div class="filter-tag-options">
+              <small class="muted">标签（匹配任意所选标签）</small
+              ><label v-for="tag in s.tags" :key="tag.id"
+                ><input
+                  :checked="s.filterTags.includes(tag.id)"
+                  type="checkbox"
+                  @change="
+                    s.setTagFilters(
+                      ($event.target as HTMLInputElement).checked
+                        ? [...s.filterTags, tag.id]
+                        : s.filterTags.filter((id) => id !== tag.id),
+                    )
+                  "
+                />{{ tag.name }}</label
+              ><button
+                v-if="s.filterTags.length"
+                class="text-button"
+                @click="s.setTagFilters([])"
+              >
+                清除标签筛选
+              </button>
+            </div>
           </div>
         </div>
         <div class="depth-control">
@@ -1156,6 +1296,20 @@ onUnmounted(() => {
               "
             />
             <div class="depth-scale"><span>1 层</span><span>5 层</span></div>
+            <label
+              ><input
+                type="checkbox"
+                :checked="s.boot?.settings.showTags === 'true'"
+                @change="
+                  s.setting(
+                    'showTags',
+                    ($event.target as HTMLInputElement).checked
+                      ? 'true'
+                      : 'false',
+                  )
+                "
+              />显示标签</label
+            >
           </div>
         </div>
         <button
@@ -1258,6 +1412,13 @@ onUnmounted(() => {
         >
         {{ completed }} / {{ roots.length }} 已完成
       </footer>
+      <GanttView
+        v-else-if="calendarMode === 'gantt'"
+        :start="month + '-01'"
+        :show-children="s.boot?.settings.calendarShowChildren === 'true'"
+        @edit="openCalendarTask"
+        @changed="loadCalendar"
+      />
       <section
         v-else
         class="calendar-workspace"
@@ -1318,15 +1479,20 @@ onUnmounted(() => {
                 class="calendar-task"
                 :class="{ done: t.status === 'completed' }"
                 :title="
-                  t.seriesId
-                    ? t.title + '（重复任务请在详情中调整规则）'
-                    : t.title
+                  t.parentId
+                    ? t.title + '（跟随主任务日期）'
+                    : t.status === 'pending'
+                      ? t.title + '（拖动调整当天日期）'
+                      : t.title
                 "
                 :data-calendar-task="t.id"
                 :aria-label="'编辑任务：' + t.title"
-                :draggable="!t.seriesId && !s.saving"
+                :draggable="!t.parentId && t.status === 'pending' && !s.saving"
                 @pointerdown.stop="
-                  !t.seriesId && !s.saving && startTaskDrag($event, t.id)
+                  !t.parentId &&
+                  t.status === 'pending' &&
+                  !s.saving &&
+                  startTaskDrag($event, t.id)
                 "
                 @click.stop="openCalendarTask(t)"
                 @dragstart.stop="calendarNativeDrag($event, t)"
@@ -1343,7 +1509,7 @@ onUnmounted(() => {
                 <h2>
                   {{
                     repeatDays
-                      ? "创建重复任务"
+                      ? "创建范围任务"
                       : parseDay(activeDay).toLocaleDateString("zh-CN", {
                           month: "long",
                           day: "numeric",
@@ -1353,7 +1519,7 @@ onUnmounted(() => {
                 </h2>
                 <small>{{
                   repeatDays
-                    ? "已选 " + repeatDays.length + " 天 · 可调整重复规则"
+                    ? "已选 " + repeatDays.length + " 天 · 设置任务时间范围"
                     : roots.length + " 项任务"
                 }}</small>
               </div>
@@ -1468,7 +1634,7 @@ onUnmounted(() => {
         @keydown.esc.stop.prevent="calendarMenu = null"
       >
         <button role="menuitem" @click="composeRepeat">
-          <Repeat2 :size="15" />创建重复任务
+          <Repeat2 :size="15" />创建范围任务
         </button>
       </div></MotionPresence
     >

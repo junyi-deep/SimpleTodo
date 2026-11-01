@@ -170,8 +170,8 @@ export function installControlMotion() {
     if (icon)
       runMotion(
         icon,
-        { transform: ["scale(1)", "scale(.82)", "scale(1)"] },
-        0.2,
+        { transform: ["scale(1)", "scale(.94)", "scale(1)"] },
+        0.16,
       );
   }
   document.addEventListener("pointerdown", press);

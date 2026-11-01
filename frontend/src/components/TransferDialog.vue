@@ -237,7 +237,7 @@ async function copy() {
         <p class="muted small">
           {{
             format === "json"
-              ? "完整结构导入将校验父子关系与重复规则。"
+              ? "完整结构导入将校验父子关系与任务时间配置。"
               : "确认后添加到 " + (s.view === "inbox" ? "收集箱" : s.date)
           }}
           · 不会静默丢弃无效行。
@@ -315,7 +315,7 @@ async function copy() {
         <p class="muted small">
           {{
             format === "json"
-              ? "JSON 始终保存完整领域数据和重复规则。"
+              ? "JSON 始终保存完整任务结构和时间配置。"
               : "导出完整子任务层级，中文与 emoji 使用 UTF-8。可读清单不能代替完整数据库备份。"
           }}
         </p></template

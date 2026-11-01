@@ -116,6 +116,13 @@ func (e *Engine) CommitBatch(token string) error {
 	}
 	now := e.now().UnixMilli()
 	for rootID, m := range trees {
+		var alive int
+		if err = tx.QueryRow("SELECT count(*) FROM tasks WHERE id=?", rootID).Scan(&alive); err != nil {
+			return err
+		}
+		if alive == 0 {
+			continue
+		}
 		previous := map[string]Task{}
 		for id, t := range m {
 			previous[id] = t
@@ -128,6 +135,11 @@ func (e *Engine) CommitBatch(token string) error {
 			if p.Data.AppVersion == "delete" {
 				branch := descendants(m, id)
 				if t.ParentID == nil && t.SeriesID != nil {
+					if e.periodModel {
+						if err = e.stopPeriodTx(tx, t); err != nil {
+							return err
+						}
+					}
 					t.Status = "skipped"
 					t.CompletedAt = nil
 					t.RemindAt = nil
@@ -145,7 +157,7 @@ func (e *Engine) CommitBatch(token string) error {
 			}
 		}
 		if len(m) > 0 {
-			aggregate(m, now)
+			e.aggregate(m, now)
 			markException(m, rootID)
 			if err = validateTree(m, previous); err != nil {
 				return err
@@ -162,6 +174,11 @@ func (e *Engine) CommitBatch(token string) error {
 			t.Version++
 			t.UpdatedAt = now
 			if err = putTask(tx, t); err != nil {
+				return err
+			}
+		}
+		if p.Data.AppVersion == "delete" && e.periodModel {
+			if err = e.refreshDailyTemplateTx(tx, m); err != nil {
 				return err
 			}
 		}

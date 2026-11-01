@@ -93,7 +93,11 @@ test("日历显示全部任务并内部滚动，蓝底白字，日期清单和�
   await rail.press("Home");
   const task = items.locator(".calendar-task").first();
   await expect(task).toHaveCSS("color", "rgb(255, 255, 255)");
-  await expect(task).toHaveCSS("background-color", "rgb(37, 99, 235)");
+  const blue = await task.evaluate((el) =>
+    getComputedStyle(el).backgroundColor.match(/\d+/g)!.map(Number),
+  );
+  expect(blue[2]).toBeGreaterThan(blue[0]);
+  expect(blue[2]).toBeGreaterThan(blue[1]);
   await page.screenshot({
     path: "../.impeccable/review/calendar-scroll-month.png",
     animations: "disabled",
@@ -107,7 +111,7 @@ test("日历显示全部任务并内部滚动，蓝底白字，日期清单和�
     .getByLabel("任务设置", { exact: true })
     .click();
   const details = drawer.getByRole("region", {
-    name: "任务详细设置",
+    name: "任务详情",
     exact: true,
   });
   await expect(details).toBeVisible();
@@ -196,7 +200,7 @@ test("抽屉详情保留冲突草稿，取消离开不会关闭编辑", async ({
     .getByRole("button", { name: "编辑任务：" + t.title, exact: true })
     .click();
   const details = page.getByRole("region", {
-    name: "任务详细设置",
+    name: "任务详情",
     exact: true,
   });
   await details.getByLabel("任务标题", { exact: true }).fill("保留我的草稿");

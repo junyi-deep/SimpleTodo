@@ -1,272 +1,146 @@
 <script setup lang="ts">
-import CustomSelect from "./CustomSelect.vue";
-import { restoreDialogFocus } from "../composables/dialogFocus";
-import { computed, onMounted, onUnmounted, ref } from "vue";
-import { X, Repeat2 } from "lucide-vue-next";
+import { ref, onMounted, onUnmounted, computed } from "vue";
+import { X } from "lucide-vue-next";
 import { api, confirmAction } from "../api";
-import { type Task, parseDay, shiftDay } from "../api/types";
 import { useTodo } from "../stores/todo";
+import type { Task } from "../api/types";
+import CustomSelect from "./CustomSelect.vue";
 import { registerEditorGuard } from "../composables/editorGuard";
+import { restoreDialogFocus } from "../composables/dialogFocus";
 const props = defineProps<{ task: Task }>(),
   emit = defineEmits<{ close: [] }>(),
   s = useTodo(),
-  dialog = ref<HTMLDialogElement>();
-const parent = ref(props.task.parentId || props.task.rootId),
-  date = ref(props.task.date || s.boot?.today || s.date),
-  frequency = ref("none"),
-  interval = ref(1),
-  until = ref(""),
-  weekdays = ref<number[]>([parseDay(props.task.date || s.date).getDay()]);
-const state = () =>
-  JSON.stringify([
-    parent.value,
-    date.value,
-    frequency.value,
-    interval.value,
-    until.value,
-    weekdays.value,
-  ]);
-const initial = state();
+  dialog = ref<HTMLDialogElement>(),
+  parent = ref(props.task.parentId || ""),
+  busy = ref(false),
+  error = ref("");
+function local(ms: number) {
+  const d = new Date(ms);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}T${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+const start = ref(local(props.task.startAt || props.task.createdAt)),
+  end = ref(props.task.endAt ? local(props.task.endAt) : "");
+const initial = JSON.stringify([parent.value, start.value, end.value]);
+const dirty = () =>
+  JSON.stringify([parent.value, start.value, end.value]) !== initial;
 const canLeave = async () =>
-  !s.saving &&
-  (state() === initial || (await confirmAction("放弃未保存的计划设置？")));
-const release = registerEditorGuard(() => state() !== initial, canLeave);
+  !busy.value && (!dirty() || (await confirmAction("放弃未保存的时间设置？")));
+const release = registerEditorGuard(dirty, canLeave);
 onUnmounted(release);
-async function cancel() {
-  if (await canLeave()) emit("close");
-}
-function toggleDay(n: number) {
-  weekdays.value = weekdays.value.includes(n)
-    ? weekdays.value.filter((x) => x !== n)
-    : [...weekdays.value, n];
-}
-const expectedVersion = ref(
-  s.taskMap.get(props.task.rootId)?.version || props.task.version,
-);
-const latest = ref<Task | null>(null),
-  nodes = ref(s.snapshot.tasks.filter((t) => t.rootId === props.task.rootId));
-async function refresh() {
-  const rows = await s.run(() => api<Task[]>("ReadTree", props.task.rootId));
-  if (rows) {
-    nodes.value = rows;
-    latest.value = rows.find((t) => !t.parentId) || null;
-  }
-}
-async function retry() {
-  if (
-    latest.value &&
-    (await confirmAction("基于最新版本重新提交当前移动选择？"))
-  ) {
-    expectedVersion.value = latest.value.version;
-    await save();
-  }
-}
-
+restoreDialogFocus(props.task.id);
+onMounted(() => dialog.value?.showModal());
 const candidates = computed(() =>
-  nodes.value.filter((t) => t.rootId === props.task.rootId && !isDescendant(t)),
+  s.snapshot.tasks.filter(
+    (t) =>
+      t.rootId === props.task.rootId && t.id !== props.task.id && !isChild(t),
+  ),
 );
-function isDescendant(t: Task) {
-  let cur: Task | undefined = t;
-  while (cur) {
-    if (cur.id === props.task.id) return true;
-    cur = cur.parentId
-      ? nodes.value.find((t) => t.id === cur!.parentId)
-      : undefined;
+function isChild(t: Task) {
+  let p = t.parentId;
+  while (p) {
+    if (p === props.task.id) return true;
+    p = s.taskMap.get(p)?.parentId || null;
   }
   return false;
 }
-function path(t: Task) {
-  const parts = [t.title];
-  let cur = t;
-  while (cur.parentId) {
-    const p = nodes.value.find((t) => t.id === cur!.parentId);
-    if (!p) break;
-    parts.unshift(p.title);
-    cur = p;
-  }
-  return parts.join(" / ");
+async function cancel() {
+  if (await canLeave()) emit("close");
 }
-restoreDialogFocus(props.task.id);
-onMounted(() => {
-  dialog.value?.showModal();
-  dialog.value?.querySelector<HTMLInputElement>("input")?.focus();
-});
-
+const expectedVersion = s.command(props.task).expectedVersion;
 async function save() {
-  if (s.saving) return;
-  let plannedDate = date.value;
-  if (frequency.value === "weekly") {
-    if (!weekdays.value.length) {
-      s.error = "请至少选择一个重复星期";
-      return;
-    }
-    while (!weekdays.value.includes(parseDay(plannedDate).getDay()))
-      plannedDate = shiftDay(plannedDate, 1);
-  }
-  if (frequency.value !== "none" && until.value && until.value < plannedDate) {
-    s.error = "起止日期内没有符合规则的任务日期";
+  const originalStart = props.task.startAt || props.task.createdAt;
+  const a =
+      start.value === local(originalStart)
+        ? originalStart
+        : new Date(start.value).getTime(),
+    b = end.value
+      ? props.task.endAt && end.value === local(props.task.endAt)
+        ? props.task.endAt
+        : new Date(end.value).getTime()
+      : null;
+  if (!Number.isFinite(a) || (b !== null && b < a)) {
+    error.value = "请选择有效的起止时间";
     return;
   }
-  let ok = false;
-  const c = {
-    ...s.command(props.task),
-    expectedVersion: expectedVersion.value,
-  };
-  if (props.task.parentId) {
-    await s.run(async () => {
-      await api("Reparent", { ...c, parentId: parent.value });
-      ok = true;
-    });
-  } else {
-    await s.run(async () => {
-      await api("Move", {
-        ...c,
-        date: plannedDate,
-        repeatRule:
-          frequency.value === "none"
-            ? null
-            : {
-                frequency: frequency.value,
-                interval: interval.value,
-                weekdays: weekdays.value,
-                until: until.value || null,
-              },
-      });
-      ok = true;
-    });
+  const spanChanged = a !== originalStart || b !== props.task.endAt;
+  const parentChanged =
+    props.task.parentId && parent.value !== props.task.parentId;
+  if (!spanChanged && !parentChanged) {
+    emit("close");
+    return;
   }
-  if (ok) emit("close");
+  busy.value = true;
+  try {
+    const c = { ...s.command(props.task), expectedVersion };
+    if (parentChanged)
+      await api("Reparent", {
+        ...c,
+        parentId: parent.value,
+        span: spanChanged ? { start: a, end: b } : null,
+      });
+    else await api("SetTaskSpan", c, a, b);
+    await s.load();
+    emit("close");
+  } catch (e) {
+    error.value = String(e);
+  } finally {
+    busy.value = false;
+  }
 }
 </script>
 <template>
   <Teleport to="body"
     ><dialog
-      :inert="s.maintenance || undefined"
       ref="dialog"
       v-motion
-      class="task-settings-dialog placement-dialog"
-      :aria-label="task.parentId ? '移动整个分支' : '调整计划日期'"
-      @cancel.prevent="cancel()"
-      @keydown.esc.stop.prevent="cancel()"
-      @keydown.meta.enter.prevent="save"
-      @keydown.ctrl.enter.prevent="save"
+      class="task-settings-dialog task-placement-dialog"
+      aria-label="调整任务时间"
+      @cancel.prevent="cancel"
+      @keydown.esc.stop.prevent="cancel"
     >
-      <form @submit.prevent="save">
-        <header class="dialog-header">
-          <span>{{ task.parentId ? "移动整个分支" : "调整计划日期" }}</span
-          ><button
-            type="button"
-            class="icon-button"
-            aria-label="关闭移动面板"
-            @click="cancel()"
-          >
-            <X :size="18" />
-          </button>
-        </header>
-        <div class="dialog-body">
-          <p class="muted small placement-task-title">{{ task.title }}</p>
-          <label v-if="task.parentId" class="field"
-            ><span>新的父任务</span
-            ><CustomSelect v-model="parent">
-              <option v-for="t in candidates" :key="t.id" :value="t.id">
-                {{ path(t) }}
-              </option></CustomSelect
-            ><small>携带完整子树；不能跨根任务或移入自身后代。</small></label
-          ><template v-else
-            ><label class="field"
-              ><span>计划日期</span
-              ><input
-                v-model="date"
-                type="date"
-                min="2000-01-01"
-                max="2100-12-31"
-                required
-            /></label>
-            <section class="repeat-fields">
-              <label class="field"
-                ><span><Repeat2 :size="14" />重复</span
-                ><CustomSelect v-model="frequency" aria-label="计划重复方式"
-                  ><option value="none">不重复</option>
-                  <option value="daily">每日</option>
-                  <option value="weekly">每周</option>
-                  <option value="monthly">
-                    每月（缺少日期时使用月末）
-                  </option></CustomSelect
-                ></label
-              >
-              <template v-if="frequency !== 'none'">
-                <p class="muted small">
-                  从计划日期开始，结束日期留空则一直重复。
-                </p>
-                <div class="field-grid">
-                  <label class="field"
-                    ><span>重复间隔</span
-                    ><input
-                      v-model.number="interval"
-                      type="number"
-                      min="1"
-                      max="99"
-                      required /></label
-                  ><label class="field"
-                    ><span>结束日期（可选）</span
-                    ><input
-                      v-model="until"
-                      type="date"
-                      :min="date"
-                      max="2100-12-31"
-                  /></label>
-                </div>
-                <div
-                  v-if="frequency === 'weekly'"
-                  class="weekday-picker"
-                  role="group"
-                  aria-label="重复星期"
-                >
-                  <button
-                    v-for="(label, n) in [
-                      '日',
-                      '一',
-                      '二',
-                      '三',
-                      '四',
-                      '五',
-                      '六',
-                    ]"
-                    :key="n"
-                    type="button"
-                    :aria-label="'每周' + label"
-                    :aria-pressed="weekdays.includes(n)"
-                    :class="{ active: weekdays.includes(n) }"
-                    @click="toggleDay(n)"
-                  >
-                    {{ label }}
-                  </button>
-                </div>
-              </template>
-            </section>
-          </template>
-          <p v-if="s.error" class="inline-error" role="alert">{{ s.error }}</p>
-          <template v-if="s.error.includes('CONFLICT')"
-            ><button type="button" class="button" @click="refresh">
-              加载最新任务树
-            </button></template
-          >
-          <div v-if="latest" class="path-output">
-            最新根任务：{{ latest.title }}<br />{{ latest.date || "收集箱" }} ·
-            当前移动选择仍保留<button
-              type="button"
-              class="button"
-              @click="retry"
-            >
-              基于最新版本确认移动
-            </button>
-          </div>
-        </div>
-        <footer class="dialog-footer">
-          <button type="button" class="button" @click="cancel()">取消</button
-          ><button class="button primary" :disabled="s.saving">确认移动</button>
-        </footer>
-      </form>
+      <header class="dialog-header">
+        <strong>调整任务时间</strong
+        ><button
+          class="icon-button"
+          aria-label="关闭时间设置"
+          :disabled="busy"
+          @click="cancel"
+        >
+          <X :size="16" />
+        </button>
+      </header>
+      <div class="dialog-body">
+        <p class="placement-task-title">{{ task.title }}</p>
+        <label v-if="task.parentId" class="field"
+          ><span>父任务</span
+          ><CustomSelect v-model="parent" aria-label="父任务"
+            ><option v-for="t in candidates" :key="t.id" :value="t.id">
+              {{ t.title }}
+            </option></CustomSelect
+          ></label
+        ><label class="field"
+          ><span>开始时间</span
+          ><input
+            v-model="start"
+            aria-label="开始时间"
+            type="datetime-local" /></label
+        ><label class="field"
+          ><span>结束时间（可选）</span
+          ><input
+            v-model="end"
+            aria-label="结束时间"
+            type="datetime-local"
+            :min="start"
+        /></label>
+        <p class="muted small">每天独立完成。不设置结束时间则持续显示。</p>
+        <p v-if="error" class="error" role="alert">{{ error }}</p>
+      </div>
+      <footer class="dialog-footer">
+        <button class="button" :disabled="busy" @click="cancel">取消</button
+        ><button class="button primary" :disabled="busy" @click="save">
+          确认调整
+        </button>
+      </footer>
     </dialog></Teleport
   >
 </template>

@@ -8,29 +8,32 @@ import (
 )
 
 type Task struct {
-	ID                 string  `json:"id"`
-	ParentID           *string `json:"parentId"`
-	RootID             string  `json:"rootId"`
-	Title              string  `json:"title"`
-	Description        *string `json:"description"`
-	Date               *string `json:"date"`
-	OriginalDate       *string `json:"originalDate"`
-	Status             string  `json:"status"`
-	Color              *string `json:"color"`
-	Order              int     `json:"order"`
-	CompletedAt        *int64  `json:"completedAt"`
-	Postpone           *string `json:"postpone"`
-	SeriesID           *string `json:"seriesId"`
-	RuleID             *string `json:"ruleId"`
-	OccurrenceDate     *string `json:"occurrenceDate"`
-	Exception          bool    `json:"exception"`
-	RemindAt           *int64  `json:"remindAt"`
-	ReminderTime       *string `json:"reminderTime"`
-	ReminderZone       *string `json:"reminderZone"`
-	ReminderGeneration int     `json:"reminderGeneration"`
-	Version            int64   `json:"version,string"`
-	CreatedAt          int64   `json:"createdAt"`
-	UpdatedAt          int64   `json:"updatedAt"`
+	StartAt            int64    `json:"startAt"`
+	EndAt              *int64   `json:"endAt"`
+	TagIDs             []string `json:"tagIds"`
+	ID                 string   `json:"id"`
+	ParentID           *string  `json:"parentId"`
+	RootID             string   `json:"rootId"`
+	Title              string   `json:"title"`
+	Description        *string  `json:"description"`
+	Date               *string  `json:"date"`
+	OriginalDate       *string  `json:"originalDate"`
+	Status             string   `json:"status"`
+	Color              *string  `json:"color"`
+	Order              int      `json:"order"`
+	CompletedAt        *int64   `json:"completedAt"`
+	Postpone           *string  `json:"postpone"`
+	SeriesID           *string  `json:"seriesId"`
+	RuleID             *string  `json:"ruleId"`
+	OccurrenceDate     *string  `json:"occurrenceDate"`
+	Exception          bool     `json:"exception"`
+	RemindAt           *int64   `json:"remindAt"`
+	ReminderTime       *string  `json:"reminderTime"`
+	ReminderZone       *string  `json:"reminderZone"`
+	ReminderGeneration int      `json:"reminderGeneration"`
+	Version            int64    `json:"version,string"`
+	CreatedAt          int64    `json:"createdAt"`
+	UpdatedAt          int64    `json:"updatedAt"`
 }
 type Query struct {
 	View  string `json:"view"`
@@ -45,24 +48,32 @@ type Snapshot struct {
 	Today     string         `json:"today"`
 	Truncated bool           `json:"truncated"`
 }
+type TaskSpan struct {
+	Start int64  `json:"start"`
+	End   *int64 `json:"end"`
+}
 type Command struct {
-	RepeatRule      *Rule   `json:"repeatRule,omitempty"`
-	Following       bool    `json:"following,omitempty"`
-	CommandID       string  `json:"commandId"`
-	ID              string  `json:"id"`
-	RootID          string  `json:"rootId"`
-	ParentID        *string `json:"parentId"`
-	ExpectedVersion string  `json:"expectedVersion"`
-	Title           string  `json:"title"`
-	Description     string  `json:"description"`
-	Date            *string `json:"date"`
-	Color           string  `json:"color"`
-	Postpone        string  `json:"postpone"`
-	RemindAt        *int64  `json:"remindAt"`
-	ReminderTime    *string `json:"reminderTime"`
-	Completed       bool    `json:"completed"`
-	BeforeID        string  `json:"beforeId"`
-	AfterID         string  `json:"afterId"`
+	TargetVersion   string    `json:"targetVersion,omitempty"`
+	StopPeriod      bool      `json:"stopPeriod,omitempty"`
+	AllowDailyMove  bool      `json:"allowDailyMove,omitempty"`
+	Span            *TaskSpan `json:"span,omitempty"`
+	RepeatRule      *Rule     `json:"repeatRule,omitempty"`
+	Following       bool      `json:"following,omitempty"`
+	CommandID       string    `json:"commandId"`
+	ID              string    `json:"id"`
+	RootID          string    `json:"rootId"`
+	ParentID        *string   `json:"parentId"`
+	ExpectedVersion string    `json:"expectedVersion"`
+	Title           string    `json:"title"`
+	Description     string    `json:"description"`
+	Date            *string   `json:"date"`
+	Color           string    `json:"color"`
+	Postpone        string    `json:"postpone"`
+	RemindAt        *int64    `json:"remindAt"`
+	ReminderTime    *string   `json:"reminderTime"`
+	Completed       bool      `json:"completed"`
+	BeforeID        string    `json:"beforeId"`
+	AfterID         string    `json:"afterId"`
 }
 type Rule struct {
 	ID               string  `json:"id"`
@@ -153,6 +164,7 @@ type Job struct {
 	Title      string `json:"title"`
 }
 type Transfer struct {
+	Tags        []Tag             `json:"tags"`
 	SourceStart *string           `json:"sourceStart,omitempty"`
 	Series      []Series          `json:"series"`
 	Jobs        []Job             `json:"notificationJobs"`

@@ -59,7 +59,7 @@ func allRules(db interface {
 func putRule(tx *sql.Tx, r Rule) error {
 	w, _ := json.Marshal(r.Weekdays)
 	t, _ := json.Marshal(r.Template)
-	_, err := tx.Exec("INSERT INTO repeat_rules("+ruleColumns+") VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET effective_to=excluded.effective_to,frequency=excluded.frequency,interval_n=excluded.interval_n,weekdays=excluded.weekdays,month_day=excluded.month_day,template_tree_json=excluded.template_tree_json,generated_through=excluded.generated_through", r.ID, r.SeriesID, r.From, r.Until, r.Anchor, r.Frequency, r.Interval, string(w), r.MonthDay, string(t), r.GeneratedThrough)
+	_, err := tx.Exec("INSERT INTO repeat_rules("+ruleColumns+") VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(id) DO UPDATE SET effective_from=excluded.effective_from,effective_to=excluded.effective_to,anchor_date=excluded.anchor_date,frequency=excluded.frequency,interval_n=excluded.interval_n,weekdays=excluded.weekdays,month_day=excluded.month_day,template_tree_json=excluded.template_tree_json,generated_through=excluded.generated_through", r.ID, r.SeriesID, r.From, r.Until, r.Anchor, r.Frequency, r.Interval, string(w), r.MonthDay, string(t), r.GeneratedThrough)
 	return err
 }
 func (e *Engine) Rules() ([]Rule, error) { e.mu.Lock(); defer e.mu.Unlock(); return allRules(e.db) }
@@ -102,10 +102,34 @@ func ruleMatches(r Rule, d time.Time) bool {
 	}
 	return false
 }
-func cloneTree(template []Task, date, series, rule string, now int64, keepStatus bool, loc *time.Location) map[string]Task {
+func cloneTree(template []Task, date, series, rule string, now int64, keepStatus bool, loc *time.Location, enforceBounds ...bool) map[string]Task {
+	byID := map[string]Task{}
+	for _, t := range template {
+		byID[t.ID] = t
+	}
+	var eligible func(Task, map[string]bool) bool
+	eligible = func(t Task, seen map[string]bool) bool {
+		if t.ParentID == nil || date == "" || len(enforceBounds) == 0 || !enforceBounds[0] {
+			return true
+		}
+		if seen[t.ID] {
+			return false
+		}
+		seen[t.ID] = true
+		if t.StartAt > 0 && date < time.UnixMilli(t.StartAt).In(loc).Format("2006-01-02") {
+			return false
+		}
+		if t.EndAt != nil && date > time.UnixMilli(*t.EndAt).In(loc).Format("2006-01-02") {
+			return false
+		}
+		p, ok := byID[*t.ParentID]
+		return ok && eligible(p, seen)
+	}
 	ids := map[string]string{}
 	for _, t := range template {
-		ids[t.ID] = ID()
+		if eligible(t, map[string]bool{}) {
+			ids[t.ID] = ID()
+		}
 	}
 	var rootID string
 	for _, t := range template {
@@ -115,6 +139,9 @@ func cloneTree(template []Task, date, series, rule string, now int64, keepStatus
 	}
 	out := map[string]Task{}
 	for _, old := range template {
+		if ids[old.ID] == "" {
+			continue
+		}
 		t := old
 		t.ID = ids[old.ID]
 		t.RootID = rootID
@@ -141,7 +168,9 @@ func cloneTree(template []Task, date, series, rule string, now int64, keepStatus
 				t.SeriesID = ptr(series)
 				t.RuleID = ptr(rule)
 				t.OccurrenceDate = ptr(date)
-				t.Postpone = ptr("off")
+				if t.Postpone == nil {
+					t.Postpone = ptr("inherit")
+				}
 			} else {
 				t.SeriesID = nil
 				t.RuleID = nil
@@ -247,7 +276,9 @@ func (e *Engine) repeatTx(tx *sql.Tx, req RepeatRequest, m map[string]Task) erro
 	root.SeriesID = ptr(r.SeriesID)
 	root.RuleID = ptr(r.ID)
 	root.OccurrenceDate = ptr(r.From)
-	root.Postpone = ptr("off")
+	if root.Postpone == nil {
+		root.Postpone = ptr("inherit")
+	}
 	root.Exception = false
 	m[root.ID] = root
 	root.UpdatedAt = e.now().UnixMilli()
@@ -341,7 +372,7 @@ func (e *Engine) EnsureThrough(end string) error {
 					var count int
 					er = tx.QueryRow("SELECT count(*) FROM tasks WHERE parent_id IS NULL AND series_id=? AND occurrence_date=?", r.SeriesID, date).Scan(&count)
 					if er == nil && count == 0 {
-						m := cloneTree(r.Template, date, r.SeriesID, r.ID, e.now().UnixMilli(), false, e.location())
+						m := cloneTree(r.Template, date, r.SeriesID, r.ID, e.now().UnixMilli(), false, e.location(), r.Frequency == "daily")
 						er = validateTree(m)
 						if er == nil {
 							for _, t := range m {
@@ -394,6 +425,10 @@ func (e *Engine) postpone() error {
 	defer tx.Rollback()
 	var global string
 	_ = tx.QueryRow("SELECT value_json FROM settings WHERE key='autoPostpone'").Scan(&global)
+	extended, err := e.extendDailySpansTx(tx, global)
+	if err != nil {
+		return err
+	}
 	rows, err := tx.Query("SELECT "+columns+" FROM tasks WHERE parent_id IS NULL AND status='pending' AND planned_date<? AND series_id IS NULL AND (auto_postpone_policy='on' OR (auto_postpone_policy='inherit' AND ?='true')) ORDER BY planned_date,sort_order,id", today(e.localNow()), global)
 	if err != nil {
 		return err
@@ -421,7 +456,7 @@ func (e *Engine) postpone() error {
 			return err
 		}
 	}
-	if len(ts) > 0 {
+	if len(ts) > 0 || extended {
 		if err = revisionTx(tx); err != nil {
 			return err
 		}
@@ -455,16 +490,22 @@ func (e *Engine) Tick() error {
 	newDay := e.lastDay != day
 	e.mu.Unlock()
 	if newDay {
+		e.mu.Lock()
+		err := e.postpone()
+		e.mu.Unlock()
+		if err != nil {
+			return err
+		}
 		if err := e.EnsureThrough(now.AddDate(0, 0, 7).Format("2006-01-02")); err != nil {
+			return err
+		}
+		if err := e.DailyBackup(); err != nil {
 			return err
 		}
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if newDay {
-		if err := e.postpone(); err != nil {
-			return err
-		}
 		e.lastDay = day
 		e.signal()
 	}

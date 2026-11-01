@@ -17,7 +17,7 @@ type ViewWindowState struct {
 }
 
 func (e *Engine) SaveViewWindow(state ViewWindowState) error {
-	if !contains([]string{"day", "inbox", "calendar", "focus"}, state.View) || state.Width <= 0 || state.Height <= 0 {
+	if !contains([]string{"day", "inbox", "calendar", "focus", "settings", "review"}, state.View) || state.Width <= 0 || state.Height <= 0 {
 		return fail("VALIDATION_ERROR", "无效视图窗口尺寸")
 	}
 	e.mu.Lock()

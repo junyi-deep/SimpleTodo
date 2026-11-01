@@ -20,6 +20,10 @@ export interface BackupInfo {
 }
 
 export interface Command {
+    "targetVersion"?: string;
+    "stopPeriod"?: boolean;
+    "allowDailyMove"?: boolean;
+    "span"?: TaskSpan | null;
     "repeatRule"?: Rule | null;
     "following"?: boolean;
     "commandId": string;
@@ -79,6 +83,15 @@ export interface LocalCalendarState {
     "events": localcalendar$0.Event[] | null;
 }
 
+export interface Note {
+    "id": string;
+    "title": string;
+    "content": string;
+    "createdAt": number;
+    "updatedAt": number;
+    "version": number;
+}
+
 export interface Preview {
     "token": string;
     "tasks": Task[] | null;
@@ -130,7 +143,16 @@ export interface Snapshot {
     "truncated": boolean;
 }
 
+export interface Tag {
+    "id": string;
+    "name": string;
+    "order": number;
+}
+
 export interface Task {
+    "startAt": number;
+    "endAt": number | null;
+    "tagIds": string[] | null;
     "id": string;
     "parentId": string | null;
     "rootId": string;
@@ -154,4 +176,9 @@ export interface Task {
     "version": `${number}`;
     "createdAt": number;
     "updatedAt": number;
+}
+
+export interface TaskSpan {
+    "start": number;
+    "end": number | null;
 }

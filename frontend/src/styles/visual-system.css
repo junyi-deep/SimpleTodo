@@ -1,0 +1,1388 @@
+/* Shared visual vocabulary. Geometry and task behavior remain in style.css. */
+:root {
+  font-variant-numeric: tabular-nums;
+  font-optical-sizing: auto;
+}
+.lucide {
+  stroke-width: 1.7;
+}
+button,
+summary,
+input,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+summary {
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+button:disabled {
+  opacity: 0.4;
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--quiet);
+  opacity: 1;
+}
+::selection {
+  background: var(--accent-soft);
+  color: var(--text);
+}
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border: 1px solid var(--surface);
+  border-radius: 4px;
+}
+button:focus-visible,
+summary:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 1px var(--focus);
+}
+input:focus-visible,
+textarea:focus-visible {
+  outline: none;
+  border-color: var(--focus);
+  box-shadow: none;
+}
+.icon-button {
+  width: 28px;
+  height: 28px;
+  padding: 6px;
+  border-radius: var(--radius-control);
+  color: var(--icon);
+}
+.icon-button:hover {
+  background: var(--secondary);
+  color: var(--text);
+}
+.icon-button.active {
+  background: var(--secondary);
+  color: var(--text);
+}
+.button,
+.select-trigger {
+  min-height: 32px;
+  border-radius: var(--radius-control);
+  border-color: var(--border);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 500;
+}
+.button {
+  padding: 6px 12px;
+  gap: 6px;
+}
+.button:hover,
+.select-trigger:hover {
+  background: var(--inset);
+  border-color: var(--border-strong);
+}
+.button.primary {
+  border: 0;
+  background: var(--accent);
+  color: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+.button.primary:hover {
+  background: var(--accent-strong);
+}
+.button.primary:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--surface);
+}
+.button.destructive {
+  background: var(--danger);
+  border: 0;
+  color: #fff;
+}
+.text-button {
+  font-weight: 500;
+}
+input:not([type="checkbox"]):not([type="range"]),
+textarea {
+  border-color: var(--border);
+  border-radius: var(--radius-control);
+  background: var(--inset);
+  padding: 8px 10px;
+  font-size: 13px;
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease;
+}
+input:not([type="checkbox"]):not([type="range"]):focus,
+textarea:focus {
+  background: var(--surface);
+}
+input[type="checkbox"] {
+  accent-color: var(--accent);
+}
+input[type="range"] {
+  accent-color: var(--accent);
+}
+/* The chrome recedes; view navigation reads as one small, coherent group. */
+.compact-app .app-header,
+.compact-app.on-mac .app-header {
+  height: 46px;
+  min-height: 46px;
+  padding: 7px 12px;
+  gap: 8px;
+  background: color-mix(
+    in srgb,
+    var(--chrome) calc(var(--window-alpha) * 100%),
+    transparent
+  );
+  border-bottom: 1px solid var(--border-subtle);
+}
+.compact-app .brand {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+.compact-app .app-header .header-actions {
+  gap: 1px;
+}
+.view-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: 7px;
+  background: var(--secondary);
+  --wails-draggable: no-drag;
+}
+.compact-app .header-actions .icon-button,
+.compact-app.on-mac .header-actions .icon-button {
+  width: 26px;
+  min-width: 26px;
+  height: 27px;
+  padding: 5px;
+  color: var(--icon);
+  border-radius: 5px;
+}
+.compact-app .view-actions .icon-button.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.07);
+}
+.compact-app .header-actions .icon-button:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+.compact-app .view-actions .icon-button.active:hover {
+  background: var(--surface);
+}
+.compact-app .toolbar-divider {
+  height: 13px;
+  margin: 0 5px;
+  background: var(--border);
+}
+.compact-app .header-actions .window-close:hover {
+  color: #fff;
+  background: #ba5151;
+}
+/* View hierarchy is carried by type and spacing, rather than stacked boxes. */
+.compact-app .planning-bar {
+  padding: 0 16px;
+  background: transparent;
+}
+.compact-app .list-heading {
+  height: 48px;
+  gap: 10px;
+}
+.compact-app .view-switch {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  gap: 6px;
+}
+.compact-app .list-heading > .small {
+  font-size: 11px;
+  color: var(--muted);
+}
+.compact-app .list-heading .icon-button {
+  width: 26px;
+  height: 26px;
+}
+.compact-app .compact-week {
+  gap: 4px;
+  padding-bottom: 12px;
+}
+.compact-app .week-date {
+  height: 32px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+.compact-app .week-date small {
+  font-size: 10px;
+}
+.timeline-pill {
+  border-radius: 6px;
+  background: var(--accent);
+}
+.timeline-today-outline {
+  border-width: 2px;
+  border-color: var(--text);
+  border-radius: 6px;
+}
+.compact-app .list-toolbar {
+  min-height: 38px;
+  padding: 4px 12px;
+  gap: 4px;
+  border-block: 1px solid var(--border-subtle);
+  background: var(--inset);
+}
+.compact-app .list-toolbar .search-control {
+  flex: 1;
+  min-width: 0;
+  gap: 7px;
+}
+.compact-app .search-control {
+  color: var(--icon);
+}
+.compact-app .search-control input {
+  min-height: 26px;
+  width: 100%;
+  padding: 0;
+  font-size: 12px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+.compact-app .search-control input:focus {
+  background: transparent;
+  box-shadow: none;
+}
+.compact-app .list-toolbar .icon-button {
+  width: 27px;
+  height: 27px;
+  padding: 6px;
+}
+.compact-app .list-toolbar .icon-button.active {
+  color: var(--text);
+  background: var(--hover);
+}
+/* Preserve first-line alignment and the established 22px task hierarchy. */
+.compact-app .task-list {
+  padding: 8px 12px 16px;
+}
+.compact-app .root-entry {
+  border: 0;
+}
+.compact-app .root-entry + .root-entry {
+  border-top: 1px solid var(--border-subtle);
+  margin-top: 3px;
+  padding-top: 3px;
+}
+.compact-app .task-row,
+.compact-app .task-row.selected {
+  min-height: 37px;
+  padding-block: 6px;
+  padding-right: 4px;
+  gap: 5px;
+  border-radius: 6px;
+  align-items: flex-start;
+}
+.compact-app .task-row:hover {
+  background: var(--inset);
+}
+.compact-app .task-row.selected {
+  background: var(--secondary);
+}
+.compact-app .task-title {
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 23px;
+}
+.compact-app .task-row .task-check,
+.compact-app .task-row.selected .task-check {
+  width: 16px;
+  min-width: 16px;
+  height: 16px;
+  margin-top: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  background: var(--surface);
+}
+.compact-app .task-row .task-check.checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.compact-app .task-row .tree-toggle {
+  color: var(--icon);
+  height: 23px;
+  margin-top: 0;
+}
+.compact-app .task-row .task-progress {
+  line-height: 23px;
+  margin-top: 0;
+  color: var(--quiet);
+  font-size: 10px;
+}
+.compact-app .task-row.done .task-title,
+.compact-app .task-row.done .inline-title-input {
+  color: var(--quiet);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+.task-reminder,
+.task-time {
+  color: var(--quiet);
+  font-size: 10px;
+  line-height: 17px;
+}
+.task-tags {
+  gap: 3px 5px;
+  margin-top: 3px;
+}
+.task-tags small {
+  color: var(--muted);
+  background: var(--secondary);
+  border-radius: 3px;
+  padding: 0 5px;
+  font-size: 10px;
+  line-height: 17px;
+}
+.compact-app .task-row.selected .task-tags small {
+  background: var(--surface);
+}
+.compact-app .draft-task-row {
+  min-height: 37px;
+  padding-block: 6px;
+  border-radius: 6px;
+  background: var(--secondary);
+}
+.compact-app .draft-check {
+  width: 16px;
+  height: 16px;
+  margin-top: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+}
+.inline-title-input,
+.inline-title-input:focus-visible {
+  background: transparent !important;
+  border: 0 !important;
+  border-radius: 0;
+  box-shadow: none;
+  line-height: 23px !important;
+}
+.compact-app .task-actions {
+  gap: 1px;
+}
+.compact-app .task-actions .icon-button {
+  width: 23px;
+  min-width: 23px;
+  height: 25px;
+  padding: 5px;
+  border-radius: 5px;
+}
+.compact-app .task-row:hover .task-actions,
+.compact-app .task-actions:focus-within,
+.compact-app .task-actions.confirming-delete {
+  max-width: 182px;
+}
+.compact-app .task-actions .icon-button,
+[data-theme="dark"] .compact-app .task-actions .icon-button {
+  color: var(--icon);
+}
+.compact-app .task-actions .icon-button:hover,
+.compact-app .task-actions .icon-button:focus-visible {
+  background: var(--surface);
+}
+.compact-app .task-actions .action-tag:is(:hover, :focus-visible) {
+  color: var(--action-tag);
+}
+.compact-app .task-actions .action-reminder:is(:hover, :focus-visible) {
+  color: var(--action-reminder);
+}
+.compact-app .task-actions .action-edit:is(:hover, :focus-visible) {
+  color: var(--action-edit);
+}
+.compact-app .task-actions .action-date:is(:hover, :focus-visible) {
+  color: var(--action-date);
+}
+.compact-app .task-actions .action-delete:is(:hover, :focus-visible) {
+  color: var(--action-delete);
+}
+.compact-app .task-actions .action-delete.armed {
+  color: var(--action-confirm);
+  background: color-mix(in srgb, var(--action-confirm) 12%, transparent);
+}
+.compact-app .add-task-button,
+.compact-app .add-task-button:is(:hover, :focus-visible) {
+  background: transparent;
+  color: var(--icon);
+  box-shadow: none;
+}
+.compact-app .add-task-button {
+  margin-top: 8px;
+  min-height: 36px;
+}
+.compact-app .add-task-button svg {
+  width: 30px;
+  height: 30px;
+  padding: 6px;
+  border-radius: 6px;
+}
+.compact-app .add-task-button:hover svg,
+.compact-app .add-task-button:focus-visible svg {
+  background: var(--secondary);
+  color: var(--text);
+}
+.compact-app .list-footer {
+  height: 30px;
+  padding-inline: 16px;
+  border-color: var(--border-subtle);
+  color: var(--quiet);
+  background: var(--inset);
+  font-size: 10px;
+}
+/* The same field and floating-panel vocabulary is used in every workspace. */
+.menu,
+.select-options,
+.reminder-popover,
+.filter-popover,
+.calendar-repeat-menu,
+.notice-panel,
+.tag-popover {
+  border: 0;
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-popover);
+}
+.menu,
+.filter-popover,
+.select-options,
+.calendar-repeat-menu {
+  padding: 5px;
+}
+.menu button,
+.select-options button,
+.calendar-repeat-menu button {
+  border-radius: 5px;
+  min-height: 31px;
+  font-size: 12px;
+}
+.menu button:hover,
+.select-options button[data-active="true"],
+.calendar-repeat-menu button:hover {
+  background: var(--secondary);
+}
+.menu hr {
+  border-color: var(--border-subtle);
+  margin: 5px 2px;
+}
+.select-options.searchable {
+  max-height: 320px;
+  overflow: hidden;
+}
+.select-search {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 7px 8px;
+  color: var(--icon);
+  border-bottom: 1px solid var(--border-subtle);
+}
+.select-options .select-search input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 5px 2px;
+  font-size: 12px;
+  text-align: left;
+}
+.select-options .select-search input:focus-visible {
+  border: 0;
+  box-shadow: none;
+}
+.select-results {
+  position: relative;
+  overflow-y: auto;
+  max-height: 260px;
+  overscroll-behavior: contain;
+  padding-top: 4px;
+}
+.select-results > button {
+  width: 100%;
+}
+.select-empty {
+  padding: 12px 7px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.menu svg {
+  color: var(--icon);
+}
+.filter-popover {
+  width: 208px;
+  padding: 8px;
+}
+.filter-popover label {
+  font-size: 12px;
+  line-height: 20px;
+  padding: 6px;
+  border-radius: 5px;
+}
+.filter-popover label:hover {
+  background: var(--inset);
+}
+.filter-tag-options {
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 10px;
+  gap: 3px;
+}
+.depth-popover {
+  width: 188px;
+  padding: 12px;
+}
+.reminder-popover {
+  padding: 14px;
+}
+.reminder-popover header {
+  padding-bottom: 6px;
+}
+.tag-popover {
+  width: 240px;
+  padding: 12px;
+}
+.tag-options {
+  gap: 3px;
+}
+.tag-options label {
+  min-height: 30px;
+  padding: 4px 5px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.tag-options label:hover {
+  background: var(--inset);
+}
+.task-settings-dialog,
+.component-confirmation,
+.placement-dialog {
+  border: 0;
+  border-radius: var(--radius-overlay);
+  box-shadow: var(--shadow-dialog);
+  background: var(--surface);
+}
+.task-settings-dialog::backdrop,
+.component-confirmation::backdrop,
+.placement-dialog::backdrop {
+  background: rgb(20 20 24 / 0.28);
+}
+.task-settings-dialog .dialog-header,
+.task-settings-dialog .dialog-footer,
+.placement-dialog .dialog-header,
+.placement-dialog .dialog-footer {
+  border-color: var(--border-subtle);
+  padding: 12px 18px;
+}
+.task-settings-dialog .dialog-body,
+.placement-dialog .dialog-body {
+  padding: 18px;
+}
+.dialog-header strong,
+.dialog-header h2 {
+  font-size: 13px;
+  font-weight: 600;
+}
+.task-settings-dialog .title-input {
+  font-size: 18px !important;
+  font-weight: 550;
+  letter-spacing: -0.015em;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.task-settings-dialog .field {
+  margin-bottom: 16px;
+}
+.field > span {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  gap: 6px;
+}
+.field > span .lucide {
+  width: 14px;
+  height: 14px;
+  color: var(--icon);
+}
+.task-settings-dialog .field > textarea {
+  min-height: 86px;
+  background: var(--inset);
+}
+.repeat-fields {
+  border-color: var(--border-subtle);
+}
+.component-confirmation {
+  padding: 20px 20px 0;
+}
+.component-confirmation h2 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.component-confirmation p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.7;
+}
+.component-confirmation .dialog-footer {
+  padding: 14px 0;
+  border-color: var(--border-subtle);
+}
+/* Scheduled items keep their useful blue, with less saturation and quieter grids. */
+.compact-app .calendar-toolbar {
+  height: 60px;
+  gap: 8px;
+  padding: 12px 16px;
+}
+.calendar-month-picker .select-trigger {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  background: transparent;
+}
+.calendar-selection-hint {
+  font-size: 10px;
+  color: var(--quiet);
+}
+.compact-app .calendar-workspace {
+  padding: 0 16px 16px;
+}
+.compact-app .month-weekdays {
+  color: var(--muted);
+  padding-block: 8px 10px;
+  font-size: 10px;
+  font-weight: 500;
+}
+.compact-app .calendar-grid {
+  border-color: var(--border);
+  border-radius: 8px;
+}
+.compact-app .calendar-day {
+  padding: 8px;
+  border-color: var(--border-subtle);
+  gap: 5px;
+}
+.compact-app .calendar-day.outside {
+  background: var(--inset);
+}
+.compact-app .calendar-day:hover {
+  background: var(--inset);
+}
+.compact-app .calendar-day.selected {
+  background: var(--secondary);
+  box-shadow: inset 0 0 0 1px var(--focus);
+}
+.compact-app .calendar-number {
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.compact-app .calendar-day.today .calendar-number {
+  color: var(--text);
+  font-weight: 650;
+}
+.compact-app .calendar-task,
+.calendar-drag-preview {
+  background: var(--calendar-blue);
+  color: #fff;
+  border-radius: 4px;
+  min-height: 23px;
+  line-height: 23px;
+  font-size: 11px;
+  padding-inline: 7px;
+}
+.compact-app .calendar-task:hover {
+  background: var(--calendar-blue-hover);
+}
+.compact-app .calendar-task.done {
+  background: var(--calendar-blue-done);
+  color: #fff;
+}
+.calendar-scrollbar {
+  width: 5px;
+  background: var(--secondary);
+}
+.calendar-scroll-thumb {
+  width: 5px;
+  background: var(--border-strong);
+}
+.compact-app .day-drawer {
+  border: 0;
+  box-shadow: -12px 0 36px rgb(20 20 24 / 0.1);
+  background: var(--surface);
+}
+.day-drawer .drawer-header {
+  padding: 16px 18px;
+  border-color: var(--border-subtle);
+  background: var(--inset);
+}
+.drawer-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.drawer-header small {
+  font-size: 10px;
+  color: var(--quiet);
+}
+.compact-app .drawer-task-editor .dialog-body {
+  padding: 18px;
+}
+.compact-app .drawer-task-editor .dialog-footer {
+  border-color: var(--border-subtle);
+  padding: 12px 18px;
+}
+.gantt-view {
+  padding: 0 16px 16px;
+}
+.gantt-toolbar {
+  color: var(--muted);
+  padding-block: 11px;
+}
+.gantt-scroll {
+  border-color: var(--border);
+  border-radius: 8px;
+}
+.gantt-head,
+.gantt-label,
+.gantt-day,
+.gantt-row,
+.gantt-column {
+  border-color: var(--border-subtle);
+}
+.gantt-head,
+.gantt-head .gantt-label {
+  background: var(--inset);
+}
+.gantt-day,
+.gantt-label {
+  font-size: 11px;
+}
+.gantt-label {
+  font-weight: 500;
+}
+.gantt-day small {
+  font-size: 9px;
+  color: var(--quiet);
+}
+.gantt-bar {
+  background: var(--calendar-blue);
+  height: 23px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.gantt-bar.done {
+  background: var(--calendar-blue-done);
+}
+.gantt-bar.dragging {
+  box-shadow: var(--shadow-popover);
+}
+/* Settings, reports and notes now share a restrained navigation and type scale. */
+.compact-app .embedded-pane > .dialog-header {
+  padding: 14px 20px;
+  border-color: var(--border-subtle);
+  min-height: 48px;
+  background: var(--surface);
+}
+.compact-app .settings-layout > nav {
+  width: 144px;
+  padding: 16px 8px;
+  background: var(--chrome);
+  border-right: 1px solid var(--border-subtle);
+}
+.compact-app .settings-layout > nav button {
+  min-height: 35px;
+  padding: 8px 10px;
+  margin-bottom: 4px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 450;
+  color: var(--muted);
+}
+.compact-app .settings-layout > nav button.active {
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 550;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.04);
+}
+.compact-app .settings-content {
+  padding: 26px 24px;
+}
+.settings-content > h2 {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin-bottom: 8px;
+}
+.settings-content h3 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 26px 0 12px;
+}
+.settings-content .section-description:empty {
+  display: none;
+}
+.setting-row {
+  padding-block: 16px;
+  border-color: var(--border-subtle);
+  font-size: 12px;
+}
+.setting-row small {
+  font-size: 11px;
+  color: var(--quiet);
+  margin-top: 4px;
+}
+.local-calendar-settings {
+  border-color: var(--border-subtle);
+}
+.tag-setting-row {
+  gap: 4px;
+  margin: 6px 0;
+}
+.tag-setting-row input {
+  background: var(--inset);
+  font-size: 12px;
+}
+.about-app-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+}
+.compact-app .focus-page {
+  padding: 24px;
+}
+.focus-page .tabs {
+  background: var(--chrome);
+  border-color: var(--border-subtle);
+}
+.clock-digits {
+  font-size: 72px;
+  line-height: 1.2;
+  font-weight: 450;
+  letter-spacing: -0.04em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.focus-state {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.focus-config {
+  gap: 10px;
+}
+.focus-config input {
+  font-size: 13px;
+}
+.focus-actions .button {
+  min-height: 34px;
+  padding-inline: 18px;
+}
+.focus-page .quiet-note {
+  color: var(--quiet);
+  font-size: 10px;
+}
+.countdown-row {
+  border-color: var(--border-subtle);
+}
+.review-nav {
+  width: 112px;
+  padding: 16px 8px;
+  background: var(--chrome);
+  border-color: var(--border-subtle);
+  gap: 4px;
+}
+.review-nav button {
+  min-height: 35px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 450;
+  color: var(--muted);
+}
+.review-nav button.active {
+  color: var(--text);
+  background: var(--surface);
+  font-weight: 550;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.04);
+}
+.review-main {
+  padding: 24px 26px;
+  gap: 24px;
+}
+.review-heading h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.review-filters {
+  gap: 10px;
+}
+.review-filters > label:not(.check-label) {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.review-filters input[type="date"] {
+  min-height: 30px;
+  background: var(--inset);
+}
+.review-summary {
+  gap: 32px;
+  padding-block: 4px 22px;
+  border-color: var(--border-subtle);
+}
+.review-summary strong {
+  font-size: 28px;
+  font-weight: 550;
+  letter-spacing: -0.03em;
+}
+.review-summary p {
+  font-size: 11px;
+  color: var(--muted);
+  gap: 6px;
+}
+.review-main h2 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 14px;
+}
+.heatmap-grid > span,
+.heatmap-key > span {
+  border-radius: 2px;
+}
+.tag-stat {
+  font-size: 11px;
+  color: var(--muted);
+}
+.report-task,
+.note-item {
+  border-color: var(--border-subtle);
+  border-radius: 4px;
+}
+.report-task {
+  padding: 12px 6px;
+}
+.report-task:hover,
+.note-item:hover {
+  background: var(--inset);
+}
+.report-task > span,
+.note-item strong {
+  font-size: 13px;
+  font-weight: 450;
+}
+.report-task small,
+.note-item small {
+  font-size: 10px;
+  color: var(--quiet);
+  line-height: 1.6;
+}
+.review-resizer {
+  border: 0;
+  background: var(--border-subtle);
+  border-radius: 2px;
+  width: 1px;
+  justify-self: center;
+}
+.review-resizer::before {
+  content: "";
+  display: block;
+  width: 7px;
+  height: 100%;
+  margin-left: -3px;
+}
+.review-resizer:is(:hover, :focus-visible) {
+  background: var(--border-strong);
+}
+.notes-pane {
+  padding-left: 18px;
+  gap: 14px;
+}
+.notes-pane > header {
+  min-height: 30px;
+}
+.note-title {
+  background: transparent !important;
+  font-size: 17px !important;
+  font-weight: 550;
+  letter-spacing: -0.015em;
+  padding-inline: 0 !important;
+}
+.note-content,
+.note-content:focus {
+  background: transparent !important;
+  font-size: 13px;
+  line-height: 1.8;
+  padding-inline: 0;
+}
+.markdown-body {
+  line-height: 1.8;
+}
+.markdown-body pre {
+  border-radius: 6px;
+  background: var(--inset);
+}
+.markdown-body a {
+  color: var(--action-edit);
+  text-underline-offset: 3px;
+}
+.toast {
+  border-radius: 7px;
+  box-shadow: var(--shadow-popover);
+  font-size: 11px;
+}
+/* Compact windows retain comfortable controls without making a second layout. */
+@media (max-width: 520px) {
+  .compact-app .app-header,
+  .compact-app.on-mac .app-header {
+    padding-inline: 10px;
+    gap: 4px;
+  }
+  .compact-app .brand {
+    font-size: 11.5px;
+  }
+  .compact-app .header-actions .icon-button,
+  .compact-app.on-mac .header-actions .icon-button {
+    width: 24px;
+    min-width: 24px;
+    height: 26px;
+    padding: 5px;
+  }
+  .compact-app .view-actions {
+    gap: 1px;
+    padding: 2px;
+  }
+  .compact-app .toolbar-divider,
+  .compact-app.on-mac .toolbar-divider {
+    margin-inline: 4px;
+  }
+  .compact-app .settings-layout > nav {
+    width: 42px;
+    padding-inline: 4px;
+  }
+  .compact-app .settings-layout > nav button {
+    justify-content: center;
+    padding-inline: 8px;
+  }
+  .compact-app .settings-content {
+    padding: 20px 16px;
+  }
+  .compact-app .list-heading > .small {
+    font-size: 10px;
+  }
+  .compact-app .week-date {
+    min-width: 26px;
+    gap: 3px;
+  }
+}
+@media (max-width: 850px) {
+  .review-main {
+    padding: 20px 18px;
+  }
+  .review-nav {
+    width: 88px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button,
+  summary,
+  input,
+  textarea {
+    transition: none;
+  }
+}
+.no-motion button,
+.no-motion summary,
+.no-motion input,
+.no-motion textarea {
+  transition: none;
+}
+
+.compact-app .view-actions .icon-button.active:focus-visible {
+  box-shadow: inset 0 0 0 1px var(--focus);
+}
+
+/* The timer itself is the focus, without a second decorative clock face. */
+.compact-app .focus-page .focus-orbit {
+  display: none;
+}
+.compact-app .focus-page .focus-state {
+  margin-top: 64px;
+}
+
+/* Keep the title a document heading, and calendar context visible beside a drawer. */
+.task-settings-dialog input.task-editor-title,
+.drawer-task-editor input.task-editor-title,
+.task-settings-dialog input.task-editor-title:focus,
+.drawer-task-editor input.task-editor-title:focus {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  font-size: 18px;
+  font-weight: 550;
+  letter-spacing: -0.015em;
+  line-height: 1.5;
+  padding: 0;
+  margin: 0 0 20px;
+}
+.compact-app .calendar-workspace {
+  --drawer-width: clamp(340px, 40vw, 420px);
+}
+.compact-app .day-drawer {
+  width: var(--drawer-width);
+  min-width: 340px;
+}
+.compact-app .calendar-workspace:has(.day-drawer) .calendar-grid,
+.compact-app .calendar-workspace:has(.day-drawer) .month-weekdays {
+  margin-right: var(--drawer-width);
+}
+
+.compact-app .task-row .task-actions {
+  margin-top: -1px;
+}
+
+/* Review keeps its filters with the content they control. */
+.review-main {
+  padding: 18px 22px;
+  gap: 20px;
+}
+.review-heading {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.review-heading h1,
+.report-heading h1 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+.review-filters {
+  align-items: flex-end;
+  gap: 10px;
+}
+.review-filters input[type="date"] {
+  width: 140px;
+  max-width: 100%;
+  min-width: 0;
+  height: 32px;
+  min-height: 32px;
+  padding: 4px 8px;
+  line-height: 20px;
+}
+.review-filters .check-label {
+  min-height: 31px;
+}
+.review-status-field .select-trigger {
+  min-width: 110px;
+}
+.review-overview-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  gap: 24px;
+  padding-block: 18px;
+  border-block: 1px solid var(--border-subtle);
+}
+.review-overview-grid > section {
+  min-width: 0;
+}
+.review-pie-content {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.review-pie {
+  width: 120px;
+  height: 120px;
+  flex: none;
+}
+.pie-completed {
+  fill: var(--accent);
+  background: var(--accent);
+}
+.pie-pending {
+  fill: var(--border-strong);
+  background: var(--border-strong);
+}
+.pie-empty {
+  fill: var(--secondary);
+  stroke: var(--border);
+}
+.review-pie-legend {
+  flex: 1;
+  min-width: 100px;
+  display: grid;
+  gap: 10px;
+}
+.review-pie-legend p {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+  white-space: nowrap;
+}
+.review-pie-legend strong {
+  color: var(--text);
+  font-weight: 550;
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+.review-pie-legend .pie-total strong {
+  font-size: 24px;
+  line-height: 1;
+  margin-left: 0;
+}
+.review-pie-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+.review-pie-legend .pie-rate {
+  padding-top: 8px;
+  border-top: 1px solid var(--border-subtle);
+}
+.review-heatmap > p {
+  margin: 0 0 12px;
+}
+.review-main.review-report-page {
+  gap: 0;
+}
+.report-heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.report-heading small {
+  font-size: 11px;
+}
+.report-range-filters {
+  margin-bottom: 12px;
+}
+.report-filters {
+  padding-bottom: 12px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+.report-filters .search-control {
+  min-width: 130px;
+}
+.tag-filter {
+  min-width: 115px;
+}
+.tag-filter .select-trigger {
+  width: 100%;
+  gap: 6px;
+}
+.tag-filter .select-trigger > span {
+  flex: 1;
+  text-align: left;
+}
+.tag-filter-popup {
+  position: fixed;
+  margin: 0;
+  padding: 8px;
+  border: 0;
+  border-radius: var(--radius-overlay);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-popover);
+  font-size: 12px;
+}
+.tag-filter-popup .search-control {
+  width: 100%;
+  min-width: 0;
+  padding: 3px 5px 7px;
+}
+.tag-filter-popup .search-control input {
+  min-width: 0;
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  padding: 5px 2px;
+}
+.tag-filter-options {
+  max-height: 176px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.tag-filter-options label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  border-radius: 5px;
+  padding: 5px 7px;
+  cursor: pointer;
+}
+.tag-filter-options label:hover {
+  background: var(--secondary);
+}
+.tag-filter-options label span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.tag-filter-options .muted {
+  padding: 8px;
+}
+.tag-filter-popup > .text-button {
+  margin-top: 6px;
+  padding: 7px;
+  width: 100%;
+  border-top: 1px solid var(--border-subtle);
+  text-align: left;
+  color: var(--muted);
+}
+.review-report-page .notes-pane > header {
+  min-height: 25px;
+  margin-bottom: 4px;
+}
+.review-report-page .notes-pane > header h2 {
+  margin-bottom: 0;
+}
+@media (max-width: 850px) {
+  .review-main {
+    padding: 16px;
+  }
+  .review-overview-grid {
+    grid-template-columns: 240px minmax(0, 1fr);
+    gap: 18px;
+  }
+  .review-filters {
+    gap: 8px;
+  }
+  .report-range-filters input[type="date"] {
+    width: 130px;
+  }
+}
+@media (max-width: 660px) {
+  .review-overview-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .review-pie-content {
+    max-width: 280px;
+  }
+}

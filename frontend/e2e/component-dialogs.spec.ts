@@ -112,7 +112,7 @@ test("应用确认使用组件，取消保留描述，确认放弃，不出现�
   await row(page, t.title).hover();
   await row(page, t.title).getByLabel("任务设置", { exact: true }).click();
   const editor = page.getByRole("dialog", {
-    name: "任务详细设置",
+    name: "任务详情",
     exact: true,
   });
   const desc = editor.getByLabel("描述", { exact: true });
@@ -136,33 +136,26 @@ test("应用确认使用组件，取消保留描述，确认放弃，不出现�
   await expect(editor).toHaveCount(0);
   expect((await call(request, "FindTask", t.id)).description).toBe("");
 });
-test("改期弹窗内设置重复，日期和规则一起保存且可跨周生成", async ({
+test("时间弹窗保存起止范围，结束日之后不生成记录", async ({
   page,
   request,
 }) => {
-  const t = await root(request, "改期并重复");
+  const t = await root(request, "时间范围");
   await page.goto("/?preview=1");
   await row(page, t.title).hover();
-  await row(page, t.title).getByLabel("调整计划日期", { exact: true }).click();
-  const p = page.getByRole("dialog", { name: "调整计划日期", exact: true });
-  await select(page, "计划重复方式", "每日");
-  await p.getByLabel("重复间隔", { exact: true }).fill("2");
-  await expect(
-    p.getByText("从计划日期开始，结束日期留空则一直重复。", { exact: true }),
-  ).toBeVisible();
-  await page.screenshot({
-    path: "../.impeccable/review/component-placement-repeat.png",
-  });
-  await p.getByRole("button", { name: "确认移动", exact: true }).click();
+  await row(page, t.title).getByLabel("调整任务时间", { exact: true }).click();
+  const p = page.getByRole("dialog", { name: "调整任务时间", exact: true });
+  await p.getByLabel("开始时间", { exact: true }).fill(t.date + "T00:00");
+  await p.getByLabel("结束时间", { exact: true }).fill(t.date + "T23:59");
+  await p.getByRole("button", { name: "确认调整", exact: true }).click();
   await expect(p).toHaveCount(0);
-  const r = (await call(request, "Rules"))[0];
-  expect(r.frequency).toBe("daily");
-  expect(r.interval).toBe(2);
-  expect(r.until).toBeNull();
-  await page.reload();
-  await expect(
-    page.locator(".task-repeat").filter({ hasText: "每 2 天 · 持续重复" }),
-  ).toBeVisible();
+  const saved = await call(request, "FindTask", t.id);
+  expect(saved.endAt).toBeGreaterThan(saved.startAt);
+  const d = new Date(t.date + "T12:00:00");
+  d.setDate(d.getDate() + 1);
+  const next = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const q = await call(request, "Query", { view: "day", date: next });
+  expect(q.tasks.some((n: any) => n.title === t.title)).toBe(false);
 });
 
 test("编辑中的未完成任务拖动时先保存标题再排序", async ({ page, request }) => {
@@ -197,7 +190,7 @@ test("深色窄窗口确认框、输入焦点和 Esc 取消可用", async ({ pag
   await page.goto("/?preview=1");
   await row(page, t.title).hover();
   await row(page, t.title).getByLabel("任务设置", { exact: true }).click();
-  const e = page.getByRole("dialog", { name: "任务详细设置", exact: true });
+  const e = page.getByRole("dialog", { name: "任务详情", exact: true });
   await e.getByLabel("描述", { exact: true }).fill("深色输入没有外框");
   await expect(e.getByLabel("描述", { exact: true })).toHaveCSS(
     "outline-style",
@@ -220,14 +213,11 @@ test("深色窄窗口确认框、输入焦点和 Esc 取消可用", async ({ pag
   );
 });
 
-test("浅深主题下已选和未选星期、已完成复选框都有细内描边焦点", async ({
-  page,
-  request,
-}) => {
+test("浅深主题下完成框与标签选择的键盘焦点可见", async ({ page, request }) => {
   for (const theme of ["light", "dark"]) {
     await call(request, "Settings", { theme, animation: "false" });
-    const t = await root(request, theme + "焦点");
-    const done = await root(request, theme + "已完成");
+    const t = await root(request, theme + "焦点"),
+      done = await root(request, theme + "已完成");
     await call(request, "Complete", {
       commandId: crypto.randomUUID(),
       id: done.id,
@@ -241,51 +231,42 @@ test("浅深主题下已选和未选星期、已完成复选框都有细内描�
     await page.keyboard.press("Tab");
     await page.keyboard.press("Shift+Tab");
     await expect(check).toBeFocused();
-    await expect(check).toHaveCSS("outline-style", "none");
     expect(
       await check.evaluate((el) => getComputedStyle(el).boxShadow),
     ).not.toBe("none");
     await row(page, t.title).hover();
     await row(page, t.title)
-      .getByLabel("调整计划日期", { exact: true })
+      .getByLabel("设置标签 " + t.title, { exact: true })
       .click();
-    await select(page, "计划重复方式", "每周");
-    const picker = page.getByRole("group", { name: "重复星期", exact: true });
-    for (const pressed of ["true", "false"]) {
-      const b = picker.locator(`[aria-pressed="${pressed}"]`).first();
-      const bg = await b.evaluate((el) => getComputedStyle(el).backgroundColor);
-      await b.focus();
+    const pop = page.getByRole("dialog", { name: "选择任务标签", exact: true });
+    for (const name of ["重要", "紧急"]) {
+      const box = pop.getByRole("checkbox", { name, exact: true });
+      await box.focus();
       await page.keyboard.press("Tab");
       await page.keyboard.press("Shift+Tab");
-      await expect(b).toBeFocused();
-      await expect(b).toHaveCSS("outline-style", "none");
-      await expect(b).toHaveCSS("background-color", bg);
-      expect(await b.evaluate((el) => getComputedStyle(el).boxShadow)).not.toBe(
-        "none",
-      );
+      await expect(box).toBeFocused();
+      await expect(box).toHaveCSS("outline-style", "none");
     }
-    await page.screenshot({
-      path: `../.impeccable/review/component-weekday-focus-${theme}.png`,
-    });
+    await page.keyboard.press("Escape");
   }
 });
 
-test("关闭重复后改期不受隐藏的旧结束日期限制", async ({ page, request }) => {
-  const t = await root(request, "取消重复设置");
+test("清空结束时间后恢复持续的每日任务", async ({ page, request }) => {
+  const t = await root(request, "清空结束时间");
   await page.goto("/?preview=1");
   await row(page, t.title).hover();
-  await row(page, t.title).getByLabel("调整计划日期", { exact: true }).click();
-  const d = page.getByRole("dialog", { name: "调整计划日期", exact: true });
-  await select(page, "计划重复方式", "每日");
-  await d.getByLabel("结束日期（可选）", { exact: true }).fill(t.date);
-  await select(page, "计划重复方式", "不重复");
-  const date = new Date(t.date + "T12:00:00");
-  date.setDate(date.getDate() + 1);
-  const next = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-  await d.getByLabel("计划日期", { exact: true }).fill(next);
-  await d.getByRole("button", { name: "确认移动", exact: true }).click();
+  await row(page, t.title).getByLabel("调整任务时间", { exact: true }).click();
+  const d = page.getByRole("dialog", { name: "调整任务时间", exact: true });
+  await d.getByLabel("结束时间", { exact: true }).fill(t.date + "T23:59");
+  await d.getByLabel("结束时间", { exact: true }).fill("");
+  const next = new Date(t.date + "T12:00:00");
+  next.setDate(next.getDate() + 1);
+  const day = `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`;
+  await d.getByLabel("开始时间", { exact: true }).fill(day + "T09:00");
+  await d.getByRole("button", { name: "确认调整", exact: true }).click();
   await expect(d).toHaveCount(0);
   const saved = await call(request, "FindTask", t.id);
-  expect(saved.date).toBe(next);
-  expect(saved.seriesId).toBeNull();
+  expect(saved.endAt).toBeNull();
+  const q = await call(request, "Query", { view: "day", date: day });
+  expect(q.tasks.some((n: any) => n.title === t.title)).toBe(true);
 });

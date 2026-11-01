@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 // Promote detaches a complete child branch without changing its IDs or date.
@@ -84,8 +85,8 @@ func (e *Engine) Promote(c Command, revision string) ([]Task, error) {
 		promoted[id] = t
 	}
 	now := e.now().UnixMilli()
-	aggregate(tree, now)
-	aggregate(promoted, now)
+	e.aggregate(tree, now)
+	e.aggregate(promoted, now)
 	markException(tree, c.RootID)
 	if err = validateTree(tree, previous); err != nil {
 		return nil, err
@@ -139,8 +140,28 @@ func (e *Engine) Promote(c Command, revision string) ([]Task, error) {
 		}
 	}
 	for i, id := range ids {
-		if _, err = tx.Exec("UPDATE tasks SET sort_order=?,version=version+1,updated_at=? WHERE id=?", i, now, id); err != nil {
+		if _, err = tx.Exec("UPDATE tasks SET sort_order=?,version=version+1 WHERE id=?", i, id); err != nil {
 			return nil, err
+		}
+	}
+	if e.periodModel {
+		if err = e.refreshDailyTemplateTx(tx, tree); err != nil {
+			return nil, err
+		}
+		live, er := scanTask(tx.QueryRow("SELECT "+columns+" FROM tasks WHERE id=?", node.ID))
+		if er != nil {
+			return nil, er
+		}
+		promoted[node.ID] = live
+		var until *string
+		if live.EndAt != nil {
+			d := time.UnixMilli(*live.EndAt).In(e.location()).Format("2006-01-02")
+			until = &d
+		}
+		if until == nil || *until >= val(live.Date) {
+			if err = e.repeatTx(tx, RepeatRequest{Command: Command{ID: node.ID, RootID: node.ID}, Rule: Rule{Frequency: "daily", Interval: 1, Until: until}}, promoted); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if err = syncReminder(tx, tree[c.RootID], now); err != nil {

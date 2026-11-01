@@ -31,27 +31,41 @@ test("行内编辑仍固定版本并支持冲突后显式重试", async ({ page,
   await editor
     .getByRole("button", { name: "基于最新版本重试", exact: true })
     .click();
-  await page.locator(".component-confirmation").getByRole("button", { name: "确认", exact: true }).click();
+  await page
+    .locator(".component-confirmation")
+    .getByRole("button", { name: "确认", exact: true })
+    .click();
   await expect(
     page.getByRole("button", { name: t.title + "草稿", exact: true }),
   ).toBeVisible();
 });
-test("重复模板使用行内编辑器和自定义周期下拉", async ({ page, request }) => {
-  const t = await root(request, unique("每天复盘"));
+test("详细编辑用起止时间控制每日任务，不显示周期规则", async ({
+  page,
+  request,
+}) => {
+  const t = await root(request, unique("任务范围"));
   await page.goto("/?preview=1");
-  // Keyboard focus keeps actions visible while an accumulated list scrolls.
   await row(page, t.title).getByLabel("任务设置").focus();
   await row(page, t.title).getByLabel("任务设置").click();
-  const editor = page.locator(".task-settings-dialog");
-  await select(page, "不重复", "每日");
-  await editor.getByRole("button", { name: "保存修改", exact: true }).click();
+  const e = page.getByRole("dialog", { name: "任务详情", exact: true });
+  await e.getByLabel("开始时间", { exact: true }).fill(t.date + "T09:00");
+  const d = new Date(t.date + "T12:00:00");
+  d.setDate(d.getDate() + 2);
+  const end = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  await e.getByLabel("结束时间", { exact: true }).fill(end + "T23:59");
+  await expect(
+    e.getByRole("combobox", { name: "不重复", exact: true }),
+  ).toHaveCount(0);
+  await e.getByRole("button", { name: "保存修改", exact: true }).click();
   const updated = await call(request, "FindTask", t.id);
   expect(updated.seriesId).toBeTruthy();
+  expect(updated.endAt).toBeGreaterThan(updated.startAt);
   const rules = await call(request, "Rules");
   expect(rules.find((r: any) => r.id === updated.ruleId).frequency).toBe(
     "daily",
   );
 });
+
 test("拖动显示预览和落点并保存根任务顺序", async ({ page, request }) => {
   const a = await root(request, unique("拖动A")),
     b = await root(request, unique("拖动B"));
@@ -134,11 +148,17 @@ test("详细设置弹窗未保存时 Esc 取消保护草稿", async ({ page, req
   const editor = page.locator(".task-settings-dialog");
   await editor.getByLabel("任务标题").fill(t.title + "未保存");
   await page.keyboard.press("Escape");
-  await page.locator(".component-confirmation").getByRole("button", { name: "取消", exact: true }).click();
+  await page
+    .locator(".component-confirmation")
+    .getByRole("button", { name: "取消", exact: true })
+    .click();
   await expect(editor).toBeVisible();
   await expect(editor.getByLabel("任务标题")).toHaveValue(t.title + "未保存");
   await editor.getByRole("button", { name: "取消", exact: true }).click();
-  await page.locator(".component-confirmation").getByRole("button", { name: "确认", exact: true }).click();
+  await page
+    .locator(".component-confirmation")
+    .getByRole("button", { name: "确认", exact: true })
+    .click();
   await expect(editor).toHaveCount(0);
   expect((await call(request, "FindTask", t.id)).title).toBe(t.title);
 });

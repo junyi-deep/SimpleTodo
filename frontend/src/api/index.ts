@@ -38,6 +38,13 @@ export async function api<T = void>(
     if (!r.ok) throw new Error(body.error || "操作失败");
     return body as T;
   }
+  if (method === "WindowAction") {
+    method = "WindowActionFor";
+    args = [
+      new URLSearchParams(location.search).get("window") || "main",
+      ...args,
+    ];
+  }
   const { Call } = await import("@wailsio/runtime");
   return Call.ByName(`main.TodoService.${method}`, ...args);
 }

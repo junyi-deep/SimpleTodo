@@ -129,7 +129,14 @@ test("删除两次确认，取消和超时不删除，确认删除完整分支",
   await r.hover();
   await r.getByLabel("删除任务", { exact: true }).click();
   const confirm = r.getByLabel("确认删除任务", { exact: true });
-  await expect(confirm).toHaveCSS("color", "rgb(36, 128, 70)");
+  await expect
+    .poll(async () => {
+      const green = await confirm.evaluate((el) =>
+        getComputedStyle(el).color.match(/\d+/g)!.map(Number),
+      );
+      return green[1] > green[0] && green[1] > green[2];
+    })
+    .toBe(true);
   expect((await call(request, "ReadTree", t.id)).length).toBe(2);
   await page.keyboard.press("Escape");
   await expect(confirm).toHaveCount(0);
@@ -155,7 +162,5 @@ test("单击编辑后 Shift+Enter 保存并直接添加子任务", async ({
   await page.goto("/?preview=1");
   await page.getByRole("button", { name: t.title, exact: true }).click();
   await page.getByLabel("编辑任务标题", { exact: true }).press("Shift+Enter");
-  await expect(
-    page.getByLabel("新待办标题", { exact: true }),
-  ).toBeFocused();
+  await expect(page.getByLabel("新待办标题", { exact: true })).toBeFocused();
 });

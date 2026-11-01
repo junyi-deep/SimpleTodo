@@ -90,9 +90,9 @@ test("单击光标在行尾，柔和编辑样式，完成后标题变浅并划�
   const pendingColor = await title.evaluate((el) => getComputedStyle(el).color);
   await updated.getByLabel("完成任务及所有后代", { exact: true }).click();
   await expect(title).toHaveCSS("text-decoration-line", "line-through");
-  expect(await title.evaluate((el) => getComputedStyle(el).color)).not.toBe(
-    pendingColor,
-  );
+  await expect
+    .poll(() => title.evaluate((el) => getComputedStyle(el).color))
+    .not.toBe(pendingColor);
 });
 
 test("计划日期为模态框，不挤动列表，Esc 返回任务", async ({
@@ -109,9 +109,9 @@ test("计划日期为模态框，不挤动列表，Esc 返回任务", async ({
     .toBe(0);
   const before = (await r.boundingBox())!;
   await r.hover();
-  await r.getByRole("button", { name: "调整计划日期", exact: true }).click();
+  await r.getByRole("button", { name: "调整任务时间", exact: true }).click();
   const dialog = page.getByRole("dialog", {
-    name: "调整计划日期",
+    name: "调整任务时间",
     exact: true,
   });
   await expect(dialog).toBeVisible();
@@ -123,7 +123,7 @@ test("计划日期为模态框，不挤动列表，Esc 返回任务", async ({
   });
   await page.keyboard.press("Escape");
   await expect(dialog).toHaveCount(0);
-  await expect(r.getByLabel("调整计划日期", { exact: true })).toBeFocused();
+  await expect(r.getByLabel("调整任务时间", { exact: true })).toBeFocused();
 });
 
 test("真实指针拖动可取消，边缘排序保持同级并持久化", async ({
@@ -147,6 +147,7 @@ test("真实指针拖动可取消，边缘排序保持同级并持久化", async
   await dragStart();
   await page.keyboard.press("Escape");
   await page.mouse.up();
+  await expect(page.getByLabel("编辑任务标题", { exact: true })).toHaveCount(0);
   await expect(page.locator(".pointer-drag-preview")).toHaveCount(0);
   expect((await call(request, "FindTask", c.id)).parentId).toBeNull();
   await dragStart();

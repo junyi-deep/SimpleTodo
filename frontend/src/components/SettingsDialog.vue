@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import CustomSelect from "./CustomSelect.vue";
+import { canLeaveEditor } from "../composables/editorGuard";
+import TagSettings from "./TagSettings.vue";
 import LocalCalendarSettings from "./LocalCalendarSettings.vue";
 import { restoreDialogFocus } from "../composables/dialogFocus";
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, watch, onMounted, onUnmounted } from "vue";
 import {
   X,
   Settings2,
@@ -10,6 +12,7 @@ import {
   Database,
   Keyboard,
   Info,
+  Tags,
   FolderOpen,
   Archive,
   RotateCcw,
@@ -41,19 +44,38 @@ const tabs = [
   { id: "appearance", label: "外观与窗口", icon: Palette },
   { id: "keys", label: "快捷键", icon: Keyboard },
   { id: "data", label: "本地数据", icon: Database },
+  { id: "tags", label: "标签", icon: Tags },
   { id: "about", label: "关于", icon: Info },
 ];
+watch(
+  () => props.initialTab,
+  (value) => {
+    if (value) void switchTab(value);
+  },
+);
+async function switchTab(next: string) {
+  if (next === tab.value || (await canLeaveEditor())) tab.value = next;
+}
 restoreDialogFocus();
 onMounted(async () => {
   await loadBackups();
   await loadProxy();
-
-  emoji.value = s.boot?.settings.emoji || "☺";
-  for (const key of ["main", "quick", "mini"])
-    bindings.value[key] =
-      s.boot?.settings["shortcut" + key[0].toUpperCase() + key.slice(1)] || "";
-  readWindow();
 });
+// Independent settings can mount before the startup metadata has arrived.
+let initialized = false;
+watch(
+  () => s.boot,
+  (boot) => {
+    if (!boot || initialized) return;
+    initialized = true;
+    emoji.value = boot.settings.emoji || "☺";
+    for (const key of ["main", "quick", "mini"])
+      bindings.value[key] =
+        boot.settings["shortcut" + key[0].toUpperCase() + key.slice(1)] || "";
+    readWindow();
+  },
+  { immediate: true },
+);
 onUnmounted(() => emit("window-opacity", null));
 function readWindow() {
   const w = s.boot?.windows.find((w) => w.key === windowKey.value);
@@ -252,12 +274,13 @@ async function migrate() {
           :class="{ active: tab === t.id }"
           :title="t.label"
           :aria-current="tab === t.id ? 'page' : undefined"
-          @click="tab = t.id"
+          @click="switchTab(t.id)"
         >
           <component :is="t.icon" :size="16" />{{ t.label }}
         </button>
       </nav>
       <div v-motion="tab" class="settings-content">
+        <TagSettings v-if="tab === 'tags'" />
         <template v-if="tab === 'general'"
           ><h2>按自己的节奏安排</h2>
           <p class="muted section-description"></p>
@@ -270,7 +293,7 @@ async function migrate() {
           ><label class="setting-row"
             ><span
               >未完成任务自动延期<small
-                >仅移动普通任务，重复任务不延期</small
+                >未完成时自动延长结束时间，开始时间保持不变</small
               ></span
             ><input
               type="checkbox"
@@ -301,7 +324,7 @@ async function migrate() {
               type="number"
               min="1"
               max="180"
-              :model-value="s.boot?.settings.focusMinutes"
+              :value="s.boot?.settings.focusMinutes"
               @change="set('focusMinutes', $event)"
           /></label>
           <div class="setting-row">
@@ -350,10 +373,23 @@ async function migrate() {
               @change="s.setting('animation', checkbox($event))"
           /></label>
           <h3>窗口显示</h3>
+          <label class="field"
+            ><span>窗口</span
+            ><CustomSelect
+              v-model="windowKey"
+              aria-label="窗口设置目标"
+              @update:model-value="readWindow"
+              ><option value="main">任务列表</option>
+              <option value="calendar">日历</option>
+              <option value="focus">专注</option>
+              <option value="settings">设置</option>
+              <option value="review">复盘</option></CustomSelect
+            ></label
+          >
           <div class="field-grid">
             <label class="field"
               ><span>显示层级</span
-              ><CustomSelect v-model="windowMode">
+              ><CustomSelect v-model="windowMode" aria-label="显示层级">
                 <option value="normal">普通窗口</option>
                 <option value="top">始终置顶</option>
                 <option
@@ -367,7 +403,9 @@ async function migrate() {
               ><span>背景不透明度 {{ Math.round(opacity * 100) }}%</span
               ><input
                 v-model.number="opacity"
-                @input="emit('window-opacity', opacity)"
+                @input="
+                  emit('window-opacity', windowKey === s.key ? opacity : null)
+                "
                 aria-label="背景不透明度"
                 type="range"
                 min="0.4"
@@ -449,7 +487,8 @@ async function migrate() {
             ><button class="button" @click="restore('')">从文件恢复</button>
           </div>
           <p class="muted small">
-            每日首次启动自动备份，保留最近 7 份。恢复前另建保护备份。
+            每日首次启动自动备份，所有备份合计保留最近 3
+            次。恢复前另建保护备份。
           </p>
           <div class="backup-list">
             <p v-if="!backups.length" class="muted">还没有备份。</p>

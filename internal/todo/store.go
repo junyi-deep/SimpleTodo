@@ -24,20 +24,21 @@ import (
 var migrations embed.FS
 
 type Engine struct {
-	zone     atomic.Pointer[time.Location]
-	lock     *flock.Flock
-	mu       sync.Mutex
-	db       *sql.DB
-	Dir      string
-	now      func() time.Time
-	Changed  func()
-	Notify   func(Notice) error
-	Report   func(error)
-	previews map[string]pendingImport
-	lastDay  string
+	zone        atomic.Pointer[time.Location]
+	lock        *flock.Flock
+	mu          sync.Mutex
+	db          *sql.DB
+	Dir         string
+	now         func() time.Time
+	Changed     func()
+	Notify      func(Notice) error
+	Report      func(error)
+	previews    map[string]pendingImport
+	lastDay     string
+	periodModel bool
 }
 
-var defaults = map[string]string{"expandDepth": "2", "dayShowCompleted": "true", "inboxShowCompleted": "false", "dayShowRecurring": "true", "inboxShowRecurring": "true", "theme": "system", "autoPostpone": "true", "completedBottom": "true", "titleClick": "edit", "tabEntry": "false", "sound": "true", "focusMinutes": "25", "emoji": "☺", "miniView": "today", "miniPending": "true", "edgeHide": "false", "releaseURL": "", "shortcutMain": "", "shortcutMini": "", "shortcutQuick": "", "onboarding": "false", "animation": "true", "notificationPrompted": "false", "autostartConfigured": "false"}
+var defaults = map[string]string{"skippedUpdateVersion": "", "dayFilterTags": "[]", "inboxFilterTags": "[]", "showTags": "false", "calendarShowChildren": "false", "reviewNoteWidth": "33", "expandDepth": "2", "dayShowCompleted": "true", "inboxShowCompleted": "false", "dayShowRecurring": "true", "inboxShowRecurring": "true", "theme": "system", "autoPostpone": "true", "completedBottom": "true", "titleClick": "edit", "tabEntry": "false", "sound": "true", "focusMinutes": "25", "emoji": "☺", "miniView": "today", "miniPending": "true", "edgeHide": "false", "releaseURL": "", "shortcutMain": "", "shortcutMini": "", "shortcutQuick": "", "onboarding": "false", "animation": "true", "notificationPrompted": "false", "autostartConfigured": "false"}
 
 func Open(dir string) (*Engine, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -103,7 +104,7 @@ func (e *Engine) openDB() error {
 		}
 	} else {
 		var version int
-		if er := db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); er != nil || version < 1 || version > 2 {
+		if er := db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); er != nil || version < 1 || version > 3 {
 			db.Close()
 			return fail("SCHEMA_ERROR", "数据库版本不受当前版本支持，请保留原文件")
 		}
@@ -159,7 +160,54 @@ func (e *Engine) openDB() error {
 			return fail("SCHEMA_ERROR", "迁移校验不匹配，请保留数据库")
 		}
 	}
+	// Schema 3 keeps every task in the existing table and adds local tags/notes.
+	var v3 int
+	if err = db.QueryRow("SELECT count(*) FROM schema_migrations WHERE version=3").Scan(&v3); err != nil {
+		db.Close()
+		return err
+	}
+	data3, _ := migrations.ReadFile("migrations/003_workspace.sql")
+	hash3 := fmt.Sprintf("%x", sha256.Sum256(data3))
+	if v3 == 0 {
+		if n != 0 {
+			dir := filepath.Join(e.Dir, "backups")
+			if err = os.MkdirAll(dir, 0700); err != nil {
+				db.Close()
+				return err
+			}
+			if _, err = db.Exec("VACUUM INTO ?", filepath.Join(dir, "pre-schema-v3-"+e.now().UTC().Format("20060102T150405.000000000")+".db")); err != nil {
+				db.Close()
+				return err
+			}
+		}
+		tx, er := db.Begin()
+		if er != nil {
+			db.Close()
+			return er
+		}
+		if _, er = tx.Exec(string(data3)); er == nil {
+			_, er = tx.Exec("INSERT INTO schema_migrations VALUES(3,?,?)", hash3, e.now().UnixMilli())
+		}
+		if er != nil {
+			tx.Rollback()
+			db.Close()
+			return er
+		}
+		if er = tx.Commit(); er != nil {
+			db.Close()
+			return er
+		}
+	} else {
+		var actual string
+		if er := db.QueryRow("SELECT checksum FROM schema_migrations WHERE version=3").Scan(&actual); er != nil || actual != hash3 {
+			db.Close()
+			return fail("SCHEMA_ERROR", "迁移校验不匹配")
+		}
+	}
 	e.db = db
+	var periodReady int
+	_ = db.QueryRow("SELECT count(*) FROM app_meta WHERE key='period_model_ready'").Scan(&periodReady)
+	e.periodModel = periodReady > 0
 	e.loadTimezone(db)
 	for k, v := range defaults {
 		if _, err = db.Exec("INSERT INTO settings(key,value_json) VALUES(?,?) ON CONFLICT(key) DO NOTHING", k, v); err != nil {
@@ -187,10 +235,14 @@ func (e *Engine) signal() {
 
 type scanner interface{ Scan(...any) error }
 
-const columns = "id,parent_id,root_id,title,description,planned_date,original_planned_date,status,color,sort_order,completed_at,auto_postpone_policy,series_id,rule_id,occurrence_date,is_exception,remind_at,reminder_local_time,reminder_timezone,reminder_generation,version,created_at,updated_at"
+const columns = "id,parent_id,root_id,title,description,planned_date,original_planned_date,status,color,sort_order,completed_at,auto_postpone_policy,series_id,rule_id,occurrence_date,is_exception,remind_at,reminder_local_time,reminder_timezone,reminder_generation,version,created_at,updated_at,starts_at,ends_at,tags_json"
 
 func scanTask(s scanner) (t Task, err error) {
-	err = s.Scan(&t.ID, &t.ParentID, &t.RootID, &t.Title, &t.Description, &t.Date, &t.OriginalDate, &t.Status, &t.Color, &t.Order, &t.CompletedAt, &t.Postpone, &t.SeriesID, &t.RuleID, &t.OccurrenceDate, &t.Exception, &t.RemindAt, &t.ReminderTime, &t.ReminderZone, &t.ReminderGeneration, &t.Version, &t.CreatedAt, &t.UpdatedAt)
+	var tags string
+	err = s.Scan(&t.ID, &t.ParentID, &t.RootID, &t.Title, &t.Description, &t.Date, &t.OriginalDate, &t.Status, &t.Color, &t.Order, &t.CompletedAt, &t.Postpone, &t.SeriesID, &t.RuleID, &t.OccurrenceDate, &t.Exception, &t.RemindAt, &t.ReminderTime, &t.ReminderZone, &t.ReminderGeneration, &t.Version, &t.CreatedAt, &t.UpdatedAt, &t.StartAt, &t.EndAt, &tags)
+	if err == nil {
+		err = json.Unmarshal([]byte(tags), &t.TagIDs)
+	}
 	return
 }
 func readTasks(rows *sql.Rows) ([]Task, error) {
@@ -209,9 +261,20 @@ func putTask(tx *sql.Tx, t Task) error {
 	parts := strings.Split(columns, ",")
 	updates := []string{}
 	for _, k := range parts[1:] {
-		updates = append(updates, k+"=excluded."+k)
+		if k == "updated_at" {
+			updates = append(updates, "updated_at=CASE WHEN tasks.title IS NOT excluded.title OR COALESCE(tasks.description,'')<>COALESCE(excluded.description,'') OR tasks.starts_at IS NOT excluded.starts_at OR tasks.ends_at IS NOT excluded.ends_at OR tasks.tags_json IS NOT excluded.tags_json OR tasks.remind_at IS NOT excluded.remind_at THEN excluded.updated_at ELSE tasks.updated_at END")
+		} else if k != "created_at" {
+			updates = append(updates, k+"=excluded."+k)
+		}
 	}
-	_, err := tx.Exec("INSERT INTO tasks("+columns+") VALUES("+strings.TrimSuffix(strings.Repeat("?,", len(parts)), ",")+") ON CONFLICT(id) DO UPDATE SET "+strings.Join(updates, ","), t.ID, t.ParentID, t.RootID, t.Title, t.Description, t.Date, t.OriginalDate, t.Status, t.Color, t.Order, t.CompletedAt, t.Postpone, t.SeriesID, t.RuleID, t.OccurrenceDate, t.Exception, t.RemindAt, t.ReminderTime, t.ReminderZone, t.ReminderGeneration, t.Version, t.CreatedAt, t.UpdatedAt)
+	if t.StartAt == 0 {
+		t.StartAt = t.CreatedAt
+	}
+	if t.TagIDs == nil {
+		t.TagIDs = []string{}
+	}
+	tagJSON, _ := json.Marshal(t.TagIDs)
+	_, err := tx.Exec("INSERT INTO tasks("+columns+") VALUES("+strings.TrimSuffix(strings.Repeat("?,", len(parts)), ",")+") ON CONFLICT(id) DO UPDATE SET "+strings.Join(updates, ","), t.ID, t.ParentID, t.RootID, t.Title, t.Description, t.Date, t.OriginalDate, t.Status, t.Color, t.Order, t.CompletedAt, t.Postpone, t.SeriesID, t.RuleID, t.OccurrenceDate, t.Exception, t.RemindAt, t.ReminderTime, t.ReminderZone, t.ReminderGeneration, t.Version, t.CreatedAt, t.UpdatedAt, t.StartAt, t.EndAt, string(tagJSON))
 	return err
 }
 func treeTx(tx *sql.Tx, id string) (map[string]Task, error) {
@@ -281,6 +344,11 @@ func (e *Engine) SaveSettings(m map[string]string) error {
 			return fail("VALIDATION_ERROR", "未知设置项")
 		}
 		switch k {
+		case "dayFilterTags", "inboxFilterTags":
+			var ids []string
+			if json.Unmarshal([]byte(v), &ids) != nil || len(ids) > 200 {
+				return fail("VALIDATION_ERROR", "标签筛选值无效")
+			}
 		case "expandDepth":
 			n, er := strconv.Atoi(v)
 			if er != nil || n < 1 || n > 5 {
@@ -298,12 +366,17 @@ func (e *Engine) SaveSettings(m map[string]string) error {
 			if !contains([]string{"today", "pending"}, v) {
 				return fail("VALIDATION_ERROR", "无效浮窗模式")
 			}
+		case "reviewNoteWidth":
+			n, er := strconv.Atoi(v)
+			if er != nil || n < 25 || n > 50 {
+				return fail("VALIDATION_ERROR", "笔记区域宽度为25%—50%")
+			}
 		case "focusMinutes":
 			n, er := strconv.Atoi(v)
 			if er != nil || n < 1 || n > 180 {
 				return fail("VALIDATION_ERROR", "专注时长为 1—180 分钟")
 			}
-		case "dayShowCompleted", "inboxShowCompleted", "dayShowRecurring", "inboxShowRecurring", "autoPostpone", "completedBottom", "tabEntry", "sound", "miniPending", "edgeHide", "onboarding", "animation", "notificationPrompted", "autostartConfigured":
+		case "dayShowCompleted", "inboxShowCompleted", "dayShowRecurring", "inboxShowRecurring", "autoPostpone", "completedBottom", "tabEntry", "sound", "miniPending", "edgeHide", "onboarding", "animation", "notificationPrompted", "autostartConfigured", "showTags", "calendarShowChildren":
 			if v != "true" && v != "false" {
 				return fail("VALIDATION_ERROR", "无效开关值")
 			}
@@ -404,6 +477,35 @@ func (e *Engine) Query(q Query) (Snapshot, error) {
 			return result, err
 		}
 	}
+	if e.periodModel {
+		byID := map[string]Task{}
+		for _, t := range result.Tasks {
+			byID[t.ID] = t
+		}
+		var eligible func(Task, map[string]bool) bool
+		eligible = func(t Task, seen map[string]bool) bool {
+			if seen[t.ID] {
+				return false
+			}
+			seen[t.ID] = true
+			r := byID[t.RootID]
+			if t.Status != "completed" && !(r.Exception && val(r.Date) != val(r.OccurrenceDate)) && !activeOnDay(t, val(r.Date), e.location()) {
+				return false
+			}
+			if t.ParentID == nil {
+				return true
+			}
+			p, ok := byID[*t.ParentID]
+			return ok && eligible(p, seen)
+		}
+		visible := []Task{}
+		for _, t := range result.Tasks {
+			if eligible(t, map[string]bool{}) {
+				visible = append(visible, t)
+			}
+		}
+		result.Tasks = visible
+	}
 	for k, sqlq := range map[string]string{"inbox": "SELECT count(*) FROM tasks WHERE parent_id IS NULL AND status='pending' AND planned_date IS NULL", "pending": "SELECT count(*) FROM tasks WHERE parent_id IS NULL AND status='pending'", "today": "SELECT count(*) FROM tasks WHERE parent_id IS NULL AND status='pending' AND planned_date=?"} {
 		var n int
 		if k == "today" {
@@ -467,6 +569,17 @@ func (e *Engine) mutate(c Command, op string, fn func(map[string]Task, int64) er
 	if err = fn(m, now); err != nil {
 		return nil, err
 	}
+	if c.Span != nil {
+		if c.Span.Start <= 0 || c.Span.End != nil && *c.Span.End < c.Span.Start {
+			return nil, fail("VALIDATION_ERROR", "任务时间范围无效")
+		}
+		if t, ok := m[c.ID]; ok {
+			t.StartAt = c.Span.Start
+			t.EndAt = c.Span.End
+			m[c.ID] = t
+		}
+		e.aggregate(m, now)
+	}
 	// Insert the new sibling in the same transaction as creation, including root peers.
 	if c.AfterID != "" && (op == "create" || op == "create-node") {
 		created := m[c.ID]
@@ -525,12 +638,25 @@ func (e *Engine) mutate(c Command, op string, fn func(map[string]Task, int64) er
 	for id, t := range m {
 		t.Version++
 		t.UpdatedAt = now
+		if before, ok := old[id]; ok && sameTaskContent(before, t) {
+			t.UpdatedAt = before.UpdatedAt
+		}
 		if t.CreatedAt == 0 {
 			t.CreatedAt = now
+		}
+		if t.StartAt == 0 {
+			t.StartAt = t.CreatedAt
 		}
 		m[id] = t
 		if err = putTask(tx, t); err != nil {
 			return nil, err
+		}
+	}
+	if c.StopPeriod {
+		if root, ok := m[c.RootID]; ok && root.SeriesID != nil {
+			if err = e.stopPeriodTx(tx, root); err != nil {
+				return nil, err
+			}
 		}
 	}
 	if c.RepeatRule != nil {
@@ -538,6 +664,20 @@ func (e *Engine) mutate(c Command, op string, fn func(map[string]Task, int64) er
 			return nil, fail("VALIDATION_ERROR", "只能为根任务设置重复")
 		}
 		if err = e.repeatTx(tx, RepeatRequest{Command: c, Rule: *c.RepeatRule, Following: c.Following}, m); err != nil {
+			return nil, err
+		}
+	}
+	if c.Span != nil {
+		if c.ID != c.RootID {
+			err = e.refreshDailyTemplateTx(tx, m)
+		} else {
+			err = e.spanRulesTx(tx, c, m)
+		}
+		if err != nil {
+			return nil, err
+		}
+	} else if c.RepeatRule == nil && contains([]string{"create-node", "update", "tags", "reparent", "delete"}, op) {
+		if err = e.refreshDailyTemplateTx(tx, m); err != nil {
 			return nil, err
 		}
 	}

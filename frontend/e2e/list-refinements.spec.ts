@@ -59,8 +59,8 @@ test("过滤按视图保存，日计划显示完成项，收集箱隐藏完成�
   await expect(
     page.getByLabel("显示已完成的任务", { exact: true }),
   ).toBeChecked();
-  await page.getByLabel("显示周期任务", { exact: true }).uncheck();
-  await expect(row(page, b.title)).toHaveCount(0);
+  await expect(page.getByLabel("显示周期任务", { exact: true })).toHaveCount(0);
+  await expect(row(page, b.title)).toBeVisible();
   await page.getByLabel("显示已完成的任务", { exact: true }).uncheck();
   await expect(row(page, a.title)).toHaveCount(0);
   await page.getByRole("button", { name: "日计划", exact: true }).click();
@@ -80,7 +80,7 @@ test("过滤按视图保存，日计划显示完成项，收集箱隐藏完成�
   await expect(
     page.getByLabel("显示已完成的任务", { exact: true }),
   ).toBeChecked();
-  await expect(page.getByLabel("显示周期任务", { exact: true })).toBeChecked();
+  await expect(page.getByLabel("显示周期任务", { exact: true })).toHaveCount(0);
   await page.screenshot({ path: "../.impeccable/review/list-filters.png" });
 });
 test("上下移按同级位置显示，跨日期收集箱排序不改变日期", async ({
@@ -174,16 +174,16 @@ test("拖动有层级线条，拖到空白区排到末尾，取消拖动清理�
     .toEqual([b.id, c.id, a.id]);
   await expect(page.locator(".task-drop-line")).toHaveCount(0);
 });
-test("长标题改期不横向溢出，重复信息在标题下显示，透明度即时预览并保存", async ({
+test("长标题调整时间不横向溢出，起止时间保存，透明度即时预览并保存", async ({
   page,
   request,
 }) => {
   const a = await root(request, "long".repeat(120));
   await page.goto("/?preview=1");
   await row(page, a.title).hover();
-  await row(page, a.title).getByLabel("调整计划日期", { exact: true }).click();
+  await row(page, a.title).getByLabel("调整任务时间", { exact: true }).click();
   const dialog = page.getByRole("dialog", {
-    name: "调整计划日期",
+    name: "调整任务时间",
     exact: true,
   });
   expect(await dialog.evaluate((el) => el.scrollWidth <= el.clientWidth)).toBe(
@@ -197,9 +197,13 @@ test("长标题改期不横向溢出，重复信息在标题下显示，透明�
   await page.screenshot({
     path: "../.impeccable/review/list-long-placement.png",
   });
-  await select(page, "计划重复方式", "每周");
-  await dialog.getByRole("button", { name: "确认移动", exact: true }).click();
-  await expect(page.locator(".task-repeat")).toContainText("每周");
+  const end = new Date(Date.now() + 3 * 86400000);
+  const localEnd = new Date(end.getTime() - end.getTimezoneOffset() * 60000)
+    .toISOString()
+    .slice(0, 16);
+  await dialog.getByLabel("结束时间", { exact: true }).fill(localEnd);
+  await dialog.getByRole("button", { name: "确认调整", exact: true }).click();
+  expect((await call(request, "FindTask", a.id)).endAt).not.toBeNull();
   await expect(page.locator(".task-indicator")).toHaveCount(0);
   await page.getByRole("button", { name: "打开设置", exact: true }).click();
   await page.getByRole("button", { name: "外观与窗口", exact: true }).click();

@@ -15,6 +15,10 @@ import * as releases$0 from "./internal/releases/models.js";
 // @ts-ignore: Unused imports
 import * as todo$0 from "./internal/todo/models.js";
 
+export function AutomaticUpdate(): $CancellablePromise<releases$0.Info | null> {
+    return $Call.ByID(1823477445);
+}
+
 export function Autostart(enabled: boolean): $CancellablePromise<void> {
     return $Call.ByID(1767460278, enabled);
 }
@@ -75,6 +79,10 @@ export function DeleteCountdown(id: string): $CancellablePromise<void> {
     return $Call.ByID(190398673, id);
 }
 
+export function DeleteNote(id: string, version: number): $CancellablePromise<void> {
+    return $Call.ByID(2676114294, id, version);
+}
+
 export function DismissNotices(): $CancellablePromise<void> {
     return $Call.ByID(2494995928);
 }
@@ -111,6 +119,10 @@ export function ImportHolidays(): $CancellablePromise<void> {
     return $Call.ByID(3092921409);
 }
 
+export function InitialSettingsTab(): $CancellablePromise<string> {
+    return $Call.ByID(1931120429);
+}
+
 export function InstallUpdate(): $CancellablePromise<void> {
     return $Call.ByID(973615585);
 }
@@ -135,8 +147,16 @@ export function Nest(c: todo$0.Command, revision: string): $CancellablePromise<t
     return $Call.ByID(920959243, c, revision);
 }
 
+export function Notes(search: string): $CancellablePromise<todo$0.Note[] | null> {
+    return $Call.ByID(718410826, search);
+}
+
 export function OpenDataDir(): $CancellablePromise<void> {
     return $Call.ByID(3179466056);
+}
+
+export function OpenExternal(link: string): $CancellablePromise<void> {
+    return $Call.ByID(647684902, link);
 }
 
 export function OpenNotificationSettings(): $CancellablePromise<void> {
@@ -187,6 +207,13 @@ export function ReadTree(id: string): $CancellablePromise<todo$0.Task[] | null> 
     return $Call.ByID(2729612149, id);
 }
 
+/**
+ * Visit ready webviews one by one so each can protect unsaved task/note drafts.
+ */
+export function RegisterWindow(key: string): $CancellablePromise<void> {
+    return $Call.ByID(4217895292, key);
+}
+
 export function Reorder(ids: string[] | null, revision: string): $CancellablePromise<void> {
     return $Call.ByID(2412813000, ids, revision);
 }
@@ -199,8 +226,16 @@ export function Repeat(r: todo$0.RepeatRequest): $CancellablePromise<void> {
     return $Call.ByID(3181994154, r);
 }
 
+export function RequestQuit(): $CancellablePromise<void> {
+    return $Call.ByID(3625302297);
+}
+
 export function ResetWindows(): $CancellablePromise<void> {
     return $Call.ByID(728046493);
+}
+
+export function RespondQuit(key: string, token: number, allow: boolean): $CancellablePromise<void> {
+    return $Call.ByID(1910103821, key, token, allow);
 }
 
 export function Restore(name: string): $CancellablePromise<void> {
@@ -221,6 +256,14 @@ export function SaveCountdown(c: todo$0.Countdown): $CancellablePromise<void> {
 
 export function SaveExport(format: string, q: todo$0.Query, inbox: boolean, ids: string[] | null): $CancellablePromise<string> {
     return $Call.ByID(256414574, format, q, inbox, ids);
+}
+
+export function SaveNote(n: todo$0.Note): $CancellablePromise<todo$0.Note> {
+    return $Call.ByID(1399078436, n);
+}
+
+export function SaveTags(tags: todo$0.Tag[] | null): $CancellablePromise<void> {
+    return $Call.ByID(3439693105, tags);
 }
 
 export function SaveTaskExpansion(states: { [_ in string]?: boolean } | null): $CancellablePromise<void> {
@@ -258,13 +301,18 @@ export function SetEdgeModalBusy(busy: boolean): $CancellablePromise<void> {
     return $Call.ByID(1019856370, busy);
 }
 
+export function SetTaskSpan(c: todo$0.Command, start: number, end: number | null): $CancellablePromise<todo$0.Task[] | null> {
+    return $Call.ByID(97959586, c, start, end);
+}
+
+export function SetTaskTags(c: todo$0.Command, ids: string[] | null): $CancellablePromise<todo$0.Task[] | null> {
+    return $Call.ByID(1967997291, c, ids);
+}
+
 export function SetTimezone(name: string): $CancellablePromise<number> {
     return $Call.ByID(2499806564, name);
 }
 
-/**
- * Views share one native window, but own their persisted geometry.
- */
 export function SetView(view: string): $CancellablePromise<void> {
     return $Call.ByID(1332064838, view);
 }
@@ -277,8 +325,16 @@ export function Shortcut(action: string, key: string): $CancellablePromise<void>
     return $Call.ByID(580459763, action, key);
 }
 
+export function ShowSettings(tab: string): $CancellablePromise<void> {
+    return $Call.ByID(2888099681, tab);
+}
+
 export function ShowWindow(key: string): $CancellablePromise<void> {
     return $Call.ByID(3556631840, key);
+}
+
+export function SkipUpdate(version: string): $CancellablePromise<void> {
+    return $Call.ByID(728403899, version);
 }
 
 export function StopFollowing(c: todo$0.Command): $CancellablePromise<void> {
@@ -289,8 +345,16 @@ export function SyncLocalCalendar($from: string, to: string): $CancellablePromis
     return $Call.ByID(891150587, $from, to);
 }
 
+export function Tags(): $CancellablePromise<todo$0.Tag[] | null> {
+    return $Call.ByID(3425357856);
+}
+
 export function TaskExpansion(): $CancellablePromise<{ [_ in string]?: boolean } | null> {
     return $Call.ByID(3069241033);
+}
+
+export function TaskReport(q: todo$0.Query): $CancellablePromise<todo$0.Task[] | null> {
+    return $Call.ByID(2069776094, q);
 }
 
 export function ToggleCountdown(id: string, enabled: boolean): $CancellablePromise<void> {
@@ -313,6 +377,14 @@ export function WindowAction(action: string): $CancellablePromise<void> {
     return $Call.ByID(4124455751, action);
 }
 
+export function WindowActionFor(key: string, action: string): $CancellablePromise<void> {
+    return $Call.ByID(2236937650, key, action);
+}
+
 export function WindowConfig(key: string, mode: string, opacity: number, collapsed: boolean): $CancellablePromise<void> {
     return $Call.ByID(3370359727, key, mode, opacity, collapsed);
+}
+
+export function WindowVisible(key: string): $CancellablePromise<boolean> {
+    return $Call.ByID(313749113, key);
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // Nest moves a whole branch atomically. The snapshot revision protects both
@@ -42,7 +43,7 @@ func (e *Engine) Nest(c Command, revision string) ([]Task, error) {
 	if err = tx.QueryRow("SELECT value FROM app_meta WHERE key='revision'").Scan(&current); err != nil {
 		return nil, err
 	}
-	if current != revision {
+	if current != revision && c.TargetVersion == "" {
 		return nil, fail("CONFLICT", "列表已变化，请刷新后重试")
 	}
 	if c.ParentID == nil || *c.ParentID == c.ID {
@@ -70,6 +71,9 @@ func (e *Engine) Nest(c Command, revision string) ([]Task, error) {
 			return nil, err
 		}
 	}
+	if c.TargetVersion != "" && fmt.Sprint(target[targetRoot].Version) != c.TargetVersion {
+		return nil, fail("CONFLICT", "目标任务已变化，请重新拖动")
+	}
 	previous := map[string]Task{}
 	for id, task := range source {
 		previous[id] = task
@@ -77,6 +81,8 @@ func (e *Engine) Nest(c Command, revision string) ([]Task, error) {
 	for id, task := range target {
 		previous[id] = task
 	}
+	sourceDate := val(source[c.RootID].Date)
+	targetDate := val(target[targetRoot].Date)
 	branch := descendants(source, c.ID)
 	if branch[*c.ParentID] {
 		return nil, fail("VALIDATION_ERROR", "不能移动到自身或后代")
@@ -108,6 +114,17 @@ func (e *Engine) Nest(c Command, revision string) ([]Task, error) {
 		for id := range branch {
 			t := source[id]
 			delete(source, id)
+			if e.periodModel && sourceDate != "" && targetDate != "" && sourceDate != targetDate {
+				a, _ := time.Parse("2006-01-02", sourceDate)
+				b, _ := time.Parse("2006-01-02", targetDate)
+				days := int(b.Sub(a).Hours() / 24)
+				if t.StartAt > 0 {
+					t.StartAt = time.UnixMilli(t.StartAt).In(e.location()).AddDate(0, 0, days).UnixMilli()
+				}
+				if t.EndAt != nil {
+					t.EndAt = ptr(time.UnixMilli(*t.EndAt).In(e.location()).AddDate(0, 0, days).UnixMilli())
+				}
+			}
 			t.RootID = targetRoot
 			if id == c.ID {
 				t.ParentID = c.ParentID
@@ -132,8 +149,8 @@ func (e *Engine) Nest(c Command, revision string) ([]Task, error) {
 		target[c.ID] = node
 	}
 	reorder(target, c.ID, c.BeforeID)
-	aggregate(source, now)
-	aggregate(target, now)
+	e.aggregate(source, now)
+	e.aggregate(target, now)
 	markException(source, c.RootID)
 	markException(target, targetRoot)
 	if err = validateTree(source, previous); err != nil {
@@ -158,6 +175,19 @@ func (e *Engine) Nest(c Command, revision string) ([]Task, error) {
 				return nil, err
 			}
 			out = append(out, t)
+		}
+	}
+	if e.periodModel {
+		if marker != nil && val(marker.SeriesID) != val(target[targetRoot].SeriesID) {
+			if err = e.stopPeriodTx(tx, *marker); err != nil {
+				return nil, err
+			}
+		}
+		if err = e.refreshDailyTemplateTx(tx, source); err != nil {
+			return nil, err
+		}
+		if err = e.refreshDailyTemplateTx(tx, target); err != nil {
+			return nil, err
 		}
 	}
 	if node.ParentID == nil && targetRoot != c.RootID {

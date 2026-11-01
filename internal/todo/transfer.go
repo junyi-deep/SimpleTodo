@@ -64,6 +64,22 @@ func (e *Engine) exportLocked() (Transfer, error) {
 	if er = jobRows.Close(); er != nil {
 		return d, er
 	}
+	tagRows, er := e.db.Query("SELECT id,name,sort_order FROM tags ORDER BY sort_order,id")
+	if er != nil {
+		return d, er
+	}
+	d.Tags = []Tag{}
+	for tagRows.Next() {
+		var tag Tag
+		if er = tagRows.Scan(&tag.ID, &tag.Name, &tag.Order); er != nil {
+			tagRows.Close()
+			return d, er
+		}
+		d.Tags = append(d.Tags, tag)
+	}
+	if er = tagRows.Close(); er != nil {
+		return d, er
+	}
 	d.Settings, err = e.settingsLocked()
 	for _, key := range []string{"shortcutMain", "shortcutMini", "shortcutQuick"} {
 		delete(d.Settings, key)
@@ -437,7 +453,7 @@ func (e *Engine) PreviewImport(content, format string, date *string, replace boo
 		}
 		d.Tasks = nil
 		for _, m := range trees {
-			aggregate(m, e.now().UnixMilli())
+			e.aggregate(m, e.now().UnixMilli())
 			for _, t := range sortedTree(m) {
 				d.Tasks = append(d.Tasks, t)
 			}
@@ -525,8 +541,12 @@ func remapTransfer(d Transfer, now int64) Transfer {
 		t.ReminderTime = nil
 		t.ReminderZone = nil
 		t.ReminderGeneration = 0
-		t.CreatedAt = now
-		t.UpdatedAt = now
+		if t.CreatedAt == 0 {
+			t.CreatedAt = now
+		}
+		if t.UpdatedAt == 0 {
+			t.UpdatedAt = t.CreatedAt
+		}
 		t.Version = 1
 		d.Tasks[i] = t
 	}
@@ -604,6 +624,77 @@ func (e *Engine) CommitImport(token string) error {
 			if _, err = tx.Exec("DELETE FROM " + table); err != nil {
 				return err
 			}
+		}
+	}
+	// Portable task JSON carries tag names/order, not only machine-local IDs.
+	tagMap := map[string]string{}
+	byName := map[string]string{}
+	knownID := map[string]bool{}
+	nextOrder := 0
+	if p.Replace && d.Tags != nil {
+		if _, err = tx.Exec("DELETE FROM tags"); err != nil {
+			return err
+		}
+	}
+	tr, er := tx.Query("SELECT id,name,sort_order FROM tags")
+	if er != nil {
+		return er
+	}
+	for tr.Next() {
+		var id, name string
+		var order int
+		if er = tr.Scan(&id, &name, &order); er != nil {
+			tr.Close()
+			return er
+		}
+		byName[name] = id
+		knownID[id] = true
+		nextOrder = max(nextOrder, order+1)
+	}
+	tr.Close()
+	for _, tag := range d.Tags {
+		if id := byName[tag.Name]; id != "" {
+			tagMap[tag.ID] = id
+			continue
+		}
+		id := tag.ID
+		if knownID[id] || id == "" {
+			id = ID()
+		}
+		if _, err = tx.Exec("INSERT INTO tags VALUES(?,?,?)", id, tag.Name, nextOrder); err != nil {
+			return fail("VALIDATION_ERROR", "导入的标签名称或标识无效")
+		}
+		nextOrder++
+		tagMap[tag.ID] = id
+		byName[tag.Name] = id
+		knownID[id] = true
+	}
+	remapTags := func(ids []string) []string {
+		out := []string{}
+		for _, id := range ids {
+			if mapped := tagMap[id]; mapped != "" {
+				id = mapped
+			}
+			out = append(out, id)
+		}
+		sort.Strings(out)
+		return out
+	}
+	for _, key := range []string{"dayFilterTags", "inboxFilterTags"} {
+		if raw, ok := d.Settings[key]; ok {
+			var ids []string
+			if json.Unmarshal([]byte(raw), &ids) == nil {
+				mapped, _ := json.Marshal(remapTags(ids))
+				d.Settings[key] = string(mapped)
+			}
+		}
+	}
+	for i := range d.Tasks {
+		d.Tasks[i].TagIDs = remapTags(d.Tasks[i].TagIDs)
+	}
+	for i := range d.Rules {
+		for j := range d.Rules[i].Template {
+			d.Rules[i].Template[j].TagIDs = remapTags(d.Rules[i].Template[j].TagIDs)
 		}
 	}
 	series := map[string]bool{}
@@ -741,7 +832,7 @@ func (e *Engine) Holidays() ([]Holiday, error) {
 	return out, rows.Err()
 }
 func (e *Engine) SaveWindow(w WindowState) error {
-	if !contains([]string{"main", "mini", "overview", "quick"}, w.Key) {
+	if !contains([]string{"main", "mini", "overview", "quick", "calendar", "focus", "settings", "review"}, w.Key) {
 		return fail("VALIDATION_ERROR", "未知窗口")
 	}
 	e.mu.Lock()
@@ -754,7 +845,7 @@ func (e *Engine) SaveWindow(w WindowState) error {
 // Native move/resize events update geometry without overwriting a concurrent
 // mode, opacity or collapse change from the settings UI.
 func (e *Engine) SaveWindowBounds(bounds WindowState) error {
-	if !contains([]string{"main", "mini", "overview", "quick"}, bounds.Key) {
+	if !contains([]string{"main", "mini", "overview", "quick", "calendar", "focus", "settings", "review"}, bounds.Key) {
 		return fail("VALIDATION_ERROR", "未知窗口")
 	}
 	e.mu.Lock()
@@ -805,7 +896,7 @@ func (e *Engine) backupLocked(kind string) (Backup, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return Backup{}, err
 	}
-	name := fmt.Sprintf("%s-%s-v1.db", kind, e.now().UTC().Format("20060102T150405.000000000"))
+	name := fmt.Sprintf("%s-%s-%s.db", kind, e.now().UTC().Format("20060102T150405.000000000"), ID()[:8])
 	tmp := filepath.Join(dir, name+".tmp")
 	if _, err := e.db.Exec("VACUUM INTO ?", tmp); err != nil {
 		return Backup{}, err
@@ -819,6 +910,9 @@ func (e *Engine) backupLocked(kind string) (Backup, error) {
 	}
 	info, err := os.Stat(filepath.Join(dir, name))
 	if err != nil {
+		return Backup{}, err
+	}
+	if err = e.pruneBackupsLocked(); err != nil {
 		return Backup{}, err
 	}
 	return Backup{Name: name, Size: info.Size(), CreatedAt: info.ModTime().UnixMilli()}, nil
@@ -837,7 +931,7 @@ func checkBackup(path string) error {
 		return fail("IO_ERROR", "备份完整性校验失败")
 	}
 	var version int
-	if err = db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); err != nil || version < 1 || version > 2 {
+	if err = db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); err != nil || version < 1 || version > 3 {
 		return fail("SCHEMA_ERROR", "不支持的备份版本")
 	}
 	rows, err := db.Query("PRAGMA foreign_key_check")
@@ -869,6 +963,7 @@ func (e *Engine) backupsLocked() ([]Backup, error) {
 		return nil, err
 	}
 	out := []Backup{}
+	modified := map[string]time.Time{}
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".db") {
 			continue
@@ -877,14 +972,23 @@ func (e *Engine) backupsLocked() ([]Backup, error) {
 		if err != nil {
 			return nil, err
 		}
+		modified[entry.Name()] = i.ModTime()
 		out = append(out, Backup{Name: entry.Name(), Size: i.Size(), CreatedAt: i.ModTime().UnixMilli()})
 	}
-	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt > out[j].CreatedAt })
+	sort.Slice(out, func(i, j int) bool {
+		if modified[out[i].Name].Equal(modified[out[j].Name]) {
+			return out[i].Name > out[j].Name
+		}
+		return modified[out[i].Name].After(modified[out[j].Name])
+	})
 	return out, nil
 }
 func (e *Engine) DailyBackup() error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
+	if err := e.pruneBackupsLocked(); err != nil {
+		return err
+	}
 	var n int
 	if err := e.db.QueryRow("SELECT count(*) FROM tasks").Scan(&n); err != nil {
 		return err
@@ -898,28 +1002,21 @@ func (e *Engine) DailyBackup() error {
 	}
 	prefix := "daily-"
 	for _, b := range bs {
-		if strings.HasPrefix(b.Name, prefix) && today(time.UnixMilli(b.CreatedAt).In(e.location())) == today(e.localNow()) {
+		created := time.UnixMilli(b.CreatedAt)
+		if strings.HasPrefix(b.Name, prefix) {
+			stamp := strings.Split(strings.TrimPrefix(b.Name, prefix), "-")[0]
+			if parsed, er := time.Parse("20060102T150405.000000000", stamp); er == nil {
+				created = parsed
+			}
+		}
+		if strings.HasPrefix(b.Name, prefix) && today(created.In(e.location())) == today(e.localNow()) {
 			return nil
 		}
 	}
 	if _, err = e.backupLocked("daily"); err != nil {
 		return err
 	}
-	bs, err = e.backupsLocked()
-	if err != nil {
-		return err
-	}
-	kept := 0
-	for _, b := range bs {
-		if strings.HasPrefix(b.Name, "daily-") {
-			kept++
-			if kept > 7 {
-				if err = os.Remove(filepath.Join(e.Dir, "backups", b.Name)); err != nil {
-					return err
-				}
-			}
-		}
-	}
+
 	return nil
 }
 func (e *Engine) Restore(name string) error {
@@ -932,9 +1029,6 @@ func (e *Engine) RestoreFile(path string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if err := checkBackup(path); err != nil {
-		return err
-	}
-	if _, err := e.backupLocked("protect"); err != nil {
 		return err
 	}
 	tmp := filepath.Join(e.Dir, "restore.tmp")
@@ -952,6 +1046,9 @@ func (e *Engine) RestoreFile(path string) error {
 		return closeErr
 	}
 	if err = checkBackup(tmp); err != nil {
+		return err
+	}
+	if _, err = e.backupLocked("protect"); err != nil {
 		return err
 	}
 	if err = e.db.Close(); err != nil {
@@ -1134,6 +1231,35 @@ func RecoverDatabase(dir, sourcePath string) error {
 	if err = os.Rename(tmp, filepath.Join(dir, "simpletodo.db")); err != nil {
 		rollback()
 		return err
+	}
+	return nil
+}
+
+// All application-created backup kinds share one retention budget. User-named
+// database files are left alone. Run on startup even if today's backup exists.
+func (e *Engine) pruneBackupsLocked() error {
+	bs, err := e.backupsLocked()
+	if err != nil {
+		return err
+	}
+	kept := 0
+	for _, b := range bs {
+		managed := false
+		for _, prefix := range []string{"daily-", "manual-", "protect-", "pre-schema-"} {
+			if strings.HasPrefix(b.Name, prefix) {
+				managed = true
+				break
+			}
+		}
+		if !managed {
+			continue
+		}
+		kept++
+		if kept > 3 {
+			if err = os.Remove(filepath.Join(e.Dir, "backups", b.Name)); err != nil {
+				return fmt.Errorf("清理旧备份失败：%w", err)
+			}
+		}
 	}
 	return nil
 }

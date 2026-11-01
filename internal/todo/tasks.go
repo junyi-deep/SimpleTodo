@@ -49,6 +49,9 @@ func validateTree(m map[string]Task, previous ...map[string]Task) error {
 		return err
 	}
 	for _, t := range m {
+		if t.StartAt < 0 || t.EndAt != nil && *t.EndAt < t.StartAt {
+			return fail("VALIDATION_ERROR", "任务时间范围无效")
+		}
 		if !contains([]string{"pending", "completed", "skipped"}, t.Status) {
 			return fail("VALIDATION_ERROR", "无效完成状态")
 		}
@@ -192,6 +195,17 @@ func (e *Engine) Create(c Command) ([]Task, error) {
 			if err := validateRoot(&t, e.localNow()); err != nil {
 				return err
 			}
+			if c.Date != nil && *c.Date != today(e.localNow()) {
+				d, er := wallTime(*c.Date, e.localNow().Format("15:04"), e.location())
+				if er != nil {
+					return er
+				}
+				t.StartAt = d.UnixMilli()
+			}
+			if c.Span != nil {
+				t.StartAt = c.Span.Start
+				t.EndAt = c.Span.End
+			}
 			m[t.ID] = t
 			return nil
 		})
@@ -211,8 +225,16 @@ func (e *Engine) Create(c Command) ([]Task, error) {
 				order = t.Order + 1
 			}
 		}
-		m[c.ID] = Task{ID: c.ID, RootID: c.RootID, ParentID: c.ParentID, Title: strings.TrimSpace(c.Title), Status: "pending", Order: order}
-		aggregate(m, now)
+		created := Task{ID: c.ID, RootID: c.RootID, ParentID: c.ParentID, Title: strings.TrimSpace(c.Title), Status: "pending", Order: order}
+		if day := val(m[c.RootID].Date); day != "" && day != today(e.localNow()) {
+			at, er := wallTime(day, e.localNow().Format("15:04"), e.location())
+			if er != nil {
+				return er
+			}
+			created.StartAt = at.UnixMilli()
+		}
+		m[c.ID] = created
+		e.aggregate(m, now)
 		markException(m, c.RootID)
 		return nil
 	})
@@ -232,9 +254,6 @@ func validateRoot(t *Task, now time.Time) error {
 	}
 	if !contains([]string{"inherit", "on", "off"}, *t.Postpone) {
 		return fail("VALIDATION_ERROR", "无效延期策略")
-	}
-	if t.SeriesID != nil && *t.Postpone == "on" {
-		return fail("VALIDATION_ERROR", "重复任务不能自动延期")
 	}
 	if t.ReminderTime != nil {
 		if _, err := time.Parse("15:04", *t.ReminderTime); err != nil {
@@ -270,12 +289,19 @@ func (e *Engine) Update(c Command) ([]Task, error) {
 			return fail("NOT_FOUND", "任务已删除")
 		}
 		t.Title = strings.TrimSpace(c.Title)
+		if c.Span != nil {
+			if c.Span.Start <= 0 || c.Span.End != nil && *c.Span.End < c.Span.Start {
+				return fail("VALIDATION_ERROR", "任务时间范围无效")
+			}
+			t.StartAt = c.Span.Start
+			t.EndAt = c.Span.End
+		}
 		if t.ParentID == nil {
 			t.Description = ptr(c.Description)
 			t.Color = ptr(c.Color)
 			t.Date = c.Date
 			t.Postpone = ptr(c.Postpone)
-			if t.SeriesID != nil && val(t.Date) != val(t.OccurrenceDate) {
+			if t.SeriesID != nil && val(t.Date) != val(m[c.ID].Date) {
 				return fail("VALIDATION_ERROR", "重复任务不能直接改期")
 			}
 			if val(t.RemindAt) != val(c.RemindAt) {
@@ -313,7 +339,7 @@ func (e *Engine) Complete(c Command) ([]Task, error) {
 		for id := range descendants(m, c.ID) {
 			m[id] = setState(m[id], c.Completed, now)
 		}
-		aggregate(m, now)
+		e.aggregate(m, now)
 		markException(m, c.RootID)
 		return nil
 	})
@@ -340,7 +366,7 @@ func (e *Engine) Delete(c Command) ([]Task, error) {
 				delete(m, id)
 			}
 		}
-		aggregate(m, now)
+		e.aggregate(m, now)
 		markException(m, c.RootID)
 		return nil
 	})
@@ -354,13 +380,16 @@ func (e *Engine) Move(c Command) ([]Task, error) {
 		if t.ParentID != nil {
 			return fail("VALIDATION_ERROR", "请移动根任务日期，或使用层级调整")
 		}
-		if t.SeriesID != nil {
-			return fail("VALIDATION_ERROR", "重复实例不能直接改期，可复制为普通任务")
+		if t.SeriesID != nil && !c.AllowDailyMove {
+			return fail("VALIDATION_ERROR", "请通过任务时间操作调整当天日期")
 		}
 		if err := validateDate(c.Date); err != nil {
 			return err
 		}
 		t.Date = c.Date
+		if t.SeriesID != nil {
+			t.Exception = true
+		}
 		t.Order = int(now)
 		t.ReminderGeneration++
 		if t.RemindAt != nil {
@@ -398,7 +427,7 @@ func (e *Engine) Reparent(c Command) ([]Task, error) {
 		t.ParentID = c.ParentID
 		m[t.ID] = t
 		reorder(m, t.ID, c.BeforeID)
-		aggregate(m, now)
+		e.aggregate(m, now)
 		markException(m, c.RootID)
 		return nil
 	})
@@ -460,7 +489,7 @@ func (e *Engine) ReorderRoots(ids []string, revision string) error {
 		if parent != nil {
 			return fail("VALIDATION_ERROR", "仅支持根任务重排")
 		}
-		if _, err = tx.Exec("UPDATE tasks SET sort_order=?,version=version+1,updated_at=? WHERE id=?", i, e.now().UnixMilli(), id); err != nil {
+		if _, err = tx.Exec("UPDATE tasks SET sort_order=?,version=version+1 WHERE id=?", i, id); err != nil {
 			return err
 		}
 	}

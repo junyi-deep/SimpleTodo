@@ -125,7 +125,9 @@ test("Shift+Tab 在编辑时保存标题并提升一级，直属子任务连同�
   const source = page.locator(`[data-node="${b.id}"]`);
   await source.getByLabel("任务设置", { exact: true }).focus();
   await page.keyboard.press("Shift+Tab");
-  await expect(source.locator(".task-title")).toBeFocused();
+  await expect(
+    source.getByLabel("设置标签 " + b.title, { exact: true }),
+  ).toBeFocused();
   await expect(source).toHaveAttribute("data-parent", a.id);
   await page.getByRole("button", { name: b.title, exact: true }).click();
   const input = page.getByLabel("编辑任务标题", { exact: true });
@@ -142,7 +144,9 @@ test("Shift+Tab 在编辑时保存标题并提升一级，直属子任务连同�
   await expect(row).toBeFocused();
   const promoted = await call(request, "ReadTree", b.id);
   expect(promoted.find((t: any) => t.id === leaf.id).rootId).toBe(b.id);
-  const roots = (await call(request, "Query", { view: "all" })).tasks
+  const roots = (
+    await call(request, "Query", { view: "day", date: r.date })
+  ).tasks
     .filter((t: any) => !t.parentId)
     .sort((a: any, b: any) => a.order - b.order);
   expect(roots.map((t: any) => t.id)).toEqual([r.id, b.id, other.id]);
@@ -169,6 +173,8 @@ test("日历日期抽屉与列表共用新增、就地编辑、子任务和详�
   let input = drawer.getByLabel("新待办标题", { exact: true });
   await input.fill("抽屉新增事项");
   await input.press("Enter");
+  await expect(input).toHaveValue("");
+  await expect(input).toBeFocused();
   await input.press("Escape");
   await drawer
     .getByRole("button", { name: "抽屉新增事项", exact: true })
@@ -176,13 +182,15 @@ test("日历日期抽屉与列表共用新增、就地编辑、子任务和详�
   const edit = drawer.getByLabel("编辑任务标题", { exact: true });
   await expect(edit).toBeFocused();
   await expect(
-    drawer.getByRole("region", { name: "任务详细设置", exact: true }),
+    drawer.getByRole("region", { name: "任务详情", exact: true }),
   ).toHaveCount(0);
   await edit.fill("抽屉内直接修改");
   await edit.press("Shift+Enter");
   input = drawer.getByLabel("新待办标题", { exact: true });
   await input.fill("抽屉内子任务");
   await input.press("Enter");
+  await expect(input).toHaveValue("");
+  await expect(input).toBeFocused();
   await input.press("Escape");
   const q = await call(request, "Query", { view: "day", date });
   const r = q.tasks.find((t: any) => !t.parentId);
@@ -195,7 +203,7 @@ test("日历日期抽屉与列表共用新增、就地编辑、子任务和详�
   await row.hover();
   await row.getByLabel("任务设置", { exact: true }).click();
   await expect(
-    drawer.getByRole("region", { name: "任务详细设置", exact: true }),
+    drawer.getByRole("region", { name: "任务详情", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await page.screenshot({

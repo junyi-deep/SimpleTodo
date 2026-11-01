@@ -45,7 +45,7 @@ func TestLegacyDeepTreeCanBeEditedAndShortened(t *testing.T) {
 		leaf = child(t, e, leaf, title)
 	}
 	// Simulate a pre-upgrade sixth-level row without changing the current API limit.
-	if _, err := e.db.Exec(`INSERT INTO tasks SELECT 'legacy-six',?,root_id,title,description,planned_date,original_planned_date,status,color,sort_order,completed_at,auto_postpone_policy,series_id,rule_id,occurrence_date,is_exception,remind_at,reminder_local_time,reminder_timezone,reminder_generation,version,created_at,updated_at FROM tasks WHERE id=?`, leaf.ID, leaf.ID); err != nil {
+	if _, err := e.db.Exec(`INSERT INTO tasks SELECT 'legacy-six',?,root_id,title,description,planned_date,original_planned_date,status,color,sort_order,completed_at,auto_postpone_policy,series_id,rule_id,occurrence_date,is_exception,remind_at,reminder_local_time,reminder_timezone,reminder_generation,version,created_at,updated_at,starts_at,ends_at,tags_json FROM tasks WHERE id=?`, leaf.ID, leaf.ID); err != nil {
 		t.Fatal(err)
 	}
 	legacy := getTree(t, e, root.ID)["legacy-six"]

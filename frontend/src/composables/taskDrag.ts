@@ -297,18 +297,34 @@ export function startTaskDrag(event: PointerEvent, id: string) {
     cancelCurrent = undefined;
     if (started) {
       // A pointer drag ends in a click in WebViews; do not open the dragged task.
+      // Escape can happen while the pointer is still held. Keep suppression
+      // until release, rather than expiring before WebKit synthesizes its click.
+      const cleanup = () => {
+        document.removeEventListener("click", suppress, true);
+        document.removeEventListener("pointerup", released, true);
+        document.removeEventListener("pointerdown", cleanup, true);
+      };
       const suppress = (event: MouseEvent) => {
         event.preventDefault();
         event.stopImmediatePropagation();
+        cleanup();
       };
+      const released = () => setTimeout(cleanup, 0);
       document.addEventListener("click", suppress, {
         capture: true,
         once: true,
       });
-      setTimeout(
-        () => document.removeEventListener("click", suppress, true),
-        0,
-      );
+      if (commit) released();
+      else {
+        document.addEventListener("pointerup", released, {
+          capture: true,
+          once: true,
+        });
+        document.addEventListener("pointerdown", cleanup, {
+          capture: true,
+          once: true,
+        });
+      }
     }
     if (commit && started && destination) {
       const data = new DataTransfer();

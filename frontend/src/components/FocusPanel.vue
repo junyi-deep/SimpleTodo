@@ -162,7 +162,12 @@ async function enabled(c: Countdown) {
             min="1"
             max="180"
           />分钟</label
-        ><CustomSelect v-model="taskID" aria-label="关联任务">
+        ><CustomSelect
+          v-model="taskID"
+          aria-label="关联任务"
+          searchable
+          search-placeholder="搜索专注任务"
+        >
           <option value="">自由专注，不关联任务</option>
           <option v-for="task in s.roots" :key="task.id" :value="task.id">
             {{ task.title }}

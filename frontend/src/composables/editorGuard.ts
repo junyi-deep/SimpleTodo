@@ -1,14 +1,17 @@
-// Exactly one inline task editor can be active in the workspace.
-let active: { dirty: () => boolean; leave: () => Promise<boolean> } | undefined;
+// A workspace may have both an inline task editor and an unsaved note.
+type Guard = { dirty: () => boolean; leave: () => Promise<boolean> };
+const guards = new Set<Guard>();
 export function registerEditorGuard(
   dirty: () => boolean,
   leave: () => Promise<boolean>,
 ) {
-  const owner = { dirty, leave };
-  active = owner;
-  return () => {
-    if (active === owner) active = undefined;
-  };
+  const guard = { dirty, leave };
+  guards.add(guard);
+  return () => guards.delete(guard);
 }
-export const hasDirtyEditor = () => active?.dirty() || false;
-export const canLeaveEditor = async () => (active ? active.leave() : true);
+export const hasDirtyEditor = () => [...guards].some((g) => g.dirty());
+export const canLeaveEditor = async () => {
+  for (const guard of [...guards].reverse())
+    if (!(await guard.leave())) return false;
+  return true;
+};

@@ -1,4 +1,20 @@
+export interface Tag {
+  id: string;
+  name: string;
+  order: number;
+}
+export interface Note {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: number;
+  updatedAt: number;
+  version: number;
+}
 export interface Task {
+  startAt: number;
+  endAt: number | null;
+  tagIds: string[];
   id: string;
   parentId: string | null;
   rootId: string;

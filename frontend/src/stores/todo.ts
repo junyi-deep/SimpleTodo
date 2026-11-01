@@ -1,10 +1,12 @@
 import { type TaskProjection } from "../composables/taskDrag";
 import { defineStore } from "pinia";
-import { ref, computed, onScopeDispose, nextTick } from "vue";
+import { ref, computed, watch, onScopeDispose, nextTick } from "vue";
 import { api, listen, confirmAction } from "../api";
 import {
   dayString,
+  parseDay,
   type Task,
+  type Tag,
   type Snapshot,
   type Boot,
   type Query,
@@ -34,6 +36,8 @@ export const useTodo = defineStore("todo", () => {
     activeTask = ref(""),
     titleEditing = ref(""),
     rules = ref<Rule[]>([]),
+    tags = ref<Tag[]>([]),
+    filterTags = ref<string[]>([]),
     sortMode = ref("manual"),
     depthPreview = ref<number | null>(null),
     expansion = ref<Record<string, boolean>>({});
@@ -81,6 +85,33 @@ export const useTodo = defineStore("todo", () => {
     }
   }
   const filterView = computed(() => (view.value === "inbox" ? "inbox" : "day"));
+  let tagFilterSaving = 0;
+  watch(
+    () => [
+      filterView.value,
+      boot.value?.settings[filterView.value + "FilterTags"],
+    ],
+    () => {
+      if (tagFilterSaving) return;
+      try {
+        filterTags.value = JSON.parse(
+          boot.value?.settings[filterView.value + "FilterTags"] || "[]",
+        );
+      } catch {
+        filterTags.value = [];
+      }
+    },
+    { immediate: true },
+  );
+  async function setTagFilters(ids: string[]) {
+    filterTags.value = ids;
+    tagFilterSaving++;
+    try {
+      await setting(filterView.value + "FilterTags", JSON.stringify(ids));
+    } finally {
+      tagFilterSaving--;
+    }
+  }
   const hideCompleted = computed(
     () =>
       (boot.value?.settings[filterView.value + "ShowCompleted"] ??
@@ -103,9 +134,23 @@ export const useTodo = defineStore("todo", () => {
     let list = snapshot.value.tasks.filter(
       (t) => !t.parentId && t.status !== "skipped",
     );
+    if (view.value === "inbox") {
+      const grouped = new Map<string, Task>(),
+        today = boot.value?.today || dayString(new Date());
+      const score = (t: Task) =>
+        Math.abs(
+          parseDay(t.date || today).getTime() - parseDay(today).getTime(),
+        );
+      for (const t of list) {
+        const id = t.seriesId || t.id,
+          old = grouped.get(id);
+        if (!old || score(t) < score(old)) grouped.set(id, t);
+      }
+      list = [...grouped.values()];
+    }
     if (hideCompleted.value)
       list = list.filter((t) => t.status !== "completed");
-    if (!showRecurring.value) list = list.filter((t) => !t.seriesId);
+
     return list.sort((a, b) => {
       if (view.value === "pending" && a.date !== b.date)
         return a.date === null
@@ -175,6 +220,7 @@ export const useTodo = defineStore("todo", () => {
     if (warning && warning !== lastInstallWarning) inform(warning);
     lastInstallWarning = warning;
     rules.value = boot.value.startupError ? [] : await api<Rule[]>("Rules");
+    tags.value = boot.value.startupError ? [] : await api<Tag[]>("Tags");
     const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (
       !boot.value.startupError &&
@@ -256,16 +302,34 @@ export const useTodo = defineStore("todo", () => {
     afterId?: string,
   ) {
     const root = parent ? taskMap.value.get(parent.rootId) : undefined;
+    const scheduled =
+      plannedDate ??
+      (view.value === "inbox" ? boot.value?.today || date.value : date.value);
+    const now = new Date(),
+      start =
+        scheduled && scheduled !== dayString(now)
+          ? new Date(
+              scheduled +
+                "T" +
+                String(now.getHours()).padStart(2, "0") +
+                ":" +
+                String(now.getMinutes()).padStart(2, "0"),
+            ).getTime()
+          : now.getTime();
     return run(() =>
       api<Task[]>("Create", {
         commandId: crypto.randomUUID(),
         title,
+        span: parent ? null : { start, end: null },
+        repeatRule: parent
+          ? null
+          : { frequency: "daily", interval: 1, until: null, weekdays: [] },
         afterId,
         date:
           plannedDate !== undefined
             ? plannedDate
             : view.value === "inbox"
-              ? null
+              ? boot.value?.today || date.value
               : view.value === "pending"
                 ? boot.value?.today || date.value
                 : date.value,
@@ -285,7 +349,9 @@ export const useTodo = defineStore("todo", () => {
       !(await confirmAction("移入收集箱将取消未发送的提醒。继续？"))
     )
       return;
-    return run(() => api<Task[]>("Move", { ...command(t), date }));
+    return run(() =>
+      api<Task[]>("Move", { ...command(t), date, allowDailyMove: true }),
+    );
   }
   async function dropProjected(id: string, projection: TaskProjection) {
     const source = taskMap.value.get(id);
@@ -321,16 +387,23 @@ export const useTodo = defineStore("todo", () => {
     if (parentId) {
       if (
         !source.parentId &&
-        (source.remindAt || source.seriesId || source.description) &&
+        (source.remindAt || source.description) &&
         !(await confirmAction(
-          "作为子任务后将继承目标任务的日期与提醒。原描述会追加到目标根任务的描述；重复任务仅移动当前实例。继续？",
+          "作为子任务后将继承目标任务的日期与提醒。原描述会追加到目标根任务的描述，仅移动当天任务。继续？",
         ))
       )
         return;
       const out = await run(() =>
         api(
           "Nest",
-          { ...command(source), parentId, beforeId },
+          {
+            ...command(source),
+            parentId,
+            beforeId,
+            targetVersion: taskMap.value.get(
+              taskMap.value.get(parentId)?.rootId || parentId,
+            )?.version,
+          },
           snapshot.value.revision,
         ),
       );
@@ -441,6 +514,9 @@ export const useTodo = defineStore("todo", () => {
     }
   }
   return {
+    tags,
+    filterTags,
+    setTagFilters,
     key,
     date,
     view,

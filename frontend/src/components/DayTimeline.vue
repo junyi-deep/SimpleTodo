@@ -11,11 +11,21 @@ const emit = defineEmits<{
   today: [];
   drop: [DragEvent, string];
 }>();
+const todayOutline = ref<HTMLElement>();
 const track = ref<HTMLElement>(),
   pill = ref<HTMLElement>(),
   anchor = ref<number | null>(null),
   offset = ref(0),
-  dragging = ref(false);
+  dragging = ref(false),
+  slotWidth = ref(0);
+const todayIndex = computed(() =>
+  props.today
+    ? Math.round(
+        (parseDay(props.today).getTime() - parseDay(days.value[0]!).getTime()) /
+          86400000,
+      )
+    : -1,
+);
 const days = computed(() => {
   const n = anchor.value ?? (parseDay(props.date).getDay() + 6) % 7;
   return Array.from({ length: 7 }, (_, i) => shiftDay(props.date, i - n));
@@ -37,6 +47,7 @@ async function position() {
   await nextTick();
   const el = track.value?.querySelector<HTMLElement>(".selected");
   if (!el || !pill.value || !track.value) return;
+  slotWidth.value = track.value.clientWidth / 7;
   const r = el.getBoundingClientRect(),
     host = track.value.getBoundingClientRect(),
     x = r.left - host.left;
@@ -113,6 +124,14 @@ function end(event: PointerEvent) {
       0.18,
     );
   }
+  if (todayOutline.value && props.today) {
+    const x = todayIndex.value * slotWidth.value;
+    runMotion(
+      todayOutline.value,
+      { transform: [`translateX(${x + from}px)`, `translateX(${x}px)`] },
+      0.18,
+    );
+  }
   void position();
 }
 function select(day: string) {
@@ -148,6 +167,16 @@ onUnmounted(() => {
     </button>
     <div ref="track" class="timeline-days">
       <span ref="pill" class="timeline-pill" aria-hidden="true" />
+      <span
+        v-if="today"
+        ref="todayOutline"
+        class="timeline-today-outline"
+        aria-hidden="true"
+        :style="{
+          width: slotWidth + 'px',
+          transform: `translateX(${todayIndex * slotWidth + offset}px)`,
+        }"
+      />
       <button
         v-for="(day, i) in days"
         :key="i"

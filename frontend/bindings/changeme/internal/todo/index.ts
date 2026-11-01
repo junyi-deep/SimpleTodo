@@ -9,11 +9,14 @@ export type {
     Focus,
     Holiday,
     LocalCalendarState,
+    Note,
     Preview,
     Query,
     RepeatRequest,
     Rule,
     SeriesImpact,
     Snapshot,
-    Task
+    Tag,
+    Task,
+    TaskSpan
 } from "./models.js";

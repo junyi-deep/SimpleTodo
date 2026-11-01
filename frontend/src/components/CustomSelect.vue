@@ -7,15 +7,18 @@ import {
   onMounted,
   onUnmounted,
   nextTick,
+  watch,
   type VNode,
 } from "vue";
 import { reveal, leave, cancelMotion } from "../composables/motion";
-import { ChevronDown, Check } from "lucide-vue-next";
+import { ChevronDown, Check, Search } from "lucide-vue-next";
 defineOptions({ inheritAttrs: false });
 const props = defineProps<{
   modelValue?: string | number;
   disabled?: boolean;
   modelModifiers?: Record<string, boolean>;
+  searchable?: boolean;
+  searchPlaceholder?: string;
 }>();
 const emit = defineEmits(["update:modelValue", "change"]);
 const slots = useSlots(),
@@ -25,7 +28,9 @@ const host = ref<HTMLElement>(),
   trigger = ref<HTMLButtonElement>(),
   popup = ref<HTMLElement>();
 const open = ref(false),
-  active = ref(0);
+  active = ref(0),
+  search = ref(""),
+  composing = ref(false);
 type Item = { value: string | number; label: string; disabled: boolean };
 function content(nodes: any): string {
   return typeof nodes === "string"
@@ -55,6 +60,23 @@ function label() {
     "请选择"
   );
 }
+function visibleItems() {
+  const query = search.value.trim().toLocaleLowerCase();
+  return props.searchable && query
+    ? items().filter((item) => item.label.toLocaleLowerCase().includes(query))
+    : items();
+}
+watch(
+  search,
+  () => {
+    active.value = Math.max(
+      0,
+      visibleItems().findIndex((item) => !item.disabled),
+    );
+    popup.value?.querySelector(".select-results")?.scrollTo({ top: 0 });
+  },
+  { flush: "sync" },
+);
 function close(focus = false) {
   if (!open.value) return;
   open.value = false;
@@ -71,16 +93,22 @@ function close(focus = false) {
 async function toggle() {
   if (props.disabled) return;
   if (open.value) return close();
+  search.value = "";
   open.value = true;
   active.value = Math.max(
     0,
-    items().findIndex((i) => String(i.value) === String(props.modelValue)),
+    visibleItems().findIndex(
+      (i) => String(i.value) === String(props.modelValue),
+    ),
   );
   await nextTick();
   const rect = trigger.value!.getBoundingClientRect(),
     p = popup.value!;
   const width = Math.min(Math.max(rect.width, 190), innerWidth - 20),
-    height = Math.min(280, items().length * 32 + 8);
+    height = Math.min(
+      props.searchable ? 320 : 280,
+      items().length * 32 + (props.searchable ? 50 : 8),
+    );
   Object.assign(p.style, {
     width: width + "px",
     left: Math.min(rect.left, innerWidth - width - 10) + "px",
@@ -93,14 +121,19 @@ async function toggle() {
   p.inert = false;
   p.showPopover();
   const selected = p.querySelector<HTMLElement>('[aria-selected="true"]');
-  if (selected)
-    p.scrollTop = Math.max(
+  if (selected) {
+    const scroller = props.searchable
+      ? p.querySelector<HTMLElement>(".select-results")!
+      : p;
+    scroller.scrollTop = Math.max(
       0,
-      selected.offsetTop - (p.clientHeight - selected.offsetHeight) / 2,
+      selected.offsetTop - (scroller.clientHeight - selected.offsetHeight) / 2,
     );
+  }
   reveal(p, "popover");
   // Safari does not focus buttons on mouse/AX activation by default.
-  trigger.value?.focus();
+  if (props.searchable) p.querySelector<HTMLInputElement>("input")?.focus();
+  else trigger.value?.focus();
 }
 function choose(i: Item) {
   if (i.disabled) return;
@@ -112,6 +145,7 @@ function choose(i: Item) {
   close(true);
 }
 async function key(e: KeyboardEvent) {
+  if (e.isComposing) return;
   if (
     ["ArrowDown", "ArrowUp", "Home", "End", "Enter", " ", "Escape"].includes(
       e.key,
@@ -126,7 +160,8 @@ async function key(e: KeyboardEvent) {
   if (e.key === "Tab") return close();
   if (!open.value && ["ArrowDown", "ArrowUp", "Enter", " "].includes(e.key))
     return toggle();
-  const rows = items();
+  const rows = visibleItems();
+  if (!rows.length) return;
   if (e.key === "Enter" || e.key === " ") {
     if (rows[active.value]) choose(rows[active.value]);
   } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(e.key)) {
@@ -146,8 +181,15 @@ async function key(e: KeyboardEvent) {
       ?.scrollIntoView({ block: "nearest" });
   }
 }
+function searchKey(e: KeyboardEvent) {
+  if (e.isComposing || composing.value) return;
+  if (["ArrowDown", "ArrowUp", "Enter", "Escape", "Tab"].includes(e.key)) {
+    e.stopPropagation();
+    void key(e);
+  }
+}
 function outside(e: Event) {
-  if (!host.value?.contains(e.target as Node)) close();
+  if (!(e.target instanceof Node) || !host.value?.contains(e.target)) close();
 }
 onMounted(() => {
   document.addEventListener("pointerdown", outside);
@@ -171,9 +213,11 @@ onUnmounted(() => {
       role="combobox"
       :aria-label="String(attrs['aria-label'] || label())"
       :aria-expanded="open"
-      aria-haspopup="listbox"
+      :aria-haspopup="searchable ? 'dialog' : 'listbox'"
       :aria-controls="id"
-      :aria-activedescendant="open ? id + '-' + active : undefined"
+      :aria-activedescendant="
+        open && !searchable ? id + '-' + active : undefined
+      "
       :disabled="disabled"
       @click="toggle"
       @keydown.stop="key"
@@ -185,25 +229,60 @@ onUnmounted(() => {
       :id="id"
       ref="popup"
       popover="manual"
-      role="listbox"
+      :role="searchable ? 'dialog' : 'listbox'"
       class="select-options"
+      :class="{ searchable }"
       :aria-label="String(attrs['aria-label'] || '选项')"
     >
-      <button
-        v-for="(item, i) in items()"
-        :id="id + '-' + i"
-        :key="String(item.value)"
-        type="button"
-        role="option"
-        :aria-selected="String(item.value) === String(modelValue)"
-        :disabled="item.disabled"
-        :data-active="active === i"
-        @pointermove="active = i"
-        @click="choose(item)"
+      <label v-if="searchable" class="select-search">
+        <Search :size="13" />
+        <input
+          v-model="search"
+          role="combobox"
+          :aria-label="searchPlaceholder || '搜索选项'"
+          :placeholder="searchPlaceholder || '搜索选项'"
+          :aria-controls="id + '-results'"
+          aria-autocomplete="list"
+          :aria-expanded="open"
+          :aria-activedescendant="
+            visibleItems().length ? id + '-' + active : undefined
+          "
+          @keydown="searchKey"
+          @compositionstart="composing = true"
+          @compositionend="composing = false"
+        />
+      </label>
+      <div
+        :id="searchable ? id + '-results' : undefined"
+        :role="searchable ? 'listbox' : undefined"
+        :aria-label="
+          searchable ? String(attrs['aria-label'] || '选项') : undefined
+        "
+        :class="{ 'select-results': searchable }"
       >
-        <span>{{ item.label }}</span
-        ><Check v-if="String(item.value) === String(modelValue)" :size="13" />
-      </button>
+        <button
+          v-for="(item, i) in visibleItems()"
+          :id="id + '-' + i"
+          :key="String(item.value)"
+          type="button"
+          role="option"
+          :aria-selected="String(item.value) === String(modelValue)"
+          :disabled="item.disabled"
+          :data-active="active === i"
+          @pointermove="active = i"
+          @click="choose(item)"
+        >
+          <span>{{ item.label }}</span
+          ><Check v-if="String(item.value) === String(modelValue)" :size="13" />
+        </button>
+        <p
+          v-if="searchable && !visibleItems().length"
+          class="select-empty"
+          role="status"
+        >
+          没有匹配的任务
+        </p>
+      </div>
     </div>
   </div>
 </template>

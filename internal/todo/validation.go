@@ -8,6 +8,17 @@ import (
 )
 
 func validateExchange(d Transfer) error {
+	if len(d.Tags) > 200 {
+		return fail("VALIDATION_ERROR", "最多200个标签")
+	}
+	tagIDs, tagNames := map[string]bool{}, map[string]bool{}
+	for _, tag := range d.Tags {
+		if tag.ID == "" || strings.TrimSpace(tag.Name) == "" || len([]rune(tag.Name)) > 40 || tagIDs[tag.ID] || tagNames[tag.Name] {
+			return fail("VALIDATION_ERROR", "导入标签无效或重复")
+		}
+		tagIDs[tag.ID] = true
+		tagNames[tag.Name] = true
+	}
 	series := map[string]bool{}
 	for _, s := range d.Series {
 		if s.ID == "" || series[s.ID] {
@@ -150,7 +161,7 @@ func validateExchange(d Transfer) error {
 			if !contains([]string{"today", "pending"}, v) {
 				return fail("VALIDATION_ERROR", "浮窗视图无效")
 			}
-		case "dayShowCompleted", "inboxShowCompleted", "dayShowRecurring", "inboxShowRecurring", "autoPostpone", "completedBottom", "tabEntry", "sound", "miniPending", "edgeHide", "onboarding", "animation", "notificationPrompted":
+		case "dayShowCompleted", "inboxShowCompleted", "dayShowRecurring", "inboxShowRecurring", "autoPostpone", "completedBottom", "tabEntry", "sound", "miniPending", "edgeHide", "onboarding", "animation", "notificationPrompted", "showTags", "calendarShowChildren":
 			if v != "true" && v != "false" {
 				return fail("VALIDATION_ERROR", "开关值无效")
 			}

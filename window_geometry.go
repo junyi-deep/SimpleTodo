@@ -7,7 +7,7 @@ import (
 )
 
 func viewMinimum(view string) (int, int) {
-	if view == "calendar" {
+	if view == "calendar" || view == "review" {
 		return 760, 500
 	}
 	return 400, 440
@@ -30,8 +30,11 @@ func capturedViewWindow(view string, saved map[string]todo.ViewWindowState, curr
 func restoredViewBounds(view string, saved map[string]todo.ViewWindowState, current, area application.Rect) application.Rect {
 	bounds := current
 	bounds.Width, bounds.Height = 480, 720
-	if view == "calendar" {
+	if view == "calendar" || view == "review" {
 		bounds.Width = 1080
+	}
+	if view == "settings" {
+		bounds.Width = 760
 	}
 	if state, ok := saved[view]; ok {
 		bounds = viewBounds(state)

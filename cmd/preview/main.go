@@ -35,12 +35,15 @@ func main() {
 		log.Fatal(err)
 	}
 	defer e.Close()
+	if err = e.UpgradeTaskPeriods(); err != nil {
+		log.Fatal(err)
+	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 	go e.Run(ctx)
 	var proxyMu sync.Mutex
 	proxyPath := filepath.Join(*dir, "update-proxy.json")
-	methods := map[string]any{"WindowConfig": func(key, mode string, opacity float64, collapsed bool) error {
+	methods := map[string]any{"Tags": e.Tags, "SaveTags": e.SaveTags, "SetTaskTags": e.SetTaskTags, "Notes": e.Notes, "SaveNote": e.SaveNote, "DeleteNote": e.DeleteNote, "TaskReport": e.TaskReport, "SetTaskSpan": e.SetTaskSpan, "AutomaticUpdate": func() any { return nil }, "SkipUpdate": func(version string) error { return e.SaveSettings(map[string]string{"skippedUpdateVersion": version}) }, "WindowConfig": func(key, mode string, opacity float64, collapsed bool) error {
 		if key != "main" || (mode != "normal" && mode != "top" && mode != "desktop") || opacity < .4 || opacity > 1 {
 			return fmt.Errorf("无效窗口设置")
 		}

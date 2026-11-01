@@ -82,6 +82,9 @@ func main() {
 		if err = engine.DailyBackup(); err != nil {
 			s.warnings = append(s.warnings, "每日备份失败："+err.Error())
 		}
+		if er := engine.UpgradeTaskPeriods(); er != nil {
+			s.warnings = append(s.warnings, "任务时间范围迁移失败："+er.Error())
+		}
 		s.installEngine(engine)
 	}
 	defer func() {
@@ -102,6 +105,7 @@ func main() {
 		}
 	}
 	s.setupWindows(background)
+	go afterDesktopReady(ctx, ready, func() { s.runUpdateChecks(ctx) })
 	tray := app.SystemTray.New()
 	tray.SetIcon(trayIcon)
 	tray.SetTooltip("SimpleTodo · 安排好每一天")
@@ -113,7 +117,7 @@ func main() {
 		key := item.Window
 		menu.Add(item.Label).OnClick(func(ctx *application.Context) { _ = s.ShowWindow(key) })
 	}
-	menu.Add("专注时钟").OnClick(func(ctx *application.Context) { _ = s.ShowWindow("main"); app.Event.Emit("todo:navigate", "focus") })
+	menu.Add("专注时钟").OnClick(func(ctx *application.Context) { _ = s.ShowWindow("focus") })
 	menu.AddSeparator()
 	menu.Add("退出 SimpleTodo").OnClick(func(ctx *application.Context) { s.requestQuit() })
 	tray.SetMenu(menu)
