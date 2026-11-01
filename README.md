@@ -2,6 +2,8 @@
 
 完全本地，安静极简的桌面待办。
 
+[访问官网](https://junyi-deep.github.io/SimpleTodo/) · [下载最新版本](https://github.com/junyi-deep/SimpleTodo/releases/latest)
+
 打开就能记，记完就能做。没有账号、云同步、AI、广告和复杂的项目体系，只有任务、日历和需要时才出现的工具。任务不上传，断网也能完整使用。
 
 ## 随手记录，专心完成

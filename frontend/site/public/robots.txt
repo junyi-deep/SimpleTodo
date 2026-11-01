@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://junyi-deep.github.io/SimpleTodo/sitemap.xml

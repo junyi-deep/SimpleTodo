@@ -1,0 +1,31 @@
+{
+  "hero": {
+    "file": "public/images/blue-prism.webp",
+    "kind": "generated decorative backdrop",
+    "tool": "built-in image_gen",
+    "prompt": "Create a premium abstract cinematic website hero backdrop for SimpleTodo, a minimalist local desktop to-do app. Landscape 1792x1024 composition. A nearly black charcoal scene, with two broad diagonal bands of sculptural cobalt blue light refracting through clear optical glass fins, running from upper left toward lower right. The light has crisp physical refraction edges, subtle smoky falloff, fine photographic grain, and an elegant electric-blue to silver-white core only at the right lower edge. Keep the upper center and central 60 percent mostly deep dark negative space so actual white website typography and real app screenshots can be placed above it. Concentrate blue light on the left and right outer quarters and across the lower third. Sophisticated art-directed long-exposure studio photograph, extremely restrained, sharp luminous lines against dense black. Similar atmosphere to premium desktop software launch campaign photography. No text, no logo, no UI, no icons, no laptop, no people, no circles, no stars, no purple, no rainbow colors. This is a decorative background asset, not a product screenshot. Opaque black background."
+  },
+  "screenshots": {
+    "kind": "actual application UI",
+    "script": "../e2e/site-assets.spec.ts",
+    "database": "isolated demonstration database",
+    "scale": 2,
+    "files": [
+      "list-portrait.png",
+      "list-dark.png",
+      "calendar-dark.png",
+      "review-dark.png",
+      "notes-dark.png",
+      "focus-dark.png"
+    ]
+  },
+  "logo": {
+    "file": "public/icon.svg",
+    "origin": "build/appicon.svg existing project logo"
+  },
+  "font": {
+    "family": "Manrope Variable",
+    "source": "@fontsource-variable/manrope",
+    "license": "public/licenses/Manrope-OFL.txt"
+  }
+}
