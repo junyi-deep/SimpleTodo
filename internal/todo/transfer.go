@@ -64,14 +64,14 @@ func (e *Engine) exportLocked() (Transfer, error) {
 	if er = jobRows.Close(); er != nil {
 		return d, er
 	}
-	tagRows, er := e.db.Query("SELECT id,name,sort_order FROM tags ORDER BY sort_order,id")
+	tagRows, er := e.db.Query("SELECT id,name,sort_order,color FROM tags ORDER BY sort_order,id")
 	if er != nil {
 		return d, er
 	}
 	d.Tags = []Tag{}
 	for tagRows.Next() {
 		var tag Tag
-		if er = tagRows.Scan(&tag.ID, &tag.Name, &tag.Order); er != nil {
+		if er = tagRows.Scan(&tag.ID, &tag.Name, &tag.Order, &tag.Color); er != nil {
 			tagRows.Close()
 			return d, er
 		}
@@ -661,7 +661,7 @@ func (e *Engine) CommitImport(token string) error {
 		if knownID[id] || id == "" {
 			id = ID()
 		}
-		if _, err = tx.Exec("INSERT INTO tags VALUES(?,?,?)", id, tag.Name, nextOrder); err != nil {
+		if _, err = tx.Exec("INSERT INTO tags(id,name,sort_order,color) VALUES(?,?,?,?)", id, tag.Name, nextOrder, tagColor(tag.Color)); err != nil {
 			return fail("VALIDATION_ERROR", "导入的标签名称或标识无效")
 		}
 		nextOrder++
@@ -931,7 +931,7 @@ func checkBackup(path string) error {
 		return fail("IO_ERROR", "备份完整性校验失败")
 	}
 	var version int
-	if err = db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); err != nil || version < 1 || version > 3 {
+	if err = db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); err != nil || version < 1 || version > 4 {
 		return fail("SCHEMA_ERROR", "不支持的备份版本")
 	}
 	rows, err := db.Query("PRAGMA foreign_key_check")

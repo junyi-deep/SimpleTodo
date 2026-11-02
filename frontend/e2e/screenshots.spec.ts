@@ -83,13 +83,17 @@ test("README 实际界面截图与紧凑窗口布局", async ({ page, request })
   await page.getByRole("button", { name: boot.today, exact: true }).click();
   const drawer = page.getByLabel("日期任务抽屉");
   await expect(drawer).toBeVisible();
-  await drawer
+  const expand = drawer
     .locator("[data-node]")
     .filter({
       has: page.getByRole("button", { name: parent.title, exact: true }),
     })
-    .getByLabel("展开子任务")
-    .click();
+    .getByLabel("展开子任务");
+  // Expansion is persisted across the list and calendar drawer.
+  if (await expand.isVisible()) await expand.click();
+  await expect(
+    drawer.getByRole("button", { name: "补充关键页面截图", exact: true }),
+  ).toBeVisible();
   await page.locator(".brand").hover();
   await page.screenshot({
     path: "../docs/images/calendar.png",

@@ -147,6 +147,7 @@ test("删除两次确认，取消和超时不删除，确认删除完整分支",
   await r.hover();
   await r.getByLabel("删除任务", { exact: true }).click();
   await expect(confirm).toHaveCount(0, { timeout: 6000 });
+  await r.hover();
   await r.getByLabel("删除任务", { exact: true }).click();
   await confirm.click();
   await expect(r).toHaveCount(0);

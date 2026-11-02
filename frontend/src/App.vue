@@ -43,6 +43,7 @@ import {
   shiftDay,
 } from "./api/types";
 import { canLeaveEditor, hasDirtyEditor } from "./composables/editorGuard";
+import { tagStyle } from "./composables/tags";
 import MotionPresence from "./components/MotionPresence.vue";
 import ConfirmDialog from "./components/ConfirmDialog.vue";
 import { confirmation } from "./composables/confirmation";
@@ -222,7 +223,9 @@ const calendarTasks = (day: string) =>
       (!t.parentId ||
         ((!t.startAt || dayString(new Date(t.startAt)) <= day) &&
           (!t.endAt || dayString(new Date(t.endAt)) >= day))) &&
-      t.status !== "skipped",
+      t.status !== "skipped" &&
+      (s.boot?.settings.calendarShowCompleted === "true" ||
+        t.status !== "completed"),
   );
 const isRange = (day: string) => selectedDays.value.includes(day);
 function fillRange() {
@@ -594,7 +597,7 @@ async function outside(e: PointerEvent) {
   if (
     drawer.value &&
     !el.closest(
-      ".day-drawer,.calendar-day,.select-options,.reminder-popover,.node-menu,.app-header,.calendar-repeat-menu",
+      ".day-drawer,.calendar-day,.select-options,.reminder-popover,.tag-popover,.node-menu,.app-header,.calendar-repeat-menu",
     )
   ) {
     if (!(await canLeaveEditor())) return;
@@ -1182,6 +1185,18 @@ onUnmounted(() => {
               )
             "
           />子任务</label
+        ><label class="check-label small"
+          ><input
+            type="checkbox"
+            aria-label="显示已完成任务"
+            :checked="s.boot?.settings.calendarShowCompleted === 'true'"
+            @change="
+              s.setting(
+                'calendarShowCompleted',
+                String(($event.target as HTMLInputElement).checked),
+              )
+            "
+          />已完成</label
         ><button class="icon-button" aria-label="上一个周期" @click="step(-1)">
           <ChevronLeft :size="15" /></button
         ><button class="text-button" @click="today">今天</button
@@ -1242,7 +1257,9 @@ onUnmounted(() => {
                         : s.filterTags.filter((id) => id !== tag.id),
                     )
                   "
-                />{{ tag.name }}</label
+                /><span class="tag-chip" :style="tagStyle(tag)">{{
+                  tag.name
+                }}</span></label
               ><button
                 v-if="s.filterTags.length"
                 class="text-button"
@@ -1416,6 +1433,7 @@ onUnmounted(() => {
         v-else-if="calendarMode === 'gantt'"
         :start="month + '-01'"
         :show-children="s.boot?.settings.calendarShowChildren === 'true'"
+        :show-completed="s.boot?.settings.calendarShowCompleted === 'true'"
         @edit="openCalendarTask"
         @changed="loadCalendar"
       />

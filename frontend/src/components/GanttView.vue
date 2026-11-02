@@ -8,7 +8,11 @@ import {
 import { api, listen } from "../api";
 import { useTodo } from "../stores/todo";
 import { type Task, dayString, parseDay, shiftDay } from "../api/types";
-const props = defineProps<{ start: string; showChildren: boolean }>(),
+const props = defineProps<{
+    start: string;
+    showChildren: boolean;
+    showCompleted: boolean;
+  }>(),
   emit = defineEmits<{ edit: [Task]; changed: [] }>(),
   s = useTodo(),
   all = ref<Task[]>([]),
@@ -50,7 +54,10 @@ const rows = computed(() => {
         86400000,
     ) + (t.status === "completed" ? 10000 : 0);
   for (const t of all.value.filter(
-    (t) => !t.parentId && t.status !== "skipped",
+    (t) =>
+      !t.parentId &&
+      t.status !== "skipped" &&
+      (props.showCompleted || t.status !== "completed"),
   )) {
     const key = t.seriesId || t.id,
       prev = roots.get(key);
@@ -61,7 +68,12 @@ const rows = computed(() => {
     out.push({ task: t, depth });
     if (props.showChildren)
       for (const c of all.value
-        .filter((n) => n.parentId === t.id)
+        .filter(
+          (n) =>
+            n.parentId === t.id &&
+            n.status !== "skipped" &&
+            (props.showCompleted || n.status !== "completed"),
+        )
         .sort((a, b) => a.order - b.order))
         add(c, depth + 1);
   }

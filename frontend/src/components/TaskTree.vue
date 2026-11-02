@@ -21,6 +21,7 @@ import {
   Check,
 } from "lucide-vue-next";
 import TagPopover from "./TagPopover.vue";
+import { tagStyle } from "../composables/tags";
 import InlineTitle from "./InlineTitle.vue";
 import { canLeaveEditor } from "../composables/editorGuard";
 import TaskEditor from "./TaskEditor.vue";
@@ -673,6 +674,8 @@ async function dropNode(e: DragEvent, t: Task) {
               <small
                 v-for="tag in s.tags.filter((x) => t.tagIds.includes(x.id))"
                 :key="tag.id"
+                class="tag-chip"
+                :style="tagStyle(tag)"
                 >{{ tag.name }}</small
               >
             </div>

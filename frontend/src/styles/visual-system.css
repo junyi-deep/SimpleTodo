@@ -1386,3 +1386,72 @@ input[type="range"] {
     max-width: 280px;
   }
 }
+
+/* Tag colors belong to task metadata; primary controls keep their neutral palette. */
+.tag-chip,
+.task-tags small.tag-chip,
+.compact-app .task-row.selected .task-tags small.tag-chip {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--tag-color, #64748b);
+  color: var(--tag-ink, #ffffff);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 17px;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.tag-popover {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  overflow: hidden;
+}
+.tag-popover:popover-open {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tag-popover > .search-control,
+.tag-popover > .text-button,
+.tag-popover > .error {
+  flex-shrink: 0;
+}
+.tag-popover .search-control input {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+}
+.tag-popover .tag-options {
+  min-height: 0;
+  margin: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.tag-popover .tag-options input {
+  flex-shrink: 0;
+}
+.tag-popover > .text-button {
+  white-space: normal;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.tag-color-preview {
+  flex: 0 0 13px;
+  width: 13px;
+  height: 13px;
+  border-radius: 4px;
+  background: var(--tag-color, #64748b);
+}
+.tag-setting-row .custom-select {
+  flex: 0 0 78px;
+  width: 78px;
+}
+.tag-setting-row .select-trigger {
+  padding-inline: 7px;
+  min-width: 0;
+}

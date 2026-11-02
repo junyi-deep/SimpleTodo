@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-01T08:13:27.651559+00:00",
+  "generatedAt": "2026-11-02T13:46:13.862497Z",
   "title": "Design System: SimpleTodo",
   "extensions": {
     "colorMeta": {
@@ -1064,9 +1064,9 @@
       "name": "任务标签选择",
       "kind": "chip",
       "refersTo": "tag-popover",
-      "description": "标签内容保持中性色，选择浮层复用共享阴影与字段。",
-      "html": "<section class=\"ds-tags\"><input aria-label=\"搜索或新增标签\" placeholder=\"搜索标签\"/><label><input type=\"checkbox\" checked/>重要</label><label><input type=\"checkbox\"/>紧急</label></section>",
-      "css": ".ds-tags{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);width:240px;padding:12px;border-radius:9px;background:var(--surface);box-shadow:var(--shadow-popover);font-size:12px;}.ds-tags>input{font:inherit;width:100%;border:0;background:transparent;color:inherit;padding:2px;}.ds-tags>input::placeholder{color:var(--quiet);opacity:1;}.ds-tags label{display:flex;align-items:center;gap:6px;min-height:30px;padding:4px 5px;border-radius:4px;}.ds-tags label:hover{background:var(--inset);}.ds-tags input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;}.ds-tags :focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}"
+      "description": "标签使用保存颜色的实心色块与对比文字；顶层浮层避开裁切，按窗口空间翻转，选项独立滚动。",
+      "html": "<section class=\"ds-tags\"><input aria-label=\"搜索或新增标签\" placeholder=\"搜索标签\"/><div class=\"ds-tag-options\"><label><input type=\"checkbox\" checked/><span class=\"ds-tag-chip\" style=\"--tag-color:#b93838;--tag-ink:#ffffff\">重要</span></label><label><input type=\"checkbox\"/><span class=\"ds-tag-chip\" style=\"--tag-color:#b45309;--tag-ink:#ffffff\">紧急</span></label></div></section>",
+      "css": ".ds-tags{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);width:240px;max-width:calc(100vw - 16px);max-height:360px;display:flex;flex-direction:column;gap:8px;overflow:hidden;padding:12px;border-radius:9px;background:var(--surface);box-shadow:var(--shadow-popover);font-size:12px;}.ds-tags>input{font:inherit;width:100%;border:0;background:transparent;color:inherit;padding:2px;}.ds-tags>input::placeholder{color:var(--quiet);opacity:1;}.ds-tags label{display:flex;align-items:center;gap:6px;min-height:30px;padding:4px 5px;border-radius:4px;}.ds-tags label:hover{background:var(--inset);}.ds-tags input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;}.ds-tags :focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-tag-options{min-height:0;overflow-y:auto;overscroll-behavior:contain;}.ds-tag-chip{display:inline-flex;max-width:100%;min-width:0;align-items:center;padding:1px 6px;border-radius:4px;background:var(--tag-color,#64748b);color:var(--tag-ink,#ffffff);font-size:10px;font-weight:500;line-height:17px;overflow-wrap:anywhere;white-space:normal;}"
     },
     {
       "name": "复盘侧栏导航",
@@ -1087,9 +1087,9 @@
   ],
   "narrative": {
     "northStar": "Quiet Neutral Workstation",
-    "overview": "SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一工作现场。近白与石墨表面、层次灰文字、系统字体和克制的细分隔线保持任务密度；顶栏品牌只保留 SimpleTodo 文字，不显示对钩或本地徽标。应用图标与关于页共用蓝底白色交叉双对钩，图标蓝色不扩展为全局强调色。任务操作图标默认灰色，悬停与键盘聚焦时显示语义色；输入星星、日历与甘特任务条保留局部彩色反馈。\n\n这是 macOS 优先、兼顾 Windows 的 Wails 桌面工具。列表、日历、专注、设置、复盘各有可同时打开的独立工作窗口，保持同一紧凑工具语言；日计划与收集箱共用列表窗口。任务详情与确认属于当前工作窗口。任务按起止范围每天独立完成，标签帮助筛选，复盘用真实任务统计和本地 Markdown 笔记回看记录。任务、标签和笔记保存在本地；版本检查只访问固定发布来源。",
+    "overview": "SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一工作现场。近白与石墨表面、层次灰文字、系统字体和克制的细分隔线保持任务密度；顶栏品牌只保留 SimpleTodo 文字，不显示对钩或本地徽标。应用图标与关于页共用蓝底白色交叉双对钩，图标蓝色不扩展为全局强调色。任务操作图标默认灰色，悬停与键盘聚焦时显示语义色；输入星星、任务标签、日历与甘特任务条保留局部彩色反馈。\n\n这是 macOS 优先、兼顾 Windows 的 Wails 桌面工具。列表、日历、专注、设置、复盘各有可同时打开的独立工作窗口，保持同一紧凑工具语言；日计划与收集箱共用列表窗口。任务详情与确认属于当前工作窗口。任务按起止范围每天独立完成，标签帮助筛选，复盘用真实任务统计和本地 Markdown 笔记回看记录。任务、标签和笔记保存在本地；版本检查只访问固定发布来源。",
     "keyCharacteristics": [
-      "黑白灰浅深主题配对，系统字体与 1.7px Lucide 线性图标；任务操作默认灰色、悬停／聚焦才显示语义色，输入星星和日历／甘特任务条使用局部彩色反馈。",
+      "黑白灰浅深主题配对，系统字体与 1.7px Lucide 线性图标；任务操作默认灰色、悬停／聚焦才显示语义色，输入星星、任务标签和日历／甘特任务条使用局部彩色反馈。",
       "五个独立工作窗口分别恢复位置、正常尺寸和最大化状态；任务详情与确认保留所属窗口上下文。",
       "37px 最小任务行、22px 层级缩进与稳定箭头列；单击原位编辑、加号草稿与独立详细设置。",
       "日期范围、每日完成历史、可选标签显示与带端点的甘特横条；复盘采用灰阶图表、任务报告与可调宽 NOTE 分栏。"
@@ -1097,7 +1097,7 @@
     "rules": [
       {
         "name": "The Scoped Color Rule",
-        "body": "任务操作默认使用中性图标色，仅悬停／键盘聚焦显示语义色，等待删除确认保持绿色；其他彩色只服务短暂输入反馈和日历／甘特任务条，统计与普通任务标签沿用中性色。",
+        "body": "任务操作默认使用中性图标色，仅悬停／键盘聚焦显示语义色，等待删除确认保持绿色；其他彩色只服务短暂输入反馈、任务标签和日历／甘特任务条，统计沿用中性色。",
         "section": "colors"
       },
       {
@@ -1114,12 +1114,12 @@
       "Do 让普通列表与日历日期抽屉共享原位编辑、新增和键盘操作；独立任务设置按钮与日历网格任务条进入抽屉详情。",
       "Do 让 Enter 同级草稿显示在原任务全部可见后代之后，以原任务为 afterTask 保存；Shift+Tab 先保存标题再连同后代提升一级。",
       "Do 允许完成项编辑和键盘提升，标题保存保留完成状态；新增未完成子项只将其祖先恢复未完成，保留其他完成子项。",
-      "Do 让月/周日期格内的全部已加载根任务独立滚动，溢出时显示持久轨道；蓝白任务条用于日历与甘特，甘特复用日历蓝色 token。",
+      "Do 让月/周日期格内符合当前过滤的已加载根任务独立滚动，溢出时显示持久轨道；蓝白任务条用于日历与甘特，甘特复用日历蓝色 token。",
       "Do 让新建、同级和子任务复用原位草稿；子草稿按完成项置底顺序插在已完成直接子任务前，取消不改状态，保护输入法和冲突草稿。",
       "Do 允许每层节点多选，按完整分支预览和提交、父子去重，并让 Esc 在选择框和搜索聚焦时退出多选。",
       "Do 使用同窗组件确认、默认取消与焦点返回；键盘焦点使用灰色细内框，保留选中填色。",
       "Do 使用自定义 combobox/listbox，展开定位当前选中项，保留键盘选择、禁用状态与焦点返回。",
-      "Do 以开始和可选结束时间表达跨度，每天独立完成并保留历史；月／周子任务默认关闭。",
+      "Do 以开始和可选结束时间表达跨度，每天独立完成并保留历史；月／周子任务默认关闭，日历／甘特默认隐藏已完成并独立于清单记忆偏好。",
       "Do 让日计划与收集箱分别记忆完成与标签过滤，标签显示默认关闭，同级排序保留计划日期。",
       "Do 用蓝色细线与小圆点投影插入位置和层级，完整分支参与五层限制；完成项置底时线条与提交均停在未完成同级区末尾。",
       "Do 保存每个节点的展开与折叠，在重进和重启后恢复；点击层级入口或调整深度按当前 snapshot 重置，滑条保持 1—5 层、默认 2 层。",

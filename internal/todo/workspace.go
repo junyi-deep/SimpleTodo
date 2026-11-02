@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"reflect"
+	"regexp"
 	"sort"
 	"strings"
 	"time"
@@ -17,12 +18,24 @@ type Tag struct {
 	ID    string `json:"id"`
 	Name  string `json:"name"`
 	Order int    `json:"order"`
+	Color string `json:"color"`
+}
+
+const defaultTagColor = "#64748b"
+
+var tagColorPattern = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
+func tagColor(color string) string {
+	if color == "" {
+		return defaultTagColor
+	}
+	return strings.ToLower(color)
 }
 
 func (e *Engine) Tags() ([]Tag, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	rows, err := e.db.Query("SELECT id,name,sort_order FROM tags ORDER BY sort_order,id")
+	rows, err := e.db.Query("SELECT id,name,sort_order,color FROM tags ORDER BY sort_order,id")
 	if err != nil {
 		return nil, err
 	}
@@ -30,7 +43,7 @@ func (e *Engine) Tags() ([]Tag, error) {
 	out := []Tag{}
 	for rows.Next() {
 		var t Tag
-		if err = rows.Scan(&t.ID, &t.Name, &t.Order); err != nil {
+		if err = rows.Scan(&t.ID, &t.Name, &t.Order, &t.Color); err != nil {
 			return nil, err
 		}
 		out = append(out, t)
@@ -50,6 +63,9 @@ func (e *Engine) SaveTags(tags []Tag) error {
 	defer tx.Rollback()
 	names := map[string]bool{}
 	for _, t := range tags {
+		if t.Color != "" && !tagColorPattern.MatchString(t.Color) {
+			return fail("VALIDATION_ERROR", "标签颜色须为六位十六进制颜色")
+		}
 		name := strings.TrimSpace(t.Name)
 		if name == "" || len([]rune(name)) > 40 || names[name] {
 			return fail("VALIDATION_ERROR", "标签名称须为1—40字且不能重复")
@@ -69,7 +85,10 @@ func (e *Engine) SaveTags(tags []Tag) error {
 			t.ID = ID()
 		}
 		seen[t.ID] = true
-		if _, err = tx.Exec("INSERT INTO tags VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,sort_order=excluded.sort_order", t.ID, t.Name, i); err != nil {
+		if t.Color == "" {
+			_ = tx.QueryRow("SELECT color FROM tags WHERE id=?", t.ID).Scan(&t.Color)
+		}
+		if _, err = tx.Exec("INSERT INTO tags(id,name,sort_order,color) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,sort_order=excluded.sort_order,color=excluded.color", t.ID, t.Name, i, tagColor(t.Color)); err != nil {
 			return fail("VALIDATION_ERROR", "标签名称不能重复")
 		}
 	}

@@ -38,7 +38,7 @@ type Engine struct {
 	periodModel bool
 }
 
-var defaults = map[string]string{"skippedUpdateVersion": "", "dayFilterTags": "[]", "inboxFilterTags": "[]", "showTags": "false", "calendarShowChildren": "false", "reviewNoteWidth": "33", "expandDepth": "2", "dayShowCompleted": "true", "inboxShowCompleted": "false", "dayShowRecurring": "true", "inboxShowRecurring": "true", "theme": "system", "autoPostpone": "true", "completedBottom": "true", "titleClick": "edit", "tabEntry": "false", "sound": "true", "focusMinutes": "25", "emoji": "☺", "miniView": "today", "miniPending": "true", "edgeHide": "false", "releaseURL": "", "shortcutMain": "", "shortcutMini": "", "shortcutQuick": "", "onboarding": "false", "animation": "true", "notificationPrompted": "false", "autostartConfigured": "false"}
+var defaults = map[string]string{"skippedUpdateVersion": "", "dayFilterTags": "[]", "inboxFilterTags": "[]", "showTags": "false", "calendarShowChildren": "false", "calendarShowCompleted": "false", "reviewNoteWidth": "33", "expandDepth": "2", "dayShowCompleted": "true", "inboxShowCompleted": "false", "dayShowRecurring": "true", "inboxShowRecurring": "true", "theme": "system", "autoPostpone": "true", "completedBottom": "true", "titleClick": "edit", "tabEntry": "false", "sound": "true", "focusMinutes": "25", "emoji": "☺", "miniView": "today", "miniPending": "true", "edgeHide": "false", "releaseURL": "", "shortcutMain": "", "shortcutMini": "", "shortcutQuick": "", "onboarding": "false", "animation": "true", "notificationPrompted": "false", "autostartConfigured": "false"}
 
 func Open(dir string) (*Engine, error) {
 	if err := os.MkdirAll(dir, 0700); err != nil {
@@ -104,7 +104,7 @@ func (e *Engine) openDB() error {
 		}
 	} else {
 		var version int
-		if er := db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); er != nil || version < 1 || version > 3 {
+		if er := db.QueryRow("SELECT max(version) FROM schema_migrations").Scan(&version); er != nil || version < 1 || version > 4 {
 			db.Close()
 			return fail("SCHEMA_ERROR", "数据库版本不受当前版本支持，请保留原文件")
 		}
@@ -200,6 +200,49 @@ func (e *Engine) openDB() error {
 	} else {
 		var actual string
 		if er := db.QueryRow("SELECT checksum FROM schema_migrations WHERE version=3").Scan(&actual); er != nil || actual != hash3 {
+			db.Close()
+			return fail("SCHEMA_ERROR", "迁移校验不匹配")
+		}
+	}
+	data4, _ := migrations.ReadFile("migrations/004_tag_colors.sql")
+	hash4 := fmt.Sprintf("%x", sha256.Sum256(data4))
+	var v4 int
+	if err = db.QueryRow("SELECT count(*) FROM schema_migrations WHERE version=4").Scan(&v4); err != nil {
+		db.Close()
+		return err
+	}
+	if v4 == 0 {
+		if n != 0 {
+			dir := filepath.Join(e.Dir, "backups")
+			if err = os.MkdirAll(dir, 0700); err != nil {
+				db.Close()
+				return err
+			}
+			if _, err = db.Exec("VACUUM INTO ?", filepath.Join(dir, "pre-schema-v4-"+e.now().UTC().Format("20060102T150405.000000000")+".db")); err != nil {
+				db.Close()
+				return err
+			}
+		}
+		tx, er := db.Begin()
+		if er != nil {
+			db.Close()
+			return er
+		}
+		if _, er = tx.Exec(string(data4)); er == nil {
+			_, er = tx.Exec("INSERT INTO schema_migrations VALUES(4,?,?)", hash4, e.now().UnixMilli())
+		}
+		if er != nil {
+			tx.Rollback()
+			db.Close()
+			return er
+		}
+		if er = tx.Commit(); er != nil {
+			db.Close()
+			return er
+		}
+	} else {
+		var actual string
+		if er := db.QueryRow("SELECT checksum FROM schema_migrations WHERE version=4").Scan(&actual); er != nil || actual != hash4 {
 			db.Close()
 			return fail("SCHEMA_ERROR", "迁移校验不匹配")
 		}
@@ -376,7 +419,7 @@ func (e *Engine) SaveSettings(m map[string]string) error {
 			if er != nil || n < 1 || n > 180 {
 				return fail("VALIDATION_ERROR", "专注时长为 1—180 分钟")
 			}
-		case "dayShowCompleted", "inboxShowCompleted", "dayShowRecurring", "inboxShowRecurring", "autoPostpone", "completedBottom", "tabEntry", "sound", "miniPending", "edgeHide", "onboarding", "animation", "notificationPrompted", "autostartConfigured", "showTags", "calendarShowChildren":
+		case "dayShowCompleted", "inboxShowCompleted", "dayShowRecurring", "inboxShowRecurring", "autoPostpone", "completedBottom", "tabEntry", "sound", "miniPending", "edgeHide", "onboarding", "animation", "notificationPrompted", "autostartConfigured", "showTags", "calendarShowChildren", "calendarShowCompleted":
 			if v != "true" && v != "false" {
 				return fail("VALIDATION_ERROR", "无效开关值")
 			}

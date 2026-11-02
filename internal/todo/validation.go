@@ -13,6 +13,9 @@ func validateExchange(d Transfer) error {
 	}
 	tagIDs, tagNames := map[string]bool{}, map[string]bool{}
 	for _, tag := range d.Tags {
+		if tag.Color != "" && !tagColorPattern.MatchString(tag.Color) {
+			return fail("VALIDATION_ERROR", "导入标签颜色无效")
+		}
 		if tag.ID == "" || strings.TrimSpace(tag.Name) == "" || len([]rune(tag.Name)) > 40 || tagIDs[tag.ID] || tagNames[tag.Name] {
 			return fail("VALIDATION_ERROR", "导入标签无效或重复")
 		}

@@ -5,6 +5,8 @@ import { registerEditorGuard } from "../composables/editorGuard";
 import { api, confirmAction } from "../api";
 import { useTodo } from "../stores/todo";
 import type { Tag } from "../api/types";
+import CustomSelect from "./CustomSelect.vue";
+import { tagColors, tagStyle } from "../composables/tags";
 const s = useTodo(),
   tags = ref<Tag[]>([]),
   name = ref(""),
@@ -60,6 +62,7 @@ async function add() {
     id: crypto.randomUUID(),
     name: name.value.trim(),
     order: tags.value.length,
+    color: tagColors[0].value,
   });
   name.value = "";
   await save();
@@ -68,14 +71,30 @@ async function add() {
 <template>
   <section class="tag-settings">
     <h2>任务标签</h2>
-    <p class="muted small">调整标签名称和显示顺序。</p>
+    <p class="muted small">调整标签名称、颜色和显示顺序。</p>
     <div v-for="(tag, i) in tags" :key="tag.id" class="tag-setting-row">
+      <span
+        class="tag-color-preview"
+        :style="tagStyle(tag)"
+        aria-hidden="true"
+      />
       <input
         v-model="tag.name"
         :disabled="busy"
         :aria-label="'标签名称 ' + (i + 1)"
         maxlength="40"
-      /><button
+      /><CustomSelect
+        v-model="tag.color"
+        :aria-label="'标签颜色 ' + (i + 1)"
+        :disabled="busy"
+        ><option
+          v-for="color in tagColors"
+          :key="color.value"
+          :value="color.value"
+        >
+          {{ color.name }}
+        </option></CustomSelect
+      ><button
         class="icon-button"
         aria-label="上移标签"
         :disabled="!i || busy"

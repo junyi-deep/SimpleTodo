@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, useId } from "vue";
 import { ChevronDown, Search, Tag as TagIcon } from "lucide-vue-next";
 import type { Tag } from "../api/types";
+import { tagStyle } from "../composables/tags";
 import { cancelMotion, leave, reveal } from "../composables/motion";
 
 const props = defineProps<{ modelValue: string[]; options: Tag[] }>();
@@ -123,7 +124,9 @@ onUnmounted(() => {
             type="checkbox"
             :checked="modelValue.includes(tag.id)"
             @change="select(tag.id)"
-          /><span>{{ tag.name }}</span></label
+          /><span class="tag-chip" :style="tagStyle(tag)">{{
+            tag.name
+          }}</span></label
         >
         <p v-if="!matches.length" class="muted small">没有匹配的标签</p>
       </div>

@@ -147,6 +147,7 @@ export interface Tag {
     "id": string;
     "name": string;
     "order": number;
+    "color": string;
 }
 
 export interface Task {

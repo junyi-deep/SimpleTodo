@@ -112,11 +112,14 @@ export const useTodo = defineStore("todo", () => {
       tagFilterSaving--;
     }
   }
-  const hideCompleted = computed(
-    () =>
+  const hideCompleted = computed(() => {
+    if (view.value === "month")
+      return boot.value?.settings.calendarShowCompleted !== "true";
+    return (
       (boot.value?.settings[filterView.value + "ShowCompleted"] ??
-        (filterView.value === "day" ? "true" : "false")) !== "true",
-  );
+        (filterView.value === "day" ? "true" : "false")) !== "true"
+    );
+  });
   const showRecurring = computed(
     () => boot.value?.settings[filterView.value + "ShowRecurring"] !== "false",
   );

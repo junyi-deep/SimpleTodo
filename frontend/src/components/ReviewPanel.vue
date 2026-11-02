@@ -14,6 +14,7 @@ import {
 import MarkdownIt from "markdown-it";
 import CustomSelect from "./CustomSelect.vue";
 import TagFilter from "./TagFilter.vue";
+import { tagStyle } from "../composables/tags";
 import TaskEditor from "./TaskEditor.vue";
 import { api, confirmAction, listen, previewMode } from "../api";
 import { useTodo } from "../stores/todo";
@@ -570,12 +571,15 @@ function keyboardResize(e: KeyboardEvent) {
               >{{ t.status === "completed" ? "已完成" : "未完成" }} ·
               {{ t.date || dayString(new Date(t.startAt || t.createdAt))
               }}<template v-if="t.parentId"> · 子任务</template></small
-            ><small v-if="t.tagIds?.length">{{
-              s.tags
-                .filter((x) => t.tagIds.includes(x.id))
-                .map((x) => x.name)
-                .join(" · ")
-            }}</small>
+            ><span v-if="t.tagIds?.length" class="task-tags">
+              <small
+                v-for="tag in s.tags.filter((x) => t.tagIds.includes(x.id))"
+                :key="tag.id"
+                class="tag-chip"
+                :style="tagStyle(tag)"
+                >{{ tag.name }}</small
+              >
+            </span>
           </button>
         </section>
         <div
