@@ -151,6 +151,14 @@ func (e *Engine) Nest(c Command, revision string) ([]Task, error) {
 	reorder(target, c.ID, c.BeforeID)
 	e.aggregate(source, now)
 	e.aggregate(target, now)
+	if targetRoot != c.RootID {
+		if _, err = e.reconcileCompletionTx(tx, previous, source, c.RootID); err != nil {
+			return nil, err
+		}
+	}
+	if _, err = e.reconcileCompletionTx(tx, previous, target, targetRoot); err != nil {
+		return nil, err
+	}
 	markException(source, c.RootID)
 	markException(target, targetRoot)
 	if err = validateTree(source, previous); err != nil {
@@ -178,6 +186,14 @@ func (e *Engine) Nest(c Command, revision string) ([]Task, error) {
 		}
 	}
 	if e.periodModel {
+		if err = e.stopCompletedPeriodTx(tx, previous[c.RootID], source[c.RootID]); err != nil {
+			return nil, err
+		}
+		if targetRoot != c.RootID {
+			if err = e.stopCompletedPeriodTx(tx, previous[targetRoot], target[targetRoot]); err != nil {
+				return nil, err
+			}
+		}
 		if marker != nil && val(marker.SeriesID) != val(target[targetRoot].SeriesID) {
 			if err = e.stopPeriodTx(tx, *marker); err != nil {
 				return nil, err

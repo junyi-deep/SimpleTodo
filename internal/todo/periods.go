@@ -157,7 +157,9 @@ func (e *Engine) extendDailySpansTx(tx *sql.Tx, global string) (bool, error) {
 		endAt := end.UnixMilli() + 59999
 		r.Until = ptr(day)
 		for i := range r.Template {
-			r.Template[i].EndAt = ptr(endAt)
+			if r.Template[i].Status != "completed" {
+				r.Template[i].EndAt = ptr(endAt)
+			}
 		}
 		if err = putRule(tx, r); err != nil {
 			return false, err
@@ -191,10 +193,15 @@ func (e *Engine) aggregate(m map[string]Task, now int64) {
 			root = t
 		}
 	}
+	day := val(root.Date)
 	var add func(string)
 	add = func(id string) {
 		for _, t := range m {
-			if val(t.ParentID) == id && activeOnDay(t, val(root.Date), e.location()) {
+			if val(t.ParentID) != id {
+				continue
+			}
+			futurePending := t.Status == "pending" && day != "" && today(time.UnixMilli(t.StartAt).In(e.location())) > day
+			if activeOnDay(t, day, e.location()) || futurePending {
 				visible[t.ID] = t
 				add(t.ID)
 			}
@@ -210,4 +217,75 @@ func (e *Engine) aggregate(m map[string]Task, now int64) {
 	for id, t := range visible {
 		m[id] = t
 	}
+}
+
+func (e *Engine) completionCutoff(root Task) string {
+	day := today(time.UnixMilli(*root.CompletedAt).In(e.location()))
+	for _, date := range []*string{root.Date, root.OccurrenceDate} {
+		if date != nil && *date < day {
+			day = *date
+		}
+	}
+	return day
+}
+
+func (e *Engine) stopCompletedPeriodTx(tx *sql.Tx, before, root Task) error {
+	if e.periodModel && root.SeriesID != nil && root.Status == "completed" && before.Status != "completed" {
+		return e.stopPeriodFromTx(tx, root, e.completionCutoff(root))
+	}
+	return nil
+}
+
+// Reconcile completion and scheduling in the same transaction as the task tree.
+func (e *Engine) reconcileCompletionTx(tx *sql.Tx, before, tasks map[string]Task, rootID string) (bool, error) {
+	if !e.periodModel {
+		return false, nil
+	}
+	changed := false
+	for id, task := range tasks {
+		old := before[id]
+		switch {
+		case task.Status == "completed" && old.Status != "completed":
+			task.EndAt = ptr(max(task.StartAt, *task.CompletedAt))
+		case task.Status == "pending" && old.CompletedAt != nil:
+			// setState already cleared any end time written by completion.
+		default:
+			continue
+		}
+		tasks[id] = task
+		changed = true
+	}
+	root, old := tasks[rootID], before[rootID]
+	if !changed || root.SeriesID == nil {
+		return changed, nil
+	}
+	if root.Status != "pending" || old.CompletedAt == nil {
+		return changed, nil
+	}
+	var stopped *string
+	if err := tx.QueryRow("SELECT stopped_from FROM repeat_series WHERE id=?", *root.SeriesID).Scan(&stopped); err != nil {
+		return false, err
+	}
+	if stopped == nil || *stopped != e.completionCutoff(old) {
+		return changed, nil
+	}
+	// The completion stop leaves the original rule intact for undo.
+	rule, err := ruleScan(tx.QueryRow("SELECT "+ruleColumns+" FROM repeat_rules WHERE id=?", val(root.RuleID)))
+	if err != nil {
+		return false, err
+	}
+	if root.EndAt == nil {
+		for _, node := range rule.Template {
+			if node.ParentID == nil && val(node.EndAt) >= root.StartAt {
+				root.EndAt = node.EndAt
+				tasks[rootID] = root
+				break
+			}
+		}
+	}
+	if _, err = tx.Exec("UPDATE repeat_series SET stopped_from=NULL,version=version+1 WHERE id=?", *root.SeriesID); err != nil {
+		return false, err
+	}
+	_, err = tx.Exec("UPDATE repeat_rules SET generated_through=min(generated_through,date(?,'-1 day')) WHERE series_id=?", *stopped, *root.SeriesID)
+	return changed, err
 }

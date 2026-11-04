@@ -151,8 +151,12 @@ func cloneTree(template []Task, date, series, rule string, now int64, keepStatus
 		t.Exception = false
 		t.ReminderGeneration = 0
 		if !keepStatus {
-			t.Status = "pending"
-			t.CompletedAt = nil
+			if series == "" {
+				t = setState(t, false, now)
+			} else {
+				t.Status = "pending"
+				t.CompletedAt = nil
+			}
 		}
 		if old.ParentID != nil {
 			t.ParentID = ptr(ids[*old.ParentID])

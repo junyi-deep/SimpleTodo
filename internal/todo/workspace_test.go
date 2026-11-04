@@ -277,20 +277,20 @@ func TestChildSpanBoundsAndCompletionApplyToActiveChildren(t *testing.T) {
 	if _, err = e.Complete(c); err != nil {
 		t.Fatal(err)
 	}
-	if getTree(t, e, r.ID)[r.ID].Status != "completed" {
-		t.Fatal("inactive child blocks today's completion")
+	if getTree(t, e, r.ID)[r.ID].Status != "pending" {
+		t.Fatal("future pending child must keep the period active")
 	}
 	q, err := e.Query(Query{View: "day", Date: day})
 	if err != nil || len(q.Tasks) != 2 {
 		t.Fatal(q, err)
 	}
 	q, err = e.Query(Query{View: "day", Date: e.localNow().AddDate(0, 0, 1).Format("2006-01-02")})
-	if err != nil || len(q.Tasks) != 3 {
+	if err != nil || len(q.Tasks) != 2 {
 		t.Fatal(q, err)
 	}
 	for _, n := range q.Tasks {
-		if n.Status != "pending" {
-			t.Fatal("completion leaked into next day", n)
+		if n.Status != "pending" || n.Title == "active" {
+			t.Fatal("completed child returned on the next day", n)
 		}
 	}
 }

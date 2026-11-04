@@ -308,7 +308,7 @@ func (e *Engine) TaskReport(q Query) ([]Task, error) {
 	defer e.mu.Unlock()
 	query := "SELECT " + columns + " FROM tasks WHERE status<>'skipped' ORDER BY created_at,id"
 	if q.View == "gantt" {
-		query = "SELECT t." + strings.ReplaceAll(columns, ",", ",t.") + " FROM tasks t JOIN tasks r ON r.id=t.root_id LEFT JOIN repeat_series s ON s.id=r.series_id WHERE t.status<>'skipped' AND (r.series_id IS NULL OR s.stopped_from IS NULL) ORDER BY t.created_at,t.id"
+		query = "SELECT t." + strings.ReplaceAll(columns, ",", ",t.") + " FROM tasks t JOIN tasks r ON r.id=t.root_id LEFT JOIN repeat_series s ON s.id=r.series_id WHERE t.status<>'skipped' AND (s.stopped_from IS NULL OR r.status='completed') ORDER BY t.created_at,t.id"
 	}
 	rows, err := e.db.Query(query)
 	if err != nil {
@@ -317,7 +317,7 @@ func (e *Engine) TaskReport(q Query) ([]Task, error) {
 	return readTasks(rows)
 }
 
-// Time ranges belong to the task; each daily snapshot completes independently.
+// Time ranges control the days on which a task can appear.
 func (e *Engine) SetTaskSpan(c Command, start int64, end *int64) ([]Task, error) {
 	if start <= 0 || end != nil && *end < start {
 		return nil, fail("VALIDATION_ERROR", "结束时间不能早于开始时间")
@@ -337,7 +337,7 @@ func (e *Engine) SetTaskSpan(c Command, start int64, end *int64) ([]Task, error)
 }
 func (e *Engine) spanRulesTx(tx *sql.Tx, c Command, m map[string]Task) error {
 	root, ok := m[c.RootID]
-	if !ok || c.ID != c.RootID {
+	if !ok || c.ID != c.RootID || e.periodModel && root.Status == "completed" {
 		return nil
 	}
 	if root.SeriesID == nil {
@@ -408,7 +408,7 @@ func (e *Engine) refreshDailyTemplateTx(tx *sql.Tx, m map[string]Task) error {
 			break
 		}
 	}
-	if root.SeriesID == nil || root.Status == "skipped" || val(root.Date) < today(e.localNow()) {
+	if root.SeriesID == nil || root.Status != "pending" || val(root.Date) < today(e.localNow()) {
 		return nil
 	}
 	rules, err := allRules(tx)
@@ -420,7 +420,8 @@ func (e *Engine) refreshDailyTemplateTx(tx *sql.Tx, m map[string]Task) error {
 			continue
 		}
 		r.Template = sortedTree(m)
-		r.GeneratedThrough = val(root.Date)
+		// A reopened series may already need to regenerate dates before this row.
+		r.GeneratedThrough = min(r.GeneratedThrough, val(root.Date))
 		if err = putRule(tx, r); err != nil {
 			return err
 		}
@@ -435,6 +436,10 @@ func (e *Engine) stopPeriodTx(tx *sql.Tx, root Task) error {
 	if cut == "" {
 		cut = today(e.localNow())
 	}
+	return e.stopPeriodFromTx(tx, root, cut)
+}
+
+func (e *Engine) stopPeriodFromTx(tx *sql.Tx, root Task, cut string) error {
 	if _, err := tx.Exec("UPDATE repeat_series SET stopped_from=CASE WHEN stopped_from IS NULL OR stopped_from>? THEN ? ELSE stopped_from END,version=version+1 WHERE id=?", cut, cut, *root.SeriesID); err != nil {
 		return err
 	}

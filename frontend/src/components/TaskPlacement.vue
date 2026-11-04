@@ -132,7 +132,7 @@ async function save() {
             type="datetime-local"
             :min="start"
         /></label>
-        <p class="muted small">每天独立完成。不设置结束时间则持续显示。</p>
+        <p class="muted small">留空结束时间时，任务会持续显示到完成。</p>
         <p v-if="error" class="error" role="alert">{{ error }}</p>
       </div>
       <footer class="dialog-footer">

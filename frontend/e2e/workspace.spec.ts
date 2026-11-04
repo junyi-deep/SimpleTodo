@@ -76,16 +76,16 @@ test("标签可多选、搜索、新增、筛选和显示，并可设置顺序",
   ).toBeEnabled();
   await page.screenshot({ path: "../.impeccable/review/workspace-tags.png" });
 });
-test("新任务按范围每天独立完成，详情没有周期规则并展示完成时间", async ({
+test("范围任务完成时更新结束时间并停止后续日期", async ({
   page,
   request,
 }) => {
   const boot = await call(request, "Boot");
   await page.goto("/?preview=1");
-  await add(page, "每天独立处理");
+  await add(page, "完成后停止安排");
   await page.getByLabel("新待办标题", { exact: true }).press("Escape");
   const q = await call(request, "Query", { view: "day", date: boot.today });
-  const t = q.tasks.find((x: any) => x.title === "每天独立处理");
+  const t = q.tasks.find((x: any) => x.title === "完成后停止安排");
   expect(t.seriesId).toBeTruthy();
   await row(page, t.title).hover();
   await row(page, t.title).getByLabel("调整任务时间", { exact: true }).click();
@@ -103,17 +103,19 @@ test("新任务按范围每天独立完成，详情没有周期规则并展示�
   await expect(editor.getByLabel("结束时间", { exact: true })).toBeVisible();
   await expect(editor.getByText("重复", { exact: true })).toHaveCount(0);
   await editor.getByRole("button", { name: "取消", exact: true }).click();
+  const d = new Date(boot.today + "T12:00:00");
+  d.setDate(d.getDate() + 1);
+  const tomorrow = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const generated = await call(request, "Query", { view: "day", date: tomorrow });
+  expect(generated.tasks.some((x: any) => x.seriesId === t.seriesId)).toBe(true);
   await row(page, t.title)
     .getByLabel("完成任务及所有后代", { exact: true })
     .click();
   await expect(row(page, t.title).locator(".task-time")).toContainText("~");
-  const d = new Date(boot.today + "T12:00:00");
-  d.setDate(d.getDate() + 1);
-  const tomorrow = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const finished = await call(request, "FindTask", t.id);
+  expect(finished.endAt).toBe(finished.completedAt);
   const next = await call(request, "Query", { view: "day", date: tomorrow });
-  expect(next.tasks.find((x: any) => x.title === t.title).status).toBe(
-    "pending",
-  );
+  expect(next.tasks.some((x: any) => x.seriesId === t.seriesId)).toBe(false);
 });
 test("日历子任务开关与甘特图调整起止时间", async ({ page, request }) => {
   const t = await root(request, "甘特任务");

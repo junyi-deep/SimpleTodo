@@ -82,7 +82,11 @@ func (e *Engine) PreviewBatch(ids []string, action, revision string) (Preview, e
 	}
 	token := ID()
 	e.previews[token] = pendingImport{Data: Transfer{Tasks: tasks, AppVersion: action}, BatchIDs: anchors, Expires: e.now().Add(5 * time.Minute), Revision: rev}
-	return Preview{Token: token, Tasks: tasks, Roots: len(anchors), Nodes: len(tasks), Warnings: []string{"仅影响所选任务及其后代；父子同时选择时只处理一次，重复任务仅影响本次"}}, nil
+	warning := "操作所选任务及其后代。父子同时选择时只处理一次。"
+	if e.periodModel && action == "complete" {
+		warning += "整项任务完成后会停止后续安排。"
+	}
+	return Preview{Token: token, Tasks: tasks, Roots: len(anchors), Nodes: len(tasks), Warnings: []string{warning}}, nil
 }
 
 func (e *Engine) CommitBatch(token string) error {
@@ -115,6 +119,9 @@ func (e *Engine) CommitBatch(token string) error {
 		}
 	}
 	now := e.now().UnixMilli()
+	completionChanged := false
+	var completedPeriods []Task
+	var updatedTemplates []map[string]Task
 	for rootID, m := range trees {
 		var alive int
 		if err = tx.QueryRow("SELECT count(*) FROM tasks WHERE id=?", rootID).Scan(&alive); err != nil {
@@ -159,6 +166,17 @@ func (e *Engine) CommitBatch(token string) error {
 		if len(m) > 0 {
 			e.aggregate(m, now)
 			markException(m, rootID)
+			changed, er := e.reconcileCompletionTx(tx, previous, m, rootID)
+			if er != nil {
+				return er
+			}
+			completionChanged = completionChanged || changed
+			if changed {
+				updatedTemplates = append(updatedTemplates, m)
+				if root := m[rootID]; root.SeriesID != nil && root.Status == "completed" && previous[rootID].Status != "completed" {
+					completedPeriods = append(completedPeriods, root)
+				}
+			}
 			if err = validateTree(m, previous); err != nil {
 				return err
 			}
@@ -173,6 +191,9 @@ func (e *Engine) CommitBatch(token string) error {
 		for _, t := range m {
 			t.Version++
 			t.UpdatedAt = now
+			if before, ok := previous[t.ID]; ok && sameTaskContent(before, t) {
+				t.UpdatedAt = before.UpdatedAt
+			}
 			if err = putTask(tx, t); err != nil {
 				return err
 			}
@@ -190,10 +211,23 @@ func (e *Engine) CommitBatch(token string) error {
 			return err
 		}
 	}
+	for _, root := range completedPeriods {
+		if err = e.stopPeriodFromTx(tx, root, e.completionCutoff(root)); err != nil {
+			return err
+		}
+	}
+	for _, m := range updatedTemplates {
+		if err = e.refreshDailyTemplateTx(tx, m); err != nil {
+			return err
+		}
+	}
 	if err = revisionTx(tx); err != nil {
 		return err
 	}
 	if err = tx.Commit(); err == nil {
+		if completionChanged {
+			e.lastDay = ""
+		}
 		delete(e.previews, token)
 		e.signal()
 	}

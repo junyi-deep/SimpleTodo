@@ -469,16 +469,21 @@ func (e *Engine) Query(q Query) (Snapshot, error) {
 	defer e.mu.Unlock()
 	result := Snapshot{Tasks: []Task{}, Counts: map[string]int{}, Today: today(e.localNow())}
 	where := "parent_id IS NULL AND status<>'skipped'"
+	activeSeries := "1=1"
+	if e.periodModel {
+		activeSeries = "NOT EXISTS (SELECT 1 FROM repeat_series s WHERE s.id=tasks.series_id AND s.stopped_from IS NOT NULL)"
+	}
 	args := []any{}
 	switch q.View {
 	case "all":
+		where += " AND (status<>'pending' OR " + activeSeries + ")"
 	case "day", "month":
 		where += " AND planned_date BETWEEN ? AND ?"
 		args = append(args, q.Date, q.End)
 	case "inbox":
 		where += " AND planned_date IS NULL"
 	case "pending":
-		where = "parent_id IS NULL AND status='pending'"
+		where = "parent_id IS NULL AND status='pending' AND " + activeSeries
 	default:
 		return result, fail("VALIDATION_ERROR", "未知视图")
 	}
@@ -549,7 +554,7 @@ func (e *Engine) Query(q Query) (Snapshot, error) {
 		}
 		result.Tasks = visible
 	}
-	for k, sqlq := range map[string]string{"inbox": "SELECT count(*) FROM tasks WHERE parent_id IS NULL AND status='pending' AND planned_date IS NULL", "pending": "SELECT count(*) FROM tasks WHERE parent_id IS NULL AND status='pending'", "today": "SELECT count(*) FROM tasks WHERE parent_id IS NULL AND status='pending' AND planned_date=?"} {
+	for k, sqlq := range map[string]string{"inbox": "SELECT count(*) FROM tasks WHERE parent_id IS NULL AND status='pending' AND planned_date IS NULL", "pending": "SELECT count(*) FROM tasks WHERE parent_id IS NULL AND status='pending' AND " + activeSeries, "today": "SELECT count(*) FROM tasks WHERE parent_id IS NULL AND status='pending' AND planned_date=?"} {
 		var n int
 		if k == "today" {
 			err = e.db.QueryRow(sqlq, result.Today).Scan(&n)
@@ -668,6 +673,10 @@ func (e *Engine) mutate(c Command, op string, fn func(map[string]Task, int64) er
 		}
 		m[c.ID] = created
 	}
+	completionChanged, err := e.reconcileCompletionTx(tx, old, m, c.RootID)
+	if err != nil {
+		return nil, err
+	}
 	if err = validateTree(m, old); err != nil {
 		return nil, err
 	}
@@ -695,6 +704,9 @@ func (e *Engine) mutate(c Command, op string, fn func(map[string]Task, int64) er
 			return nil, err
 		}
 	}
+	if err = e.stopCompletedPeriodTx(tx, old[c.RootID], m[c.RootID]); err != nil {
+		return nil, err
+	}
 	if c.StopPeriod {
 		if root, ok := m[c.RootID]; ok && root.SeriesID != nil {
 			if err = e.stopPeriodTx(tx, root); err != nil {
@@ -719,7 +731,7 @@ func (e *Engine) mutate(c Command, op string, fn func(map[string]Task, int64) er
 		if err != nil {
 			return nil, err
 		}
-	} else if c.RepeatRule == nil && contains([]string{"create-node", "update", "tags", "reparent", "delete"}, op) {
+	} else if c.RepeatRule == nil && (completionChanged || contains([]string{"create-node", "update", "tags", "reparent", "delete"}, op)) {
 		if err = e.refreshDailyTemplateTx(tx, m); err != nil {
 			return nil, err
 		}
@@ -747,7 +759,7 @@ func (e *Engine) mutate(c Command, op string, fn func(map[string]Task, int64) er
 		}
 	}
 	if err = tx.Commit(); err == nil {
-		if c.RepeatRule != nil {
+		if c.RepeatRule != nil || completionChanged {
 			e.lastDay = ""
 		}
 		e.signal()

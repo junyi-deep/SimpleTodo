@@ -68,7 +68,7 @@ async function save() {
         ><span>结束日期（可选）</span
         ><input v-model="end" type="date" aria-label="结束日期" :min="start"
       /></label>
-      <p class="muted small">范围内每天独立完成；留空结束日期则持续显示。</p>
+      <p class="muted small">留空结束日期时，任务会持续显示到完成。</p>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
     </div>
     <footer class="dialog-footer">

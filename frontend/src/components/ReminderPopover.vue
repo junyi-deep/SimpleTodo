@@ -89,7 +89,7 @@ onUnmounted(() => document.removeEventListener("pointerdown", outside));
         </button>
       </header>
       <input v-model="value" type="datetime-local" aria-label="提醒时间" />
-      <p class="muted small">时间范围内的每天任务使用相同时刻提醒。</p>
+      <p class="muted small">未完成的任务在时间范围内每天按此时刻提醒。</p>
       <p v-if="error" class="error" role="alert">{{ error }}</p>
       <footer>
         <button

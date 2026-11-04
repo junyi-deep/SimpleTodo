@@ -174,7 +174,7 @@ async function rebase() {
             :min="start"
         /></label>
       </div>
-      <p class="muted small">范围内每天独立完成；不设置结束时间则持续显示。</p>
+      <p class="muted small">任务完成后会记录结束时间，并停止后续安排。</p>
       <template v-if="!task.parentId"
         ><label class="field"
           ><span>自动延期</span

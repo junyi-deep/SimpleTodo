@@ -87,6 +87,9 @@ func (e *Engine) Promote(c Command, revision string) ([]Task, error) {
 	now := e.now().UnixMilli()
 	e.aggregate(tree, now)
 	e.aggregate(promoted, now)
+	if _, err = e.reconcileCompletionTx(tx, previous, tree, c.RootID); err != nil {
+		return nil, err
+	}
 	markException(tree, c.RootID)
 	if err = validateTree(tree, previous); err != nil {
 		return nil, err
@@ -145,6 +148,9 @@ func (e *Engine) Promote(c Command, revision string) ([]Task, error) {
 		}
 	}
 	if e.periodModel {
+		if err = e.stopCompletedPeriodTx(tx, previous[c.RootID], tree[c.RootID]); err != nil {
+			return nil, err
+		}
 		if err = e.refreshDailyTemplateTx(tx, tree); err != nil {
 			return nil, err
 		}
@@ -158,7 +164,7 @@ func (e *Engine) Promote(c Command, revision string) ([]Task, error) {
 			d := time.UnixMilli(*live.EndAt).In(e.location()).Format("2006-01-02")
 			until = &d
 		}
-		if until == nil || *until >= val(live.Date) {
+		if live.Status == "pending" && (until == nil || *until >= val(live.Date)) {
 			if err = e.repeatTx(tx, RepeatRequest{Command: Command{ID: node.ID, RootID: node.ID}, Rule: Rule{Frequency: "daily", Interval: 1, Until: until}}, promoted); err != nil {
 				return nil, err
 			}

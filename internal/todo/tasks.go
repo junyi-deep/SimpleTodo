@@ -127,6 +127,9 @@ func setState(t Task, completed bool, now int64) Task {
 		}
 		t.Status = "completed"
 	} else {
+		if t.CompletedAt != nil && val(t.EndAt) == max(t.StartAt, *t.CompletedAt) {
+			t.EndAt = nil
+		}
 		t.Status = "pending"
 		t.CompletedAt = nil
 	}
