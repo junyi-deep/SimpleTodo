@@ -543,7 +543,7 @@ func (e *Engine) Duplicate(c Command, date *string) error {
 	for _, t := range source {
 		template = append(template, t)
 	}
-	copy := cloneTree(template, val(date), "", "", e.now().UnixMilli(), false, e.location())
+	copy := cloneTree(template, val(date), "", "", e.now().UnixMilli(), false, e.location(), false, false)
 	if err = validateTree(copy); err != nil {
 		return err
 	}

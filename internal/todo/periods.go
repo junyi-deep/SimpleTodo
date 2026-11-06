@@ -20,6 +20,10 @@ func (e *Engine) UpgradeTaskPeriods() error {
 	if err = tx.QueryRow("SELECT count(*) FROM app_meta WHERE key='period_model_ready'").Scan(&modelReady); err != nil {
 		return err
 	}
+	var completedChildrenReady int
+	if err = tx.QueryRow("SELECT count(*) FROM app_meta WHERE key='period_completed_children_ready'").Scan(&completedChildrenReady); err != nil {
+		return err
+	}
 	legacyOff := map[string]bool{}
 	if modelReady == 0 {
 		rs, er := tx.Query("SELECT DISTINCT series_id FROM tasks WHERE parent_id IS NULL AND series_id IS NOT NULL AND auto_postpone_policy='off'")
@@ -72,9 +76,19 @@ func (e *Engine) UpgradeTaskPeriods() error {
 	}
 	for _, r := range rules {
 		changed := r.Frequency != "daily" || r.Interval != 1
+		restoreCompletedChildren := false
+		var templateRootID string
 		r.Frequency = "daily"
 		r.Interval = 1
 		for i := range r.Template {
+			if r.Template[i].ParentID == nil {
+				templateRootID = r.Template[i].ID
+			}
+			if completedChildrenReady == 0 && r.Template[i].ParentID != nil && r.Template[i].Status == "completed" {
+				// Regenerate untouched current/future copies from the old child filter.
+				changed = true
+				restoreCompletedChildren = true
+			}
 			if r.Template[i].StartAt == 0 {
 				at, er := wallTime(r.From, "00:00", e.location())
 				if er != nil {
@@ -98,7 +112,12 @@ func (e *Engine) UpgradeTaskPeriods() error {
 		}
 		if changed {
 			r.GeneratedThrough = e.localNow().AddDate(0, 0, -1).Format("2006-01-02")
-			if _, err = tx.Exec("DELETE FROM tasks WHERE parent_id IS NULL AND rule_id=? AND planned_date>? AND status='pending' AND is_exception=0", r.ID, today(e.localNow())); err != nil {
+			if restoreCompletedChildren {
+				_, err = tx.Exec("DELETE FROM tasks WHERE parent_id IS NULL AND rule_id=? AND planned_date>=? AND status='pending' AND is_exception=0 AND id<>?", r.ID, today(e.localNow()), templateRootID)
+			} else {
+				_, err = tx.Exec("DELETE FROM tasks WHERE parent_id IS NULL AND rule_id=? AND planned_date>? AND status='pending' AND is_exception=0", r.ID, today(e.localNow()))
+			}
+			if err != nil {
 				return err
 			}
 			if err = putRule(tx, r); err != nil {
@@ -110,6 +129,9 @@ func (e *Engine) UpgradeTaskPeriods() error {
 		return err
 	}
 	if _, err = tx.Exec("INSERT INTO app_meta(key,value) VALUES('period_model_ready','1') ON CONFLICT(key) DO NOTHING"); err != nil {
+		return err
+	}
+	if _, err = tx.Exec("INSERT INTO app_meta(key,value) VALUES('period_completed_children_ready','1') ON CONFLICT(key) DO NOTHING"); err != nil {
 		return err
 	}
 	if err = revisionTx(tx); err != nil {
@@ -201,7 +223,7 @@ func (e *Engine) aggregate(m map[string]Task, now int64) {
 				continue
 			}
 			futurePending := t.Status == "pending" && day != "" && today(time.UnixMilli(t.StartAt).In(e.location())) > day
-			if activeOnDay(t, day, e.location()) || futurePending {
+			if t.Status == "completed" || activeOnDay(t, day, e.location()) || futurePending {
 				visible[t.ID] = t
 				add(t.ID)
 			}

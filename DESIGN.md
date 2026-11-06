@@ -62,75 +62,75 @@ colors:
   window-close-hover: '#ba5151'
 typography:
   brand:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 12px
     fontWeight: 600
     letterSpacing: -0.02em
   workspace-title:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 18px
     fontWeight: 600
     letterSpacing: -0.025em
   calendar-title:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 17px
     fontWeight: 600
   body:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 14px
   task:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 13px
     lineHeight: 23px
   button:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 12px
     fontWeight: 500
   label:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 11px
   reminder:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 10px
     lineHeight: 17px
   drawer-title:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 15px
     fontWeight: 600
   clock:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 72px
     fontWeight: 450
     lineHeight: 1.2
     letterSpacing: -0.04em
   review-title:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 20px
     fontWeight: 600
     letterSpacing: -0.025em
   review-section:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 13px
     fontWeight: 600
   review-metric:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 28px
     fontWeight: 550
     lineHeight: 1.3
     letterSpacing: -0.03em
   note-title:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 17px
     fontWeight: 550
     letterSpacing: -0.015em
   editor-title:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 18px
     fontWeight: 550
     letterSpacing: -0.015em
     lineHeight: 1.5
   settings-title:
-    fontFamily: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif
+    fontFamily: '"Source Han Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif'
     fontSize: 19px
     fontWeight: 600
     letterSpacing: -0.025em
@@ -294,12 +294,12 @@ components:
 
 **Creative North Star: "Quiet Neutral Workstation"**
 
-SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一工作现场。近白与石墨表面、层次灰文字、系统字体和克制的细分隔线保持任务密度；顶栏品牌只保留 SimpleTodo 文字，不显示对钩或本地徽标。应用图标与关于页共用蓝底白色交叉双对钩，图标蓝色不扩展为全局强调色。任务操作图标默认灰色，悬停与键盘聚焦时显示语义色；输入星星、任务标签、日历与甘特任务条保留局部彩色反馈。
+SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一工作现场。近白与石墨表面、层次灰文字、随包内置的思源黑体（Source Han Sans SC）和克制的细分隔线保持任务密度；顶栏品牌只保留 SimpleTodo 文字，不显示对钩或本地徽标。应用图标与关于页共用蓝底白色交叉双对钩，图标蓝色不扩展为全局强调色。任务操作图标默认灰色，悬停与键盘聚焦时显示语义色；输入星星、任务标签、日历与甘特任务条保留局部彩色反馈。
 
-这是 macOS 优先、兼顾 Windows 的 Wails 桌面工具。列表、日历、专注、设置、复盘各有可同时打开的独立工作窗口，保持同一紧凑工具语言；日计划与收集箱共用列表窗口。任务详情与确认属于当前工作窗口。任务按起止范围每天独立完成，标签帮助筛选，复盘用真实任务统计和本地 Markdown 笔记回看记录。任务、标签和笔记保存在本地；版本检查只访问固定发布来源。
+这是 macOS 优先、兼顾 Windows 的 Wails 桌面工具。列表、日历、专注、设置、复盘各有可同时打开的独立工作窗口，保持同一紧凑工具语言；日计划与收集箱共用列表窗口。任务详情与确认属于当前工作窗口。任务按起止范围每天展示，未完成父任务持续保留已完成子任务，标签帮助筛选，复盘用真实任务统计和本地 Markdown 笔记回看记录。任务、标签和笔记保存在本地；版本检查只访问固定发布来源。
 
 **Key Characteristics:**
-- 黑白灰浅深主题配对，系统字体与 1.7px Lucide 线性图标；任务操作默认灰色、悬停／聚焦才显示语义色，输入星星、任务标签和日历／甘特任务条使用局部彩色反馈。
+- 黑白灰浅深主题配对，随包内置的思源黑体（Source Han Sans SC）与 1.7px Lucide 线性图标；任务操作默认灰色、悬停／聚焦才显示语义色，输入星星、任务标签和日历／甘特任务条使用局部彩色反馈。
 - 五个独立工作窗口分别恢复位置、正常尺寸和最大化状态；任务详情与确认保留所属窗口上下文。
 - 37px 最小任务行、22px 层级缩进与稳定箭头列；单击原位编辑、加号草稿与独立详细设置。
 - 日期范围、每日完成历史、可选标签显示与带端点的甘特横条；复盘采用灰阶图表、任务报告与可调宽 NOTE 分栏。
@@ -334,7 +334,7 @@ SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一
 
 ## Typography
 
-所有角色使用前置 token 中的系统字体栈，没有远程字体。系统字体是已确认的桌面工具选择。品牌、视图标题、日历年月、抽屉标题、任务、按钮、标签与提醒分别使用对应角色；大字号只用于专注时钟与复盘指标。系统数字使用 tabular-nums，Lucide 图标统一 1.7px 描边。正文以 13–14px 为主，标题以字重、字距和空间建立层次，不新增展示字体。
+所有角色优先使用随包内置的思源黑体（Source Han Sans SC）2.005 可变字体，覆盖 250–900 字重，系统字体作为回退。字体与许可证一同打包，离线加载，不依赖用户安装字体。品牌、视图标题、日历年月、抽屉标题、任务、按钮、标签与提醒分别使用对应角色；大字号只用于专注时钟与复盘指标。系统数字使用 tabular-nums，Lucide 图标统一 1.7px 描边。正文以 13–14px 为主，标题以字重、字距和空间建立层次，不新增展示字体。
 
 未选任务标题使用单行省略与完整 `title` 悬停内容。选中项改为 `white-space: normal`、`overflow-wrap: anywhere`，行高随完整内容扩展。`InlineTitle` 文本域继承当前文字，行高 23px，最小高 24px、最大高 210px，随内容调整高度。提醒在标题下另占小字行；已完成项追加“创建时间 ~ 完成时间”的 10px 次要文字。标签默认隐藏，启用显示后在标题下使用 10px 字号、500 字重与 17px 行高的实心彩色标签，允许换行断词。计数与时间使用 tabular-nums；清单完成项保留勾号，标题同时使用删除线与 muted 次要文字色，浅深主题一致；日历完成项沿用蓝底白字与删除线。
 
@@ -416,11 +416,11 @@ SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一
 
 铅笔打开 `task-settings-dialog`，通过 HTML `showModal()` 显示。宽 `min(460px, calc(100vw - 28px))`、最大高 `calc(100vh - 32px)`、overlay 圆角、无额外边框；主体内边距 18px，最大高 `calc(100vh - 145px)` 并可滚动，头尾内边距 12px 18px。标题为透明无框的 editor-title 文档标题角色，无内边距、底部 20px 间隔，描述域最小高 86px。
 
-保留描述、开始时间、可选结束时间、提醒、延期、影响范围确认和版本冲突处理；所有层级任务都可调整起止时间。自动延期的全局默认值为开启，已有用户保存的关闭值继续生效，延期延长结束时间而保留历史。页面明确说明范围内每天独立完成，结束时间留空则持续显示，不提供周期配置。详情显示创建、内容更新和完成时间。打开时聚焦标题，关闭后恢复任务焦点；Esc/关闭使用同一未保存检查，Cmd/Ctrl+Enter 保存。不再把完整详情展开在任务行下。
+保留描述、开始时间、可选结束时间、提醒、延期、影响范围确认和版本冲突处理；所有层级任务都可调整起止时间。自动延期的全局默认值为开启，已有用户保存的关闭值继续生效，延期延长结束时间而保留历史。页面说明完成时记录结束时间并停止后续安排，结束时间留空则持续显示，不提供周期配置；父任务未完成时，后续日期保留已完成子任务及其完成时间。详情显示创建、内容更新和完成时间。打开时聚焦标题，关闭后恢复任务焦点；Esc/关闭使用同一未保存检查，Cmd/Ctrl+Enter 保存。不再把完整详情展开在任务行下。
 
 ### Plan date / branch parent dialog
 
-“调整任务时间”沿用详细设置的 HTML 模态表面、头尾与按钮密度，背景列表位置保持不变。主体保留开始时间、可选结束时间和每日独立完成说明；子任务同时使用自定义下拉选择同一根内的新父任务。起止时间和父任务变更共同提交，长任务标题可换行断词，避免水平溢出。Esc、取消或关闭经过未保存检查后恢复任务焦点；版本冲突保留当前选择与输入。
+“调整任务时间”沿用详细设置的 HTML 模态表面、头尾与按钮密度，背景列表位置保持不变。主体保留开始时间、可选结束时间和完成后停止安排的说明；子任务同时使用自定义下拉选择同一根内的新父任务。起止时间和父任务变更共同提交，长任务标题可换行断词，避免水平溢出。Esc、取消或关闭经过未保存检查后恢复任务焦点；版本冲突保留当前选择与输入。
 
 ### Component confirmation
 
@@ -489,7 +489,7 @@ SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一
 ## Do's and Don'ts
 
 ### Do:
-- Do 沿用前置 token 的浅深配对、系统字体和 1.7px Lucide 线性图标。
+- Do 沿用前置 token 的浅深配对、随包内置的思源黑体（Source Han Sans SC）和 1.7px Lucide 线性图标。
 - Do 让任务操作默认灰色，悬停与键盘聚焦显示语义色，等待删除确认保持绿色。
 - Do 保留根任务组单条分隔、37px 紧凑行和 22px 层级缩进。
 - Do 在日期抽屉打开时为七列网格与星期标签让出相同宽度。
@@ -501,7 +501,7 @@ SimpleTodo 的界面把频繁勾选、拆分、改期与快速记录放在同一
 - Do 允许每层节点多选，按完整分支预览和提交、父子去重，并让 Esc 在选择框和搜索聚焦时退出多选。
 - Do 使用同窗组件确认、默认取消与焦点返回；键盘焦点使用灰色细内框，保留选中填色。
 - Do 使用自定义 combobox/listbox，展开定位当前选中项，保留键盘选择、禁用状态与焦点返回。
-- Do 以开始和可选结束时间表达跨度，每天独立完成并保留历史；月／周子任务默认关闭，日历／甘特默认隐藏已完成并独立于清单记忆偏好。
+- Do 以开始和可选结束时间表达跨度，整项完成后停止后续安排并保留历史；未完成父任务在后续日期保留已完成子任务的状态和完成时间；月／周子任务默认关闭，日历／甘特默认隐藏已完成并独立于清单记忆偏好。
 - Do 让日计划与收集箱分别记忆完成与标签过滤，标签显示默认关闭，同级排序保留计划日期。
 - Do 用蓝色细线与小圆点投影插入位置和层级，完整分支参与五层限制；完成项置底时线条与提交均停在未完成同级区末尾。
 - Do 保存每个节点的展开与折叠，在重进和重启后恢复；点击层级入口或调整深度按当前 snapshot 重置，滑条保持 1—5 层、默认 2 层。

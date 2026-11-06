@@ -99,6 +99,30 @@ test("视觉系统：双主题、控件状态和所有工作视图", async ({ pa
   await page.setViewportSize({ width: 480, height: 720 });
   await page.goto("/?preview=1");
   await expect(row(page, plan.title)).toBeVisible();
+  const loadedFonts = await page.evaluate(async () => {
+    const weights = [400, 450, 500, 550, 600, 650, 700];
+    const loaded = await Promise.all(
+      weights.map((weight) =>
+        document.fonts.load(
+          `${weight} 10px "Source Han Sans SC"`,
+          "任务提醒完成 123 ABC",
+        ),
+      ),
+    );
+    await document.fonts.ready;
+    return loaded.map((faces) =>
+      faces.map((face) => ({ family: face.family, status: face.status })),
+    );
+  });
+  for (const faces of loadedFonts) {
+    expect(faces).toHaveLength(1);
+    expect(faces[0].status).toBe("loaded");
+  }
+  expect(
+    await row(page, plan.title).evaluate(
+      (el) => getComputedStyle(el).fontFamily,
+    ),
+  ).toMatch(/^"Source Han Sans SC"/);
   const edit = row(page, document.title).getByLabel("任务设置", {
     exact: true,
   });

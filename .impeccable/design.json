@@ -820,67 +820,67 @@
     "typographyMeta": {
       "brand": {
         "displayName": "brand",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "workspace-title": {
         "displayName": "workspace-title",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "calendar-title": {
         "displayName": "calendar-title",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "body": {
         "displayName": "body",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "task": {
         "displayName": "task",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "button": {
         "displayName": "button",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "label": {
         "displayName": "label",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "reminder": {
         "displayName": "reminder",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "drawer-title": {
         "displayName": "drawer-title",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "clock": {
         "displayName": "clock",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "review-title": {
         "displayName": "review-title",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "review-section": {
         "displayName": "review-section",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "review-metric": {
         "displayName": "review-metric",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "note-title": {
         "displayName": "note-title",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "editor-title": {
         "displayName": "editor-title",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       },
       "settings-title": {
         "displayName": "settings-title",
-        "purpose": "数值以前置 token 为准，系统字体随平台渲染。"
+        "purpose": "数值以前置 token 为准，随包内置思源黑体，系统字体作为回退。"
       }
     },
     "shadows": [
@@ -1010,7 +1010,7 @@
       "refersTo": "button-primary",
       "description": "用于提交与确认，单色反转填色。",
       "html": "<button class=\"ds-primary\">保存更改</button>",
-      "css": ".ds-primary{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;font-size:12px;font-weight:500;min-height:32px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-control);background:var(--surface);color:var(--text);cursor:pointer;transition:background-color 140ms ease,color 140ms ease,box-shadow 140ms ease;border:0;background:var(--accent);color:var(--surface);box-shadow:0 1px 2px rgb(0 0 0 / .08);}.ds-primary:hover{background:var(--accent-strong);}.ds-primary:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--surface);}.ds-primary:disabled{opacity:.4;}"
+      "css": ".ds-primary{font-family:\"Source Han Sans SC\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;font-size:12px;font-weight:500;min-height:32px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-control);background:var(--surface);color:var(--text);cursor:pointer;transition:background-color 140ms ease,color 140ms ease,box-shadow 140ms ease;border:0;background:var(--accent);color:var(--surface);box-shadow:0 1px 2px rgb(0 0 0 / .08);}.ds-primary:hover{background:var(--accent-strong);}.ds-primary:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--surface);}.ds-primary:disabled{opacity:.4;}"
     },
     {
       "name": "次按钮",
@@ -1018,7 +1018,7 @@
       "refersTo": "button-secondary",
       "description": "克制的边界与轻微下沉悬停。",
       "html": "<button class=\"ds-secondary\">取消</button>",
-      "css": ".ds-secondary{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;font-size:12px;font-weight:500;min-height:32px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-control);background:var(--surface);color:var(--text);cursor:pointer;transition:background-color 140ms ease,color 140ms ease,box-shadow 140ms ease;}.ds-secondary:hover{background:var(--inset);border-color:var(--border-strong);}.ds-secondary:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-secondary:disabled{opacity:.4;}"
+      "css": ".ds-secondary{font-family:\"Source Han Sans SC\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;font-size:12px;font-weight:500;min-height:32px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-control);background:var(--surface);color:var(--text);cursor:pointer;transition:background-color 140ms ease,color 140ms ease,box-shadow 140ms ease;}.ds-secondary:hover{background:var(--inset);border-color:var(--border-strong);}.ds-secondary:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-secondary:disabled{opacity:.4;}"
     },
     {
       "name": "标准字段",
@@ -1026,7 +1026,7 @@
       "refersTo": "field",
       "description": "字段静止为 inset，聚焦转为 surface 与 focus 细边界。",
       "html": "<label class=\"ds-field\">提醒时间<input aria-label=\"提醒时间\" placeholder=\"设置提醒时间\"/></label>",
-      "css": ".ds-field{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);display:grid;gap:6px;font-size:11px;color:var(--muted);}.ds-field input{font:inherit;font-size:13px;color:var(--text);padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-control);background:var(--inset);transition:border-color 140ms ease,background-color 140ms ease;}.ds-field input::placeholder{color:var(--quiet);opacity:1;}.ds-field input:focus-visible{outline:none;border-color:var(--focus);box-shadow:none;background:var(--surface);}"
+      "css": ".ds-field{font-family:\"Source Han Sans SC\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);display:grid;gap:6px;font-size:11px;color:var(--muted);}.ds-field input{font:inherit;font-size:13px;color:var(--text);padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius-control);background:var(--inset);transition:border-color 140ms ease,background-color 140ms ease;}.ds-field input::placeholder{color:var(--quiet);opacity:1;}.ds-field input:focus-visible{outline:none;border-color:var(--focus);box-shadow:none;background:var(--surface);}"
     },
     {
       "name": "直接编辑任务与悬停操作",
@@ -1034,7 +1034,7 @@
       "refersTo": "task-row",
       "description": "37px 紧凑行；22px 层级缩进。操作显现后仍为灰色，悬停／聚焦显示语义色，确认删除保持绿色。",
       "html": "<div class=\"ds-task\" tabindex=\"0\"><button class=\"ds-check\" aria-label=\"完成任务\"></button><span class=\"ds-copy\">整理本周的阅读笔记</span><div class=\"ds-actions\"><button class=\"ds-edit\" aria-label=\"编辑任务\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m16 3 5 5-12 12-6 1 1-6Z M14 5l5 5\"/></svg></button><button class=\"ds-delete\" aria-label=\"删除任务\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6h18M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7\"/></svg></button></div></div>",
-      "css": ".ds-task{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);display:flex;align-items:flex-start;gap:5px;min-height:37px;padding:6px 4px;border-radius:6px;background:var(--surface);}.ds-task:hover{background:var(--inset);}.ds-task:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-copy{flex:1;font-size:13px;line-height:23px;}.ds-check{width:16px;min-width:16px;height:16px;margin-top:4px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);}.ds-check:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-actions{display:flex;gap:1px;max-width:0;overflow:hidden;opacity:0;transform:translateX(9px);transition:max-width 200ms cubic-bezier(.16,1,.3,1),transform 200ms cubic-bezier(.16,1,.3,1),opacity 160ms ease;}.ds-task:hover .ds-actions,.ds-task:focus-within .ds-actions{max-width:182px;opacity:1;transform:translateX(0);}.ds-actions button{display:grid;place-items:center;width:23px;min-width:23px;height:25px;padding:5px;border:0;border-radius:5px;background:transparent;color:var(--icon);cursor:pointer;}.ds-actions button:is(:hover,:focus-visible){background:var(--surface);}.ds-edit:is(:hover,:focus-visible){color:var(--action-edit);}.ds-delete:is(:hover,:focus-visible){color:var(--action-delete);}.ds-actions button:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-actions .ds-armed{color:var(--action-confirm);background:color-mix(in srgb,var(--action-confirm) 12%,transparent);}@media(prefers-reduced-motion:reduce){.ds-actions{transition:none;}}"
+      "css": ".ds-task{font-family:\"Source Han Sans SC\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);display:flex;align-items:flex-start;gap:5px;min-height:37px;padding:6px 4px;border-radius:6px;background:var(--surface);}.ds-task:hover{background:var(--inset);}.ds-task:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-copy{flex:1;font-size:13px;line-height:23px;}.ds-check{width:16px;min-width:16px;height:16px;margin-top:4px;border:1px solid var(--border-strong);border-radius:4px;background:var(--surface);}.ds-check:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-actions{display:flex;gap:1px;max-width:0;overflow:hidden;opacity:0;transform:translateX(9px);transition:max-width 200ms cubic-bezier(.16,1,.3,1),transform 200ms cubic-bezier(.16,1,.3,1),opacity 160ms ease;}.ds-task:hover .ds-actions,.ds-task:focus-within .ds-actions{max-width:182px;opacity:1;transform:translateX(0);}.ds-actions button{display:grid;place-items:center;width:23px;min-width:23px;height:25px;padding:5px;border:0;border-radius:5px;background:transparent;color:var(--icon);cursor:pointer;}.ds-actions button:is(:hover,:focus-visible){background:var(--surface);}.ds-edit:is(:hover,:focus-visible){color:var(--action-edit);}.ds-delete:is(:hover,:focus-visible){color:var(--action-delete);}.ds-actions button:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-actions .ds-armed{color:var(--action-confirm);background:color-mix(in srgb,var(--action-confirm) 12%,transparent);}@media(prefers-reduced-motion:reduce){.ds-actions{transition:none;}}"
     },
     {
       "name": "任务详细设置",
@@ -1042,7 +1042,7 @@
       "refersTo": "task-settings-dialog",
       "description": "所属窗口内模态；文档标题透明无框，字段沿用下沉表面。静态示例仅展示视觉。",
       "html": "<section class=\"ds-editor\"><header>任务设置</header><div class=\"ds-editor-body\"><input class=\"ds-editor-title\" aria-label=\"任务标题\" value=\"阅读计划\"/><label class=\"ds-editor-label\">描述<textarea aria-label=\"描述\">记录阅读中的问题。</textarea></label></div><footer><button class=\"ds-editor-cancel\">取消</button><button class=\"ds-editor-save\">保存</button></footer></section>",
-      "css": ".ds-editor{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);width:min(460px,calc(100vw - 28px));border-radius:var(--radius-overlay);background:var(--surface);box-shadow:var(--shadow-dialog);overflow:hidden;}.ds-editor header{padding:12px 18px;border-bottom:1px solid var(--border-subtle);font-size:13px;font-weight:600;}.ds-editor-body{padding:18px;}.ds-editor .ds-editor-title{width:100%;font:inherit;font-size:18px;font-weight:550;line-height:1.5;letter-spacing:-.015em;padding:0;margin:0 0 20px;color:var(--text);background:transparent;border:0;border-radius:0;}.ds-editor-title:focus-visible{outline:none;box-shadow:none;}.ds-editor-label{display:grid;gap:6px;color:var(--muted);font-size:11px;font-weight:500;}.ds-editor textarea{font:inherit;font-size:13px;color:var(--text);padding:8px 10px;min-height:86px;resize:vertical;border:1px solid var(--border);border-radius:6px;background:var(--inset);}.ds-editor textarea:focus-visible{outline:none;border-color:var(--focus);background:var(--surface);}.ds-editor footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border-subtle);}.ds-editor footer button{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;font-size:12px;font-weight:500;min-height:32px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-control);background:var(--surface);color:var(--text);cursor:pointer;transition:background-color 140ms ease,color 140ms ease,box-shadow 140ms ease;}.ds-editor footer button:hover{background:var(--inset);}.ds-editor footer button:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-editor footer .ds-editor-save{background:var(--accent);color:var(--surface);border:0;}.ds-editor footer .ds-editor-save:hover{background:var(--accent-strong);}.ds-editor footer .ds-editor-save:focus-visible{box-shadow:inset 0 0 0 1px var(--surface);}"
+      "css": ".ds-editor{font-family:\"Source Han Sans SC\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);width:min(460px,calc(100vw - 28px));border-radius:var(--radius-overlay);background:var(--surface);box-shadow:var(--shadow-dialog);overflow:hidden;}.ds-editor header{padding:12px 18px;border-bottom:1px solid var(--border-subtle);font-size:13px;font-weight:600;}.ds-editor-body{padding:18px;}.ds-editor .ds-editor-title{width:100%;font:inherit;font-size:18px;font-weight:550;line-height:1.5;letter-spacing:-.015em;padding:0;margin:0 0 20px;color:var(--text);background:transparent;border:0;border-radius:0;}.ds-editor-title:focus-visible{outline:none;box-shadow:none;}.ds-editor-label{display:grid;gap:6px;color:var(--muted);font-size:11px;font-weight:500;}.ds-editor textarea{font:inherit;font-size:13px;color:var(--text);padding:8px 10px;min-height:86px;resize:vertical;border:1px solid var(--border);border-radius:6px;background:var(--inset);}.ds-editor textarea:focus-visible{outline:none;border-color:var(--focus);background:var(--surface);}.ds-editor footer{display:flex;justify-content:flex-end;gap:8px;padding:12px 18px;border-top:1px solid var(--border-subtle);}.ds-editor footer button{font-family:\"Source Han Sans SC\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;font-size:12px;font-weight:500;min-height:32px;padding:6px 12px;border:1px solid var(--border);border-radius:var(--radius-control);background:var(--surface);color:var(--text);cursor:pointer;transition:background-color 140ms ease,color 140ms ease,box-shadow 140ms ease;}.ds-editor footer button:hover{background:var(--inset);}.ds-editor footer button:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-editor footer .ds-editor-save{background:var(--accent);color:var(--surface);border:0;}.ds-editor footer .ds-editor-save:hover{background:var(--accent-strong);}.ds-editor footer .ds-editor-save:focus-visible{box-shadow:inset 0 0 0 1px var(--surface);}"
     },
     {
       "name": "日历任务条",
@@ -1050,7 +1050,7 @@
       "refersTo": "calendar-task",
       "description": "月／周与甘特共用主题蓝色；完成状态加删除线。",
       "html": "<div class=\"ds-calendar\"><button>准备产品讨论</button><button class=\"ds-complete\">已完成的任务</button></div>",
-      "css": ".ds-calendar{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);display:grid;gap:5px;width:180px;padding:8px;background:var(--surface);}.ds-calendar button{font:inherit;font-size:11px;line-height:23px;min-height:23px;padding:0 7px;border:0;border-radius:4px;background:var(--calendar-blue);color:#fff;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;}.ds-calendar button:hover{background:var(--calendar-blue-hover);}.ds-calendar button:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-calendar .ds-complete{background:var(--calendar-blue-done);text-decoration:line-through;}"
+      "css": ".ds-calendar{font-family:\"Source Han Sans SC\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);display:grid;gap:5px;width:180px;padding:8px;background:var(--surface);}.ds-calendar button{font:inherit;font-size:11px;line-height:23px;min-height:23px;padding:0 7px;border:0;border-radius:4px;background:var(--calendar-blue);color:#fff;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:grab;}.ds-calendar button:hover{background:var(--calendar-blue-hover);}.ds-calendar button:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-calendar .ds-complete{background:var(--calendar-blue-done);text-decoration:line-through;}"
     },
     {
       "name": "日期任务抽屉",
@@ -1058,7 +1058,7 @@
       "refersTo": "day-drawer",
       "description": "右侧 340–420px 抽屉；打开时星期标签与七列网格同步让出其宽度。静态示例展示头部与当天任务。",
       "html": "<section class=\"ds-drawer\"><header><div><h2>11月1日</h2><small>当天任务</small></div><button aria-label=\"关闭日期抽屉\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m6 6 12 12M6 18 18 6\"/></svg></button></header><p>阅读计划</p></section>",
-      "css": ".ds-drawer{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);width:clamp(340px,40vw,420px);min-width:340px;background:var(--surface);box-shadow:-12px 0 36px rgb(20 20 24 / .1);}.ds-drawer header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border-subtle);background:var(--inset);}.ds-drawer h2{font-size:15px;font-weight:600;margin:0 0 4px;}.ds-drawer small{font-size:10px;color:var(--quiet);}.ds-drawer button{width:28px;height:28px;padding:6px;border:0;border-radius:6px;background:transparent;color:var(--icon);cursor:pointer;}.ds-drawer button:hover{background:var(--secondary);color:var(--text);}.ds-drawer button:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-drawer p{font-size:13px;line-height:23px;margin:0;padding:14px 18px;}"
+      "css": ".ds-drawer{font-family:\"Source Han Sans SC\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);width:clamp(340px,40vw,420px);min-width:340px;background:var(--surface);box-shadow:-12px 0 36px rgb(20 20 24 / .1);}.ds-drawer header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid var(--border-subtle);background:var(--inset);}.ds-drawer h2{font-size:15px;font-weight:600;margin:0 0 4px;}.ds-drawer small{font-size:10px;color:var(--quiet);}.ds-drawer button{width:28px;height:28px;padding:6px;border:0;border-radius:6px;background:transparent;color:var(--icon);cursor:pointer;}.ds-drawer button:hover{background:var(--secondary);color:var(--text);}.ds-drawer button:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-drawer p{font-size:13px;line-height:23px;margin:0;padding:14px 18px;}"
     },
     {
       "name": "任务标签选择",
@@ -1066,7 +1066,7 @@
       "refersTo": "tag-popover",
       "description": "标签使用保存颜色的实心色块与对比文字；顶层浮层避开裁切，按窗口空间翻转，选项独立滚动。",
       "html": "<section class=\"ds-tags\"><input aria-label=\"搜索或新增标签\" placeholder=\"搜索标签\"/><div class=\"ds-tag-options\"><label><input type=\"checkbox\" checked/><span class=\"ds-tag-chip\" style=\"--tag-color:#b93838;--tag-ink:#ffffff\">重要</span></label><label><input type=\"checkbox\"/><span class=\"ds-tag-chip\" style=\"--tag-color:#b45309;--tag-ink:#ffffff\">紧急</span></label></div></section>",
-      "css": ".ds-tags{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);width:240px;max-width:calc(100vw - 16px);max-height:360px;display:flex;flex-direction:column;gap:8px;overflow:hidden;padding:12px;border-radius:9px;background:var(--surface);box-shadow:var(--shadow-popover);font-size:12px;}.ds-tags>input{font:inherit;width:100%;border:0;background:transparent;color:inherit;padding:2px;}.ds-tags>input::placeholder{color:var(--quiet);opacity:1;}.ds-tags label{display:flex;align-items:center;gap:6px;min-height:30px;padding:4px 5px;border-radius:4px;}.ds-tags label:hover{background:var(--inset);}.ds-tags input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;}.ds-tags :focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-tag-options{min-height:0;overflow-y:auto;overscroll-behavior:contain;}.ds-tag-chip{display:inline-flex;max-width:100%;min-width:0;align-items:center;padding:1px 6px;border-radius:4px;background:var(--tag-color,#64748b);color:var(--tag-ink,#ffffff);font-size:10px;font-weight:500;line-height:17px;overflow-wrap:anywhere;white-space:normal;}"
+      "css": ".ds-tags{font-family:\"Source Han Sans SC\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);width:240px;max-width:calc(100vw - 16px);max-height:360px;display:flex;flex-direction:column;gap:8px;overflow:hidden;padding:12px;border-radius:9px;background:var(--surface);box-shadow:var(--shadow-popover);font-size:12px;}.ds-tags>input{font:inherit;width:100%;border:0;background:transparent;color:inherit;padding:2px;}.ds-tags>input::placeholder{color:var(--quiet);opacity:1;}.ds-tags label{display:flex;align-items:center;gap:6px;min-height:30px;padding:4px 5px;border-radius:4px;}.ds-tags label:hover{background:var(--inset);}.ds-tags input[type=checkbox]{accent-color:var(--accent);width:15px;height:15px;}.ds-tags :focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-tag-options{min-height:0;overflow-y:auto;overscroll-behavior:contain;}.ds-tag-chip{display:inline-flex;max-width:100%;min-width:0;align-items:center;padding:1px 6px;border-radius:4px;background:var(--tag-color,#64748b);color:var(--tag-ink,#ffffff);font-size:10px;font-weight:500;line-height:17px;overflow-wrap:anywhere;white-space:normal;}"
     },
     {
       "name": "复盘侧栏导航",
@@ -1074,7 +1074,7 @@
       "refersTo": "review-navigation",
       "description": "chrome 侧栏与 surface 活动项；112px 宽，850px 以下 88px。",
       "html": "<nav class=\"ds-nav\" aria-label=\"复盘导航\"><button class=\"ds-current\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"m3 10 9-7 9 7v10H3ZM9 20v-8h6v8\"/></svg>首页</button><button><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M4 3h14v18H4ZM1 7h6M1 12h6M1 17h6\"/></svg>复盘</button></nav>",
-      "css": ".ds-nav{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);display:flex;flex-direction:column;width:112px;padding:16px 8px;gap:4px;background:var(--chrome);border-right:1px solid var(--border-subtle);}.ds-nav button{font:inherit;font-size:12px;font-weight:450;display:flex;align-items:center;gap:8px;min-height:35px;padding:8px 10px;border:0;border-radius:6px;background:transparent;color:var(--muted);text-align:left;cursor:pointer;}.ds-nav button:hover{background:var(--hover);}.ds-nav .ds-current{background:var(--surface);color:var(--text);font-weight:550;box-shadow:0 1px 3px rgb(0 0 0 / .04);}.ds-nav button:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}@media(max-width:850px){.ds-nav{width:88px;}}"
+      "css": ".ds-nav{font-family:\"Source Han Sans SC\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);display:flex;flex-direction:column;width:112px;padding:16px 8px;gap:4px;background:var(--chrome);border-right:1px solid var(--border-subtle);}.ds-nav button{font:inherit;font-size:12px;font-weight:450;display:flex;align-items:center;gap:8px;min-height:35px;padding:8px 10px;border:0;border-radius:6px;background:transparent;color:var(--muted);text-align:left;cursor:pointer;}.ds-nav button:hover{background:var(--hover);}.ds-nav .ds-current{background:var(--surface);color:var(--text);font-weight:550;box-shadow:0 1px 3px rgb(0 0 0 / .04);}.ds-nav button:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}@media(max-width:850px){.ds-nav{width:88px;}}"
     },
     {
       "name": "NOTE 编辑器",
@@ -1082,7 +1082,7 @@
       "refersTo": "note-title",
       "description": "透明文档标题与 13px/1.8 Markdown 正文；保留实际保存、预览和确认流程。",
       "html": "<section class=\"ds-note\"><header>编辑笔记<button aria-label=\"保存笔记\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 3h15l3 3v15H3ZM7 3v6h10V3M7 21v-8h10v8\"/></svg></button></header><input aria-label=\"笔记标题\" value=\"本周复盘\"/><textarea aria-label=\"Markdown 笔记内容\">## 观察\n记录今天的收获。</textarea><small>未保存</small></section>",
-      "css": ".ds-note{font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);display:flex;flex-direction:column;gap:14px;min-width:260px;padding-left:18px;background:var(--surface);}.ds-note header{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;}.ds-note button{width:28px;height:28px;padding:6px;background:transparent;color:var(--icon);border:0;border-radius:6px;cursor:pointer;}.ds-note button:hover{background:var(--secondary);color:var(--text);}.ds-note button:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-note input,.ds-note textarea{font:inherit;color:inherit;background:transparent;border:0;border-radius:0;}.ds-note input{font-size:17px;font-weight:550;letter-spacing:-.015em;padding:6px 0;}.ds-note textarea{font-size:13px;line-height:1.8;min-height:270px;padding:8px 0;resize:vertical;}.ds-note input:focus-visible,.ds-note textarea:focus-visible{outline:none;box-shadow:none;}.ds-note small{font-size:10px;color:var(--quiet);}"
+      "css": ".ds-note{font-family:\"Source Han Sans SC\",-apple-system,BlinkMacSystemFont,\"Segoe UI\",\"PingFang SC\",\"Microsoft YaHei\",sans-serif;color:var(--text);display:flex;flex-direction:column;gap:14px;min-width:260px;padding-left:18px;background:var(--surface);}.ds-note header{display:flex;align-items:center;justify-content:space-between;font-size:13px;font-weight:600;}.ds-note button{width:28px;height:28px;padding:6px;background:transparent;color:var(--icon);border:0;border-radius:6px;cursor:pointer;}.ds-note button:hover{background:var(--secondary);color:var(--text);}.ds-note button:focus-visible{outline:none;box-shadow:inset 0 0 0 1px var(--focus);}.ds-note input,.ds-note textarea{font:inherit;color:inherit;background:transparent;border:0;border-radius:0;}.ds-note input{font-size:17px;font-weight:550;letter-spacing:-.015em;padding:6px 0;}.ds-note textarea{font-size:13px;line-height:1.8;min-height:270px;padding:8px 0;resize:vertical;}.ds-note input:focus-visible,.ds-note textarea:focus-visible{outline:none;box-shadow:none;}.ds-note small{font-size:10px;color:var(--quiet);}"
     }
   ],
   "narrative": {

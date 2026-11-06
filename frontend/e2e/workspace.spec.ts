@@ -76,6 +76,28 @@ test("标签可多选、搜索、新增、筛选和显示，并可设置顺序",
   ).toBeEnabled();
   await page.screenshot({ path: "../.impeccable/review/workspace-tags.png" });
 });
+test("新任务默认当天结束，切换未来日期不提前延期", async ({ page, request }) => {
+  await call(request, "Settings", { autoPostpone: "true" });
+  const boot = await call(request, "Boot");
+  await page.goto("/?preview=1");
+  await add(page, "只安排在今天");
+  await page.getByLabel("新待办标题", { exact: true }).press("Escape");
+  const current = await call(request, "Query", { view: "day", date: boot.today });
+  const task = current.tasks.find((t: any) => t.title === "只安排在今天");
+  const end = new Date(boot.today + "T23:59:59.999").getTime();
+  expect(task.endAt).toBe(end);
+  expect(task.startAt).toBeLessThanOrEqual(end);
+  const date = new Date(boot.today + "T12:00:00");
+  for (let i = 0; i < 2; i++) {
+    date.setDate(date.getDate() + 1);
+    const target = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    await page.getByLabel("后一天", { exact: true }).click();
+    await expect(row(page, task.title)).toHaveCount(0);
+    const future = await call(request, "Query", { view: "day", date: target });
+    expect(future.tasks.some((t: any) => t.seriesId === task.seriesId)).toBe(false);
+  }
+  expect((await call(request, "FindTask", task.id)).endAt).toBe(end);
+});
 test("范围任务完成时更新结束时间并停止后续日期", async ({
   page,
   request,
@@ -106,6 +128,14 @@ test("范围任务完成时更新结束时间并停止后续日期", async ({
   const d = new Date(boot.today + "T12:00:00");
   d.setDate(d.getDate() + 1);
   const tomorrow = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  await call(
+    request,
+    "SetTaskSpan",
+    { commandId: crypto.randomUUID(), id: t.id, rootId: t.id, expectedVersion: t.version },
+    t.startAt,
+    new Date(tomorrow + "T23:59:59").getTime(),
+  );
+  await page.reload();
   const generated = await call(request, "Query", { view: "day", date: tomorrow });
   expect(generated.tasks.some((x: any) => x.seriesId === t.seriesId)).toBe(true);
   await row(page, t.title)
@@ -116,6 +146,56 @@ test("范围任务完成时更新结束时间并停止后续日期", async ({
   expect(finished.endAt).toBe(finished.completedAt);
   const next = await call(request, "Query", { view: "day", date: tomorrow });
   expect(next.tasks.some((x: any) => x.seriesId === t.seriesId)).toBe(false);
+});
+test("后续日期保留已完成子任务及完成样式", async ({ page, request }) => {
+  const boot = await call(request, "Boot");
+  const rows = await call(request, "Create", {
+    commandId: crypto.randomUUID(),
+    title: "仍在进行的项目",
+    date: boot.today,
+    span: { start: Date.now() },
+  });
+  const parent = rows.find((t: any) => !t.parentId);
+  let child: any;
+  for (const title of ["已经完成的步骤", "剩余步骤"]) {
+    const latest = await call(request, "FindTask", parent.id);
+    const nodes = await call(request, "Create", {
+      commandId: crypto.randomUUID(),
+      rootId: parent.id,
+      parentId: parent.id,
+      title,
+      expectedVersion: latest.version,
+    });
+    if (title === "已经完成的步骤")
+      child = nodes.find((t: any) => t.title === title);
+  }
+  await page.goto("/?preview=1");
+  await row(page, child.title)
+    .getByLabel("完成任务及所有后代", { exact: true })
+    .click();
+  await expect(row(page, child.title).locator(".task-time")).toContainText("~");
+  const source = await call(request, "ReadTree", parent.id);
+  const finished = source.find((t: any) => t.id === child.id);
+  expect(finished.status).toBe("completed");
+  const day = new Date(boot.today + "T12:00:00");
+  day.setDate(day.getDate() + 1);
+  const tomorrow = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+  await page.locator(`[data-timeline-day="${tomorrow}"]`).click();
+  const completedRow = row(page, child.title);
+  await expect(completedRow).toBeVisible();
+  await expect(completedRow).toHaveClass(/done/);
+  await expect(completedRow.locator(".task-time")).toContainText("~");
+  const state = await call(request, "Query", { view: "day", date: tomorrow });
+  const carried = state.tasks.find((t: any) => t.title === child.title);
+  expect(carried.status).toBe("completed");
+  expect(carried.completedAt).toBe(finished.completedAt);
+  expect(carried.endAt).toBe(finished.endAt);
+  expect(state.tasks.find((t: any) => t.title === parent.title).status).toBe(
+    "pending",
+  );
+  await page.reload();
+  await page.locator(`[data-timeline-day="${tomorrow}"]`).click();
+  await expect(row(page, child.title)).toBeVisible();
 });
 test("日历子任务开关与甘特图调整起止时间", async ({ page, request }) => {
   const t = await root(request, "甘特任务");
@@ -145,7 +225,7 @@ test("日历子任务开关与甘特图调整起止时间", async ({ page, reque
   const b = (await handle.boundingBox())!;
   await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
   await page.mouse.down();
-  await page.mouse.move(b.x + b.width / 2 - 60, b.y + b.height / 2, {
+  await page.mouse.move(b.x + b.width / 2 + 60, b.y + b.height / 2, {
     steps: 10,
   });
   await page.mouse.up();

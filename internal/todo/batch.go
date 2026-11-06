@@ -188,12 +188,13 @@ func (e *Engine) CommitBatch(token string) error {
 				}
 			}
 		}
-		for _, t := range m {
+		for id, t := range m {
 			t.Version++
 			t.UpdatedAt = now
 			if before, ok := previous[t.ID]; ok && sameTaskContent(before, t) {
 				t.UpdatedAt = before.UpdatedAt
 			}
+			m[id] = t
 			if err = putTask(tx, t); err != nil {
 				return err
 			}

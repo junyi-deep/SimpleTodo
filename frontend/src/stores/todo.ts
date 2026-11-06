@@ -307,6 +307,7 @@ export const useTodo = defineStore("todo", () => {
     const root = parent ? taskMap.value.get(parent.rootId) : undefined;
     const scheduled =
       plannedDate ??
+      root?.date ??
       (view.value === "inbox" ? boot.value?.today || date.value : date.value);
     const now = new Date(),
       start =
@@ -318,15 +319,14 @@ export const useTodo = defineStore("todo", () => {
                 ":" +
                 String(now.getMinutes()).padStart(2, "0"),
             ).getTime()
-          : now.getTime();
+          : now.getTime(),
+      finish = new Date(start);
+    finish.setHours(23, 59, 59, 999);
     return run(() =>
       api<Task[]>("Create", {
         commandId: crypto.randomUUID(),
         title,
-        span: parent ? null : { start, end: null },
-        repeatRule: parent
-          ? null
-          : { frequency: "daily", interval: 1, until: null, weekdays: [] },
+        span: { start, end: finish.getTime() },
         afterId,
         date:
           plannedDate !== undefined

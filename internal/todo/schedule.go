@@ -102,14 +102,14 @@ func ruleMatches(r Rule, d time.Time) bool {
 	}
 	return false
 }
-func cloneTree(template []Task, date, series, rule string, now int64, keepStatus bool, loc *time.Location, enforceBounds ...bool) map[string]Task {
+func cloneTree(template []Task, date, series, rule string, now int64, keepStatus bool, loc *time.Location, enforceBounds, carryCompleted bool) map[string]Task {
 	byID := map[string]Task{}
 	for _, t := range template {
 		byID[t.ID] = t
 	}
 	var eligible func(Task, map[string]bool) bool
 	eligible = func(t Task, seen map[string]bool) bool {
-		if t.ParentID == nil || date == "" || len(enforceBounds) == 0 || !enforceBounds[0] {
+		if t.ParentID == nil || date == "" || !enforceBounds {
 			return true
 		}
 		if seen[t.ID] {
@@ -119,7 +119,8 @@ func cloneTree(template []Task, date, series, rule string, now int64, keepStatus
 		if t.StartAt > 0 && date < time.UnixMilli(t.StartAt).In(loc).Format("2006-01-02") {
 			return false
 		}
-		if t.EndAt != nil && date > time.UnixMilli(*t.EndAt).In(loc).Format("2006-01-02") {
+		// Completed work stays in the pending parent's later daily snapshots.
+		if !(carryCompleted && t.Status == "completed") && t.EndAt != nil && date > time.UnixMilli(*t.EndAt).In(loc).Format("2006-01-02") {
 			return false
 		}
 		p, ok := byID[*t.ParentID]
@@ -146,11 +147,14 @@ func cloneTree(template []Task, date, series, rule string, now int64, keepStatus
 		t.ID = ids[old.ID]
 		t.RootID = rootID
 		t.Version = 1
-		t.CreatedAt = now
-		t.UpdatedAt = now
+		retainedCompletion := carryCompleted && series != "" && old.ParentID != nil && old.Status == "completed"
+		if !retainedCompletion {
+			t.CreatedAt = now
+			t.UpdatedAt = now
+		}
 		t.Exception = false
 		t.ReminderGeneration = 0
-		if !keepStatus {
+		if !keepStatus && !retainedCompletion {
 			if series == "" {
 				t = setState(t, false, now)
 			} else {
@@ -376,7 +380,7 @@ func (e *Engine) EnsureThrough(end string) error {
 					var count int
 					er = tx.QueryRow("SELECT count(*) FROM tasks WHERE parent_id IS NULL AND series_id=? AND occurrence_date=?", r.SeriesID, date).Scan(&count)
 					if er == nil && count == 0 {
-						m := cloneTree(r.Template, date, r.SeriesID, r.ID, e.now().UnixMilli(), false, e.location(), r.Frequency == "daily")
+						m := cloneTree(r.Template, date, r.SeriesID, r.ID, e.now().UnixMilli(), false, e.location(), r.Frequency == "daily", e.periodModel && r.Frequency == "daily")
 						er = validateTree(m)
 						if er == nil {
 							for _, t := range m {

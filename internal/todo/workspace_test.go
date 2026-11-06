@@ -285,12 +285,12 @@ func TestChildSpanBoundsAndCompletionApplyToActiveChildren(t *testing.T) {
 		t.Fatal(q, err)
 	}
 	q, err = e.Query(Query{View: "day", Date: e.localNow().AddDate(0, 0, 1).Format("2006-01-02")})
-	if err != nil || len(q.Tasks) != 2 {
+	if err != nil || len(q.Tasks) != 3 {
 		t.Fatal(q, err)
 	}
 	for _, n := range q.Tasks {
-		if n.Status != "pending" || n.Title == "active" {
-			t.Fatal("completed child returned on the next day", n)
+		if (n.Title == "active") != (n.Status == "completed") {
+			t.Fatal("later day must retain the completed child", n)
 		}
 	}
 }

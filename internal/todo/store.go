@@ -617,6 +617,18 @@ func (e *Engine) mutate(c Command, op string, fn func(map[string]Task, int64) er
 	if err = fn(m, now); err != nil {
 		return nil, err
 	}
+	// Resolve omitted scheduled creation bounds after receipt validation so retries keep
+	// their original request hash. Explicitly empty end times remain unbounded.
+	if e.periodModel && op == "create" && c.Date != nil && c.Span == nil && c.RepeatRule == nil {
+		t := m[c.ID]
+		start := t.StartAt
+		if start == 0 {
+			start = now
+		}
+		at := time.UnixMilli(start).In(e.location())
+		end := time.Date(at.Year(), at.Month(), at.Day()+1, 0, 0, 0, 0, e.location()).UnixMilli() - 1
+		c.Span = &TaskSpan{Start: start, End: &end}
+	}
 	if c.Span != nil {
 		if c.Span.Start <= 0 || c.Span.End != nil && *c.Span.End < c.Span.Start {
 			return nil, fail("VALIDATION_ERROR", "任务时间范围无效")
